@@ -1,12 +1,12 @@
-/* Spawnbook data, built 2026-10-25T06:34:01.569Z. The page reads window.BR. */
+/* Spawnbook data, built 2026-10-25T06:48:11.414Z. The page reads window.BR. */
 window.BR = {
  "META": {
   "snapshot": "Oct 24, 2026",
-  "issueNote": "Players counted at 11:34 PM Pacific. Visits are the daily change since Oct 23, 2026.",
-  "checked": 952,
-  "pool": 147,
+  "issueNote": "Players counted at 11:48 PM Pacific. Visits are the daily change since Oct 23, 2026.",
+  "checked": 951,
+  "pool": 145,
   "readings": "We read Roblox's public chart lists once a day at about the same time and keep a daily record of every young game's visits, players, favorites and votes. Our record started on Oct 23, 2026 and now covers 2 days. Visits are the daily change since Oct 23, 2026. Players is the live count at the latest reading.",
-  "playersNote": "one count at 11:34 PM Pacific",
+  "playersNote": "one count at 11:48 PM Pacific",
   "historyDays": 2,
   "picksLogged": 24,
   "firstPicks": "2026-10-23",
@@ -17,123 +17,6 @@ window.BR = {
  },
  "BOARD": [
   [
-   76894257773137,
-   "[🎃] CloverFall ",
-   "Malphite Studios",
-   "G",
-   "RPG",
-   "Action RPG",
-   46,
-   1166,
-   86416,
-   1,
-   4.3,
-   19.4,
-   94.1,
-   27.2,
-   7.5,
-   5,
-   0,
-   0,
-   180,
-   0,
-   0,
-   "staircase",
-   0,
-   "17/23/15/13/4/8",
-   80,
-   null,
-   {
-    "passes": 16,
-    "pmin": 39,
-    "pmax": 6999,
-    "members": 133058,
-    "discord": 0,
-    "cid": 81158032,
-    "ctype": "Group",
-    "pgrowth7": null,
-    "decay": null,
-    "rank": 1,
-    "trend": {
-     "series": [
-      [
-       "2026-10-23",
-       1471
-      ],
-      [
-       "2026-10-24",
-       1166
-      ]
-     ],
-     "peak": 1471,
-     "peakDate": "2026-10-23",
-     "tracked": 2,
-     "d1": {
-      "days": 1.4,
-      "players": -21,
-      "favorites": 12.7,
-      "rating": -0.1,
-      "visits": 118823
-     },
-     "d7": null
-    },
-    "deep": {
-     "game": {
-      "maxPlayers": 15,
-      "paid": null,
-      "vip": false,
-      "licensed": null,
-      "restricted": false,
-      "created": "2026-09-09T15:30:35.883Z",
-      "updated": "2026-10-25T01:51:12.051Z"
-     },
-     "products": {
-      "n": 104,
-      "more": false,
-      "range": [
-       5,
-       6999
-      ]
-     },
-     "servers": {
-      "counted": 118,
-      "complete": true,
-      "avgPlayers": 6.2,
-      "fill": 41,
-      "atLeast": 118
-     },
-     "creator": {
-      "type": "Group",
-      "id": 81158032,
-      "members": 133078,
-      "verified": false,
-      "owner": "Phyinite",
-      "tier": 3,
-      "games": 2,
-      "moreGames": false,
-      "totalVisits": 914618,
-      "topOther": [
-       "One Piece Game (Beta)",
-       1598,
-       99919743792566
-      ]
-     },
-     "maturity": {
-      "name": "Mild",
-      "minAge": 0,
-      "has": [
-       "Violence (Repeated/Mild)"
-      ]
-     },
-     "badges": {
-      "n": 4,
-      "more": false,
-      "topAwarded": 286604
-     }
-    }
-   }
-  ],
-  [
    115068315659966,
    "[🎃] Roll A Stickman!",
    "Ultrain Studios",
@@ -141,8 +24,8 @@ window.BR = {
    "Simulation",
    "Incremental Simulator",
    44,
-   9383,
-   634349,
+   9371,
+   634496,
    1,
    8.5,
    21.3,
@@ -164,13 +47,13 @@ window.BR = {
     "passes": 10,
     "pmin": 149,
     "pmax": 399,
-    "members": 77260,
+    "members": 77349,
     "discord": 0,
     "cid": 32966386,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 2,
+    "rank": 1,
     "trend": {
      "series": [
       [
@@ -179,7 +62,7 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       9383
+       9371
       ]
      ],
      "peak": 9396,
@@ -188,9 +71,9 @@ window.BR = {
      "d1": {
       "days": 1.4,
       "players": 0,
-      "favorites": 22.4,
+      "favorites": 22.5,
       "rating": 0.3,
-      "visits": 872235
+      "visits": 878679
      },
      "d7": null
     },
@@ -213,22 +96,22 @@ window.BR = {
       ]
      },
      "servers": {
-      "counted": 100,
+      "counted": 300,
       "complete": false,
-      "avgPlayers": 13.7,
-      "fill": 85,
-      "atLeast": 686
+      "avgPlayers": 12.1,
+      "fill": 75,
+      "atLeast": 777
      },
      "creator": {
       "type": "Group",
       "id": 32966386,
-      "members": 77287,
+      "members": 77375,
       "verified": false,
       "owner": "ult_rxin",
       "tier": 3,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 3319406,
+      "totalVisits": 3325887,
       "topOther": null
      },
      "maturity": {
@@ -254,20 +137,20 @@ window.BR = {
    "Simulation",
    "Tycoon",
    58,
-   7081,
-   689649,
+   7236,
+   689112,
    1,
-   5.6,
-   14.8,
+   5.5,
+   15.1,
    97.3,
    4.6,
    7.1,
-   12,
+   13,
    0,
    0,
    279,
    0,
-   54,
+   0,
    "staircase",
    0,
    "20/18/15/13/4/8",
@@ -277,13 +160,13 @@ window.BR = {
     "passes": 7,
     "pmin": 149,
     "pmax": 499,
-    "members": 100917,
+    "members": 101004,
     "discord": 0,
     "cid": 876860520,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 3,
+    "rank": 2,
     "trend": {
      "series": [
       [
@@ -292,18 +175,18 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       7081
+       7236
       ]
      ],
-     "peak": 7081,
+     "peak": 7236,
      "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": 25,
-      "favorites": 14.5,
+      "players": 28,
+      "favorites": 14.6,
       "rating": 0.1,
-      "visits": 948273
+      "visits": 954314
      },
      "d7": null
     },
@@ -325,19 +208,26 @@ window.BR = {
        100000
       ]
      },
+     "servers": {
+      "counted": 300,
+      "complete": false,
+      "avgPlayers": 4.8,
+      "fill": 80,
+      "atLeast": 1512
+     },
      "creator": {
       "type": "Group",
       "id": 876860520,
-      "members": 100946,
+      "members": 101039,
       "verified": false,
       "owner": "itsduhbby",
       "tier": 3,
       "games": 2,
       "moreGames": false,
-      "totalVisits": 7171743,
+      "totalVisits": 7177810,
       "topOther": [
        "KILL A BRAINROT",
-       26531,
+       26533,
        133719914980709
       ]
      },
@@ -351,7 +241,350 @@ window.BR = {
      "badges": {
       "n": 16,
       "more": false,
-      "topAwarded": 2971064
+      "topAwarded": 2973082
+     }
+    }
+   }
+  ],
+  [
+   76894257773137,
+   "[🎃] CloverFall ",
+   "Malphite Studios",
+   "G",
+   "RPG",
+   "Action RPG",
+   46,
+   1152,
+   86198,
+   1,
+   4.3,
+   19.2,
+   94.1,
+   27.2,
+   7.5,
+   5,
+   0,
+   0,
+   180,
+   0,
+   0,
+   "staircase",
+   0,
+   "16/22/15/13/4/8",
+   78,
+   null,
+   {
+    "passes": 16,
+    "pmin": 39,
+    "pmax": 6999,
+    "members": 133128,
+    "discord": 0,
+    "cid": 81158032,
+    "ctype": "Group",
+    "pgrowth7": null,
+    "decay": null,
+    "rank": 3,
+    "trend": {
+     "series": [
+      [
+       "2026-10-23",
+       1471
+      ],
+      [
+       "2026-10-24",
+       1152
+      ]
+     ],
+     "peak": 1471,
+     "peakDate": "2026-10-23",
+     "tracked": 2,
+     "d1": {
+      "days": 1.4,
+      "players": -22,
+      "favorites": 12.8,
+      "rating": -0.1,
+      "visits": 119371
+     },
+     "d7": null
+    },
+    "deep": {
+     "game": {
+      "maxPlayers": 15,
+      "paid": null,
+      "vip": false,
+      "licensed": null,
+      "restricted": false,
+      "created": "2026-09-09T15:30:35.883Z",
+      "updated": "2026-10-25T01:51:12.051Z"
+     },
+     "products": {
+      "n": 104,
+      "more": false,
+      "range": [
+       5,
+       6999
+      ]
+     },
+     "servers": {
+      "counted": 116,
+      "complete": true,
+      "avgPlayers": 6.2,
+      "fill": 41,
+      "atLeast": 116
+     },
+     "creator": {
+      "type": "Group",
+      "id": 81158032,
+      "members": 133163,
+      "verified": false,
+      "owner": "Phyinite",
+      "tier": 3,
+      "games": 2,
+      "moreGames": false,
+      "totalVisits": 915249,
+      "topOther": [
+       "One Piece Game (Beta)",
+       1598,
+       99919743792566
+      ]
+     },
+     "maturity": {
+      "name": "Mild",
+      "minAge": 0,
+      "has": [
+       "Violence (Repeated/Mild)"
+      ]
+     },
+     "badges": {
+      "n": 4,
+      "more": false,
+      "topAwarded": 286778
+     }
+    }
+   }
+  ],
+  [
+   78842730158876,
+   "[🎃 NEW!] Collect Cat Cards!",
+   "cat card collector (CCC)",
+   "G",
+   "Simulation",
+   "Incremental Simulator",
+   32,
+   2561,
+   164724,
+   1,
+   4.5,
+   22.4,
+   91.1,
+   40.2,
+   3.5,
+   3,
+   0,
+   0,
+   186,
+   0,
+   0,
+   "rocket",
+   0,
+   "18/21/15/9/4/8",
+   75,
+   null,
+   {
+    "passes": 8,
+    "pmin": 79,
+    "pmax": 799,
+    "members": 27149,
+    "discord": 0,
+    "cid": 180763525,
+    "ctype": "Group",
+    "pgrowth7": null,
+    "decay": null,
+    "rank": 4,
+    "trend": {
+     "series": [
+      [
+       "2026-10-23",
+       2295
+      ],
+      [
+       "2026-10-24",
+       2561
+      ]
+     ],
+     "peak": 2561,
+     "peakDate": "2026-10-24",
+     "tracked": 2,
+     "d1": {
+      "days": 1.4,
+      "players": 12,
+      "favorites": 14.3,
+      "rating": 0.4,
+      "visits": 228117
+     },
+     "d7": null
+    },
+    "deep": {
+     "game": {
+      "maxPlayers": 6,
+      "paid": null,
+      "vip": false,
+      "licensed": null,
+      "restricted": false,
+      "created": "2026-09-23T13:11:17.509Z",
+      "updated": "2026-10-25T03:32:28.113Z"
+     },
+     "products": {
+      "n": 56,
+      "more": false,
+      "range": [
+       3,
+       4999
+      ]
+     },
+     "servers": {
+      "counted": 300,
+      "complete": false,
+      "avgPlayers": 4.2,
+      "fill": 70,
+      "atLeast": 609
+     },
+     "creator": {
+      "type": "Group",
+      "id": 180763525,
+      "members": 27162,
+      "verified": false,
+      "owner": "DragonTStudios",
+      "tier": 3,
+      "games": 1,
+      "moreGames": false,
+      "totalVisits": 1164828,
+      "topOther": null
+     },
+     "maturity": {
+      "name": "Minimal",
+      "minAge": 0,
+      "has": [
+       "Suitable for everyone"
+      ]
+     },
+     "badges": {
+      "n": 42,
+      "more": false,
+      "topAwarded": 436520
+     }
+    }
+   }
+  ],
+  [
+   132239307080610,
+   "[⏳] Deep Fishing🎣",
+   "LazyGames.",
+   "Gv",
+   "Simulation",
+   "Incremental Simulator",
+   98,
+   12575,
+   739540,
+   1,
+   3.6,
+   24.5,
+   97.2,
+   13.3,
+   2.5,
+   4,
+   0,
+   0,
+   80,
+   0,
+   36,
+   "staircase",
+   0,
+   "14/22/12/13/8/5",
+   74,
+   null,
+   {
+    "passes": 9,
+    "pmin": 99,
+    "pmax": 599,
+    "members": 856784,
+    "discord": 0,
+    "cid": 34744238,
+    "ctype": "Group",
+    "pgrowth7": null,
+    "decay": null,
+    "rank": 5,
+    "trend": {
+     "series": [
+      [
+       "2026-10-23",
+       10770
+      ],
+      [
+       "2026-10-24",
+       12575
+      ]
+     ],
+     "peak": 12575,
+     "peakDate": "2026-10-24",
+     "tracked": 2,
+     "d1": {
+      "days": 1.4,
+      "players": 17,
+      "favorites": 5.1,
+      "rating": 0,
+      "visits": 1024149
+     },
+     "d7": null
+    },
+    "deep": {
+     "game": {
+      "maxPlayers": 12,
+      "paid": null,
+      "vip": false,
+      "licensed": null,
+      "restricted": false,
+      "created": "2026-07-18T22:34:37.651Z",
+      "updated": "2026-10-25T02:54:40.422Z"
+     },
+     "products": {
+      "n": 113,
+      "more": false,
+      "range": [
+       8,
+       6499
+      ]
+     },
+     "servers": {
+      "counted": 300,
+      "complete": false,
+      "avgPlayers": 9.1,
+      "fill": 76,
+      "atLeast": 1379
+     },
+     "creator": {
+      "type": "Group",
+      "id": 34744238,
+      "members": 856996,
+      "verified": true,
+      "owner": "JoJocraftHP",
+      "tier": 3,
+      "games": 1,
+      "moreGames": false,
+      "totalVisits": 20431339,
+      "topOther": null
+     },
+     "maturity": {
+      "name": "Minimal",
+      "minAge": 0,
+      "has": [
+       "Suitable for everyone"
+      ]
+     },
+     "badges": {
+      "n": 13,
+      "more": false,
+      "topAwarded": 4700669
      }
     }
    }
@@ -364,11 +597,11 @@ window.BR = {
    "Sports & Racing",
    "Sports",
    33,
-   2720,
-   335649,
+   2620,
+   334895,
    1,
    8.5,
-   11.7,
+   11.3,
    95.8,
    13.7,
    12.6,
@@ -380,20 +613,20 @@ window.BR = {
    8,
    "staircase",
    0,
-   "24/15/15/13/0/8",
-   75,
+   "24/14/15/13/0/8",
+   74,
    null,
    {
     "passes": 10,
     "pmin": 99,
     "pmax": 499,
-    "members": 39610,
+    "members": 39685,
     "discord": 0,
     "cid": 217333714,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 4,
+    "rank": 6,
     "trend": {
      "series": [
       [
@@ -402,7 +635,7 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       2720
+       2620
       ]
      ],
      "peak": 2927,
@@ -410,10 +643,10 @@ window.BR = {
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": -7,
-      "favorites": 36.8,
+      "players": -10,
+      "favorites": 37.1,
       "rating": 0.6,
-      "visits": 461520
+      "visits": 463778
      },
      "d7": null
     },
@@ -436,25 +669,25 @@ window.BR = {
       ]
      },
      "servers": {
-      "counted": 280,
+      "counted": 276,
       "complete": true,
-      "avgPlayers": 6.1,
-      "fill": 61,
-      "atLeast": 280
+      "avgPlayers": 5.9,
+      "fill": 59,
+      "atLeast": 276
      },
      "creator": {
       "type": "Group",
       "id": 217333714,
-      "members": 39633,
+      "members": 39733,
       "verified": false,
       "owner": "kanamzi",
       "tier": 3,
       "games": 5,
       "moreGames": false,
-      "totalVisits": 1371790,
+      "totalVisits": 1375055,
       "topOther": [
        "Pixel Soccer",
-       35338,
+       35633,
        85482235371641
       ]
      },
@@ -474,112 +707,6 @@ window.BR = {
    }
   ],
   [
-   78842730158876,
-   "[🎃 NEW!] Collect Cat Cards!",
-   "cat card collector (CCC)",
-   "G",
-   "Simulation",
-   "Incremental Simulator",
-   32,
-   2579,
-   164973,
-   1,
-   4.5,
-   22.5,
-   91.1,
-   40.2,
-   3.5,
-   3,
-   0,
-   0,
-   186,
-   0,
-   0,
-   "rocket",
-   0,
-   "18/21/15/9/4/8",
-   75,
-   null,
-   {
-    "passes": 8,
-    "pmin": 79,
-    "pmax": 799,
-    "members": 27131,
-    "discord": 0,
-    "cid": 180763525,
-    "ctype": "Group",
-    "pgrowth7": null,
-    "decay": null,
-    "rank": 5,
-    "trend": {
-     "series": [
-      [
-       "2026-10-23",
-       2295
-      ],
-      [
-       "2026-10-24",
-       2579
-      ]
-     ],
-     "peak": 2579,
-     "peakDate": "2026-10-24",
-     "tracked": 2,
-     "d1": {
-      "days": 1.4,
-      "players": 12,
-      "favorites": 14.3,
-      "rating": 0.4,
-      "visits": 226839
-     },
-     "d7": null
-    },
-    "deep": {
-     "game": {
-      "maxPlayers": 6,
-      "paid": null,
-      "vip": false,
-      "licensed": null,
-      "restricted": false,
-      "created": "2026-09-23T13:11:17.509Z",
-      "updated": "2026-10-25T03:32:28.113Z"
-     },
-     "products": {
-      "n": 56,
-      "more": false,
-      "range": [
-       3,
-       4999
-      ]
-     },
-     "creator": {
-      "type": "Group",
-      "id": 180763525,
-      "members": 27138,
-      "verified": false,
-      "owner": "DragonTStudios",
-      "tier": 3,
-      "games": 1,
-      "moreGames": false,
-      "totalVisits": 1163362,
-      "topOther": null
-     },
-     "maturity": {
-      "name": "Minimal",
-      "minAge": 0,
-      "has": [
-       "Suitable for everyone"
-      ]
-     },
-     "badges": {
-      "n": 42,
-      "more": false,
-      "topAwarded": 436233
-     }
-    }
-   }
-  ],
-  [
    81839945715364,
    "Martial Arts World [IMMORTAL REALM]",
    "Tayara Studios",
@@ -587,11 +714,11 @@ window.BR = {
    "RPG",
    "Action RPG",
    31,
-   1247,
-   56224,
+   1272,
+   56239,
    1,
    3.4,
-   31.9,
+   32.6,
    97.2,
    19.1,
    23.8,
@@ -603,20 +730,20 @@ window.BR = {
    0,
    "staircase",
    0,
-   "13/25/12/13/4/8",
-   75,
+   "12/25/12/13/4/8",
+   74,
    null,
    {
     "passes": 6,
     "pmin": 299,
     "pmax": 500,
-    "members": 3006,
+    "members": 3011,
     "discord": 0,
     "cid": 410507156,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 6,
+    "rank": 7,
     "trend": {
      "series": [
       [
@@ -625,18 +752,18 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       1247
+       1272
       ]
      ],
-     "peak": 1247,
+     "peak": 1272,
      "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": 60,
-      "favorites": 14,
+      "players": 63,
+      "favorites": 14.1,
       "rating": 0.2,
-      "visits": 77309
+      "visits": 77882
      },
      "d7": null
     },
@@ -658,16 +785,23 @@ window.BR = {
        7999
       ]
      },
+     "servers": {
+      "counted": 128,
+      "complete": true,
+      "avgPlayers": 8.2,
+      "fill": 41,
+      "atLeast": 128
+     },
      "creator": {
       "type": "Group",
       "id": 410507156,
-      "members": 3006,
+      "members": 3016,
       "verified": false,
       "owner": "TayaraAbe",
       "tier": 3,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 512931,
+      "totalVisits": 513709,
       "topOther": null
      },
      "maturity": {
@@ -687,112 +821,6 @@ window.BR = {
    }
   ],
   [
-   132239307080610,
-   "[⏳] Deep Fishing🎣",
-   "LazyGames.",
-   "Gv",
-   "Simulation",
-   "Incremental Simulator",
-   98,
-   12335,
-   739592,
-   1,
-   3.6,
-   24,
-   97.2,
-   13.3,
-   2.5,
-   4,
-   0,
-   0,
-   80,
-   0,
-   35,
-   "staircase",
-   0,
-   "14/22/12/13/8/5",
-   74,
-   null,
-   {
-    "passes": 9,
-    "pmin": 99,
-    "pmax": 599,
-    "members": 856475,
-    "discord": 0,
-    "cid": 34744238,
-    "ctype": "Group",
-    "pgrowth7": null,
-    "decay": null,
-    "rank": 7,
-    "trend": {
-     "series": [
-      [
-       "2026-10-23",
-       10770
-      ],
-      [
-       "2026-10-24",
-       12335
-      ]
-     ],
-     "peak": 12335,
-     "peakDate": "2026-10-24",
-     "tracked": 2,
-     "d1": {
-      "days": 1.4,
-      "players": 15,
-      "favorites": 5.1,
-      "rating": 0,
-      "visits": 1016945
-     },
-     "d7": null
-    },
-    "deep": {
-     "game": {
-      "maxPlayers": 12,
-      "paid": null,
-      "vip": false,
-      "licensed": null,
-      "restricted": false,
-      "created": "2026-07-18T22:34:37.651Z",
-      "updated": "2026-10-25T02:54:40.422Z"
-     },
-     "products": {
-      "n": 113,
-      "more": false,
-      "range": [
-       8,
-       6499
-      ]
-     },
-     "creator": {
-      "type": "Group",
-      "id": 34744238,
-      "members": 856583,
-      "verified": true,
-      "owner": "JoJocraftHP",
-      "tier": 3,
-      "games": 1,
-      "moreGames": false,
-      "totalVisits": 20422334,
-      "topOther": null
-     },
-     "maturity": {
-      "name": "Minimal",
-      "minAge": 0,
-      "has": [
-       "Suitable for everyone"
-      ]
-     },
-     "badges": {
-      "n": 13,
-      "more": false,
-      "topAwarded": 4698918
-     }
-    }
-   }
-  ],
-  [
    111053011787075,
    "[🎃] Candy Kingdom Defense",
    "Monero Studios",
@@ -800,16 +828,16 @@ window.BR = {
    "Strategy",
    "Tower Defense",
    26,
-   9534,
-   1133414,
+   9394,
+   1133514,
    1,
    7.7,
-   12.1,
+   11.9,
    96.2,
    6.3,
    2.7,
    26,
-   37,
+   38,
    74,
    146,
    0,
@@ -823,7 +851,7 @@ window.BR = {
     "passes": 7,
     "pmin": 79,
     "pmax": 799,
-    "members": 16021,
+    "members": 16045,
     "discord": 0,
     "cid": 35554705,
     "ctype": "Group",
@@ -838,18 +866,18 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       9534
+       9394
       ]
      ],
-     "peak": 9534,
+     "peak": 9394,
      "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": 59,
-      "favorites": 29.8,
+      "players": 57,
+      "favorites": 30,
       "rating": 0.1,
-      "visits": 1558455
+      "visits": 1569741
      },
      "d7": null
     },
@@ -872,22 +900,22 @@ window.BR = {
       ]
      },
      "servers": {
-      "counted": 173,
+      "counted": 179,
       "complete": true,
-      "avgPlayers": 12.8,
-      "fill": 53,
-      "atLeast": 173
+      "avgPlayers": 13.3,
+      "fill": 55,
+      "atLeast": 179
      },
      "creator": {
       "type": "Group",
       "id": 35554705,
-      "members": 16030,
+      "members": 16061,
       "verified": false,
       "owner": "sirskibidigroup",
       "tier": 3,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 3834768,
+      "totalVisits": 3849219,
       "topOther": null
      },
      "maturity": {
@@ -913,11 +941,11 @@ window.BR = {
    "RPG",
    "Action RPG",
    96,
-   3692,
-   233278,
+   3820,
+   233474,
    1,
    3.7,
-   22.8,
+   23.6,
    90.4,
    48.1,
    3,
@@ -936,7 +964,7 @@ window.BR = {
     "passes": 4,
     "pmin": 249,
     "pmax": 499,
-    "members": 303733,
+    "members": 303812,
     "discord": 0,
     "cid": 525520885,
     "ctype": "Group",
@@ -951,18 +979,18 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       3692
+       3820
       ]
      ],
-     "peak": 3692,
+     "peak": 3820,
      "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": 81,
+      "players": 87,
       "favorites": 2.6,
       "rating": 0.1,
-      "visits": 320759
+      "visits": 323326
      },
      "d7": null
     },
@@ -985,22 +1013,22 @@ window.BR = {
       ]
      },
      "servers": {
-      "counted": 100,
+      "counted": 300,
       "complete": false,
-      "avgPlayers": 8.3,
-      "fill": 83,
-      "atLeast": 446
+      "avgPlayers": 7.4,
+      "fill": 74,
+      "atLeast": 516
      },
      "creator": {
       "type": "Group",
       "id": 525520885,
-      "members": 303765,
+      "members": 303850,
       "verified": true,
       "owner": "CptSparkeIz",
       "tier": 3,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 6020078,
+      "totalVisits": 6023527,
       "topOther": null
      },
      "maturity": {
@@ -1013,7 +1041,7 @@ window.BR = {
      "badges": {
       "n": 24,
       "more": false,
-      "topAwarded": 1343790
+      "topAwarded": 1344276
      }
     }
    }
@@ -1026,13 +1054,13 @@ window.BR = {
    "Adventure",
    "Story",
    19,
-   7674,
-   840565,
+   7494,
+   838905,
    1,
-   7.7,
-   13.1,
+   7.6,
+   12.9,
    94.7,
-   31.7,
+   31.6,
    7,
    71,
    13,
@@ -1049,7 +1077,7 @@ window.BR = {
     "passes": 5,
     "pmin": 49,
     "pmax": 699,
-    "members": 13940,
+    "members": 13982,
     "discord": 0,
     "cid": 535217792,
     "ctype": "Group",
@@ -1064,7 +1092,7 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       7674
+       7494
       ]
      ],
      "peak": 8065,
@@ -1072,10 +1100,10 @@ window.BR = {
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": -5,
-      "favorites": 96.4,
+      "players": -7,
+      "favorites": 96.9,
       "rating": -0.3,
-      "visits": 1155785
+      "visits": 1161754
      },
      "d7": null
     },
@@ -1097,16 +1125,23 @@ window.BR = {
        1000
       ]
      },
+     "servers": {
+      "counted": 61,
+      "complete": true,
+      "avgPlayers": 10.6,
+      "fill": 66,
+      "atLeast": 61
+     },
      "creator": {
       "type": "Group",
       "id": 535217792,
-      "members": 13955,
+      "members": 14018,
       "verified": false,
       "owner": "nickofthyme",
       "tier": 3,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 2045811,
+      "totalVisits": 2053326,
       "topOther": null
      },
      "maturity": {
@@ -1120,7 +1155,7 @@ window.BR = {
      "badges": {
       "n": 15,
       "more": false,
-      "topAwarded": 815493
+      "topAwarded": 818641
      }
     }
    }
@@ -1133,11 +1168,11 @@ window.BR = {
    "Strategy",
    "Tower Defense",
    116,
-   3332,
-   402678,
+   3414,
+   402642,
    1,
    3.5,
-   11.9,
+   12.2,
    96.2,
    6.1,
    2.4,
@@ -1156,7 +1191,7 @@ window.BR = {
     "passes": 2,
     "pmin": 99,
     "pmax": 399,
-    "members": 117822,
+    "members": 117851,
     "discord": 0,
     "cid": 60101259,
     "ctype": "Group",
@@ -1171,18 +1206,18 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       3332
+       3414
       ]
      ],
-     "peak": 3332,
+     "peak": 3414,
      "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": 10,
+      "players": 13,
       "favorites": 1.9,
       "rating": 0,
-      "visits": 553686
+      "visits": 557597
      },
      "d7": null
     },
@@ -1204,16 +1239,23 @@ window.BR = {
        3999
       ]
      },
+     "servers": {
+      "counted": 24,
+      "complete": true,
+      "avgPlayers": 33.1,
+      "fill": 66,
+      "atLeast": 24
+     },
      "creator": {
       "type": "Group",
       "id": 60101259,
-      "members": 117831,
+      "members": 117864,
       "verified": false,
       "owner": "Dun_iii",
       "tier": 3,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 13546106,
+      "totalVisits": 13551390,
       "topOther": null
      },
      "maturity": {
@@ -1227,7 +1269,7 @@ window.BR = {
      "badges": {
       "n": 23,
       "more": false,
-      "topAwarded": 2048174
+      "topAwarded": 2048539
      }
     }
    }
@@ -1240,11 +1282,11 @@ window.BR = {
    "Adventure",
    "Exploration",
    26,
-   3102,
-   140358,
+   3170,
+   140614,
    1,
    3,
-   31.8,
+   32.5,
    90.9,
    12.4,
    3.9,
@@ -1278,18 +1320,18 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       3102
+       3170
       ]
      ],
-     "peak": 3102,
+     "peak": 3170,
      "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": 69,
-      "favorites": 10.4,
+      "players": 73,
+      "favorites": 10.5,
       "rating": -0.2,
-      "visits": 192993
+      "visits": 194729
      },
      "d7": null
     },
@@ -1301,7 +1343,7 @@ window.BR = {
       "licensed": null,
       "restricted": false,
       "created": "2026-09-29T01:55:11.376Z",
-      "updated": "2026-10-25T06:30:58.436Z"
+      "updated": "2026-10-25T06:47:36.152Z"
      },
      "products": {
       "n": 102,
@@ -1312,11 +1354,11 @@ window.BR = {
       ]
      },
      "servers": {
-      "counted": 288,
+      "counted": 298,
       "complete": true,
-      "avgPlayers": 11,
-      "fill": 55,
-      "atLeast": 288
+      "avgPlayers": 10.8,
+      "fill": 54,
+      "atLeast": 298
      },
      "creator": {
       "type": "User",
@@ -1325,7 +1367,7 @@ window.BR = {
       "joined": "2022-12-29T16:33:34.117Z",
       "games": 14,
       "moreGames": false,
-      "totalVisits": 5008408,
+      "totalVisits": 5011234,
       "topOther": [
        "+1 Jump per Jump",
        3415327,
@@ -1348,39 +1390,39 @@ window.BR = {
    }
   ],
   [
-   132956556682909,
-   "[🎃] First Person Boxing",
-   "Can You Box?",
+   77811814730971,
+   "[ UPD 2🎃] Card Battles: Prestige",
+   "Bronies Development Studio",
    "G",
-   "Action",
-   "Battlegrounds & Fighting",
-   27,
-   2942,
-   555538,
+   "Simulation",
+   "Idle",
+   60,
+   1634,
+   90165,
    1,
-   2.6,
-   7.6,
-   91.8,
-   5.6,
-   8.8,
-   7,
-   50,
-   36,
-   137,
+   4,
+   26.1,
+   93.2,
+   1.1,
+   1.3,
    0,
-   7,
-   "staircase",
    0,
-   "21/7/12/13/6/8",
+   0,
+   224,
+   0,
+   0,
+   "rocket",
+   0,
+   "15/16/15/9/4/8",
    67,
    null,
    {
-    "passes": 6,
-    "pmin": 79,
-    "pmax": 799,
-    "members": 73740,
+    "passes": 4,
+    "pmin": 199,
+    "pmax": 699,
+    "members": 10131,
     "discord": 0,
-    "cid": 1049098079,
+    "cid": 302332574,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
@@ -1389,238 +1431,22 @@ window.BR = {
      "series": [
       [
        "2026-10-23",
-       5552
-      ],
-      [
-       "2026-10-24",
-       2942
-      ]
-     ],
-     "peak": 5552,
-     "peakDate": "2026-10-23",
-     "tracked": 2,
-     "d1": {
-      "days": 1.4,
-      "players": -47,
-      "favorites": 8.9,
-      "rating": -0.5,
-      "visits": 763870
-     },
-     "d7": null
-    },
-    "deep": {
-     "game": {
-      "maxPlayers": 16,
-      "paid": null,
-      "vip": false,
-      "licensed": null,
-      "restricted": false,
-      "created": "2026-09-28T05:58:12.337Z",
-      "updated": "2026-10-24T23:05:19.008Z"
-     },
-     "products": {
-      "n": 34,
-      "more": false,
-      "range": [
-       15,
-       2299
-      ]
-     },
-     "creator": {
-      "type": "Group",
-      "id": 1049098079,
-      "members": 73753,
-      "verified": false,
-      "owner": "ItsMoonlet",
-      "tier": 3,
-      "games": 1,
-      "moreGames": false,
-      "totalVisits": 5842885,
-      "topOther": null
-     },
-     "maturity": {
-      "name": "Mild",
-      "minAge": 0,
-      "has": [
-       "Violence (Repeated/Mild)"
-      ]
-     },
-     "badges": {
-      "n": 1,
-      "more": false,
-      "topAwarded": 2530022
-     }
-    }
-   }
-  ],
-  [
-   131488313787599,
-   "[WORLD 2] Bullets VS Everything",
-   "CCU Explosion",
-   "G",
-   "Simulation",
-   "Incremental Simulator",
-   20,
-   2551,
-   317194,
-   1,
-   4,
-   11.6,
-   93.4,
-   33.7,
-   5.8,
-   4,
-   59,
-   89,
-   0,
-   0,
-   49,
-   "rocket",
-   0,
-   "21/17/12/9/0/8",
-   67,
-   null,
-   {
-    "passes": 13,
-    "pmin": 49,
-    "pmax": 299,
-    "members": 173946,
-    "discord": 0,
-    "cid": 358598606,
-    "ctype": "Group",
-    "pgrowth7": null,
-    "decay": null,
-    "rank": 14,
-    "trend": {
-     "series": [
-      [
-       "2026-10-23",
-       4584
-      ],
-      [
-       "2026-10-24",
-       2551
-      ]
-     ],
-     "peak": 4584,
-     "peakDate": "2026-10-23",
-     "tracked": 2,
-     "d1": {
-      "days": 1.4,
-      "players": -44,
-      "favorites": 36.9,
-      "rating": -0.2,
-      "visits": 436145
-     },
-     "d7": null
-    },
-    "deep": {
-     "game": {
-      "maxPlayers": 6,
-      "paid": null,
-      "vip": false,
-      "licensed": null,
-      "restricted": false,
-      "created": "2026-10-05T15:57:33.914Z",
-      "updated": "2026-10-25T02:25:35.574Z"
-     },
-     "products": {
-      "n": 83,
-      "more": false,
-      "range": [
-       5,
-       10000
-      ]
-     },
-     "creator": {
-      "type": "Group",
-      "id": 358598606,
-      "members": 174063,
-      "verified": false,
-      "owner": "DevRylen",
-      "tier": 3,
-      "games": 2,
-      "moreGames": false,
-      "totalVisits": 1590279,
-      "topOther": [
-       "Tanks Vs Noobs",
-       14961,
-       90607574933082
-      ]
-     },
-     "maturity": {
-      "name": "Minimal",
-      "minAge": 0,
-      "has": [
-       "Suitable for everyone"
-      ]
-     },
-     "badges": {
-      "n": 0,
-      "more": false,
-      "topAwarded": 0
-     }
-    }
-   }
-  ],
-  [
-   77811814730971,
-   "[ UPD 2🎃] Card Battles: Prestige",
-   "Bronies Development Studio",
-   "G",
-   "Simulation",
-   "Idle",
-   60,
-   1606,
-   90174,
-   1,
-   4,
-   25.6,
-   93.2,
-   1.1,
-   1.3,
-   2,
-   0,
-   0,
-   224,
-   0,
-   0,
-   "rocket",
-   0,
-   "16/15/15/9/4/8",
-   67,
-   null,
-   {
-    "passes": 4,
-    "pmin": 199,
-    "pmax": 699,
-    "members": 10125,
-    "discord": 0,
-    "cid": 302332574,
-    "ctype": "Group",
-    "pgrowth7": null,
-    "decay": null,
-    "rank": 15,
-    "trend": {
-     "series": [
-      [
-       "2026-10-23",
        1612
       ],
       [
        "2026-10-24",
-       1606
+       1634
       ]
      ],
-     "peak": 1612,
-     "peakDate": "2026-10-23",
+     "peak": 1634,
+     "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": 0,
+      "players": 1,
       "favorites": 9.5,
       "rating": -0.4,
-      "visits": 123990
+      "visits": 124865
      },
      "d7": null
     },
@@ -1632,7 +1458,7 @@ window.BR = {
       "licensed": null,
       "restricted": false,
       "created": "2026-08-26T00:15:48.202Z",
-      "updated": "2026-10-25T04:32:17.489Z"
+      "updated": "2026-10-25T06:37:04.079Z"
      },
      "products": {
       "n": 35,
@@ -1642,16 +1468,23 @@ window.BR = {
        3499
       ]
      },
+     "servers": {
+      "counted": 100,
+      "complete": false,
+      "avgPlayers": 13.1,
+      "fill": 66,
+      "atLeast": 125
+     },
      "creator": {
       "type": "Group",
       "id": 302332574,
-      "members": 10127,
+      "members": 10138,
       "verified": false,
       "owner": "Gabebeast9",
       "tier": 3,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 1374896,
+      "totalVisits": 1376087,
       "topOther": null
      },
      "maturity": {
@@ -1677,16 +1510,16 @@ window.BR = {
    "Simulation",
    "Tycoon",
    25,
-   4042,
-   234942,
+   4032,
+   235054,
    1,
    4.5,
-   24.8,
+   24.7,
    91.5,
    23.1,
    2.6,
    6,
-   85,
+   82,
    0,
    274,
    0,
@@ -1700,13 +1533,13 @@ window.BR = {
     "passes": 9,
     "pmin": 149,
     "pmax": 499,
-    "members": 48823,
+    "members": 48896,
     "discord": 0,
     "cid": 623015619,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 16,
+    "rank": 14,
     "trend": {
      "series": [
       [
@@ -1715,18 +1548,18 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       4042
+       4032
       ]
      ],
-     "peak": 4042,
+     "peak": 4032,
      "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
       "players": 33,
-      "favorites": 42.9,
+      "favorites": 43.3,
       "rating": -0.2,
-      "visits": 323047
+      "visits": 325514
      },
      "d7": null
     },
@@ -1751,20 +1584,20 @@ window.BR = {
      "servers": {
       "counted": 300,
       "complete": false,
-      "avgPlayers": 4.5,
-      "fill": 74,
-      "atLeast": 906
+      "avgPlayers": 4.4,
+      "fill": 73,
+      "atLeast": 920
      },
      "creator": {
       "type": "Group",
       "id": 623015619,
-      "members": 48857,
+      "members": 48953,
       "verified": false,
       "owner": "silverjuuuu",
       "tier": 2,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 1338224,
+      "totalVisits": 1341669,
       "topOther": null
      },
      "maturity": {
@@ -1783,6 +1616,112 @@ window.BR = {
    }
   ],
   [
+   132956556682909,
+   "[🎃] First Person Boxing",
+   "Can You Box?",
+   "G",
+   "Action",
+   "Battlegrounds & Fighting",
+   27,
+   2949,
+   554370,
+   1,
+   2.6,
+   7.7,
+   91.8,
+   5.6,
+   8.8,
+   8,
+   52,
+   36,
+   137,
+   0,
+   7,
+   "staircase",
+   0,
+   "21/6/12/13/6/8",
+   66,
+   null,
+   {
+    "passes": 6,
+    "pmin": 79,
+    "pmax": 799,
+    "members": 73767,
+    "discord": 0,
+    "cid": 1049098079,
+    "ctype": "Group",
+    "pgrowth7": null,
+    "decay": null,
+    "rank": 15,
+    "trend": {
+     "series": [
+      [
+       "2026-10-23",
+       5552
+      ],
+      [
+       "2026-10-24",
+       2949
+      ]
+     ],
+     "peak": 5552,
+     "peakDate": "2026-10-23",
+     "tracked": 2,
+     "d1": {
+      "days": 1.4,
+      "players": -47,
+      "favorites": 8.9,
+      "rating": -0.5,
+      "visits": 767717
+     },
+     "d7": null
+    },
+    "deep": {
+     "game": {
+      "maxPlayers": 16,
+      "paid": null,
+      "vip": false,
+      "licensed": null,
+      "restricted": false,
+      "created": "2026-09-28T05:58:12.337Z",
+      "updated": "2026-10-24T23:05:19.008Z"
+     },
+     "products": {
+      "n": 34,
+      "more": false,
+      "range": [
+       15,
+       2299
+      ]
+     },
+     "creator": {
+      "type": "Group",
+      "id": 1049098079,
+      "members": 73790,
+      "verified": false,
+      "owner": "ItsMoonlet",
+      "tier": 3,
+      "games": 1,
+      "moreGames": false,
+      "totalVisits": 5848456,
+      "topOther": null
+     },
+     "maturity": {
+      "name": "Mild",
+      "minAge": 0,
+      "has": [
+       "Violence (Repeated/Mild)"
+      ]
+     },
+     "badges": {
+      "n": 1,
+      "more": false,
+      "topAwarded": 2532063
+     }
+    }
+   }
+  ],
+  [
    79726149410614,
    "[🎃] Bey Rivals",
    "BBR Productions",
@@ -1790,12 +1729,12 @@ window.BR = {
    "Action",
    "Battlegrounds & Fighting",
    14,
-   2457,
-   91562,
+   2510,
+   91798,
    0,
    null,
-   38.6,
-   94.6,
+   39.4,
+   94.5,
    3,
    2.3,
    0,
@@ -1813,21 +1752,21 @@ window.BR = {
     "passes": 3,
     "pmin": 99,
     "pmax": 299,
-    "members": 8329,
+    "members": 8407,
     "discord": 0,
     "cid": 32940308,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 17,
+    "rank": 16,
     "trend": {
      "series": [
       [
        "2026-10-24",
-       2457
+       2510
       ]
      ],
-     "peak": 2457,
+     "peak": 2510,
      "peakDate": "2026-10-24",
      "tracked": 1,
      "d1": null,
@@ -1841,7 +1780,7 @@ window.BR = {
       "licensed": null,
       "restricted": false,
       "created": "2026-10-10T20:57:43.958Z",
-      "updated": "2026-10-25T06:33:23.978Z"
+      "updated": "2026-10-25T06:45:40.097Z"
      },
      "products": {
       "n": 37,
@@ -1854,13 +1793,13 @@ window.BR = {
      "creator": {
       "type": "Group",
       "id": 32940308,
-      "members": 8368,
+      "members": 8468,
       "verified": false,
       "owner": "PyroZoku",
       "tier": 3,
       "games": 2,
       "moreGames": false,
-      "totalVisits": 1321043,
+      "totalVisits": 1327483,
       "topOther": [
        "[STAGING] BR",
        96,
@@ -1890,15 +1829,15 @@ window.BR = {
    "Simulation",
    "Incremental Simulator",
    37,
-   1196,
-   80845,
+   1206,
+   80727,
    1,
    1.8,
-   21.3,
+   21.5,
    95.6,
    15.3,
    13.4,
-   4,
+   5,
    0,
    0,
    251,
@@ -1913,13 +1852,13 @@ window.BR = {
     "passes": 15,
     "pmin": 39,
     "pmax": 3499,
-    "members": 47078,
+    "members": 47089,
     "discord": 0,
     "cid": 321204008,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 18,
+    "rank": 17,
     "trend": {
      "series": [
       [
@@ -1928,18 +1867,18 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       1196
+       1206
       ]
      ],
-     "peak": 1196,
+     "peak": 1206,
      "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": 5,
+      "players": 6,
       "favorites": 7.3,
       "rating": 0,
-      "visits": 111162
+      "visits": 111795
      },
      "d7": null
     },
@@ -1964,13 +1903,13 @@ window.BR = {
      "creator": {
       "type": "Group",
       "id": 321204008,
-      "members": 47081,
+      "members": 47100,
       "verified": false,
       "owner": "Indigo_blueyellow",
       "tier": 3,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 1674986,
+      "totalVisits": 1676048,
       "topOther": null
      },
      "maturity": {
@@ -1989,116 +1928,6 @@ window.BR = {
    }
   ],
   [
-   120731410233153,
-   "[🎃]+1 Assassin Leveling",
-   "+1 on top",
-   "G",
-   "Simulation",
-   "Incremental Simulator",
-   31,
-   14951,
-   846114,
-   1,
-   2,
-   25.4,
-   95.9,
-   51.7,
-   1.5,
-   8,
-   0,
-   0,
-   128,
-   0,
-   0,
-   "rocket",
-   1,
-   "9/24/15/3/6/8",
-   65,
-   null,
-   {
-    "passes": 28,
-    "pmin": 3,
-    "pmax": 1999,
-    "members": 707166,
-    "discord": 0,
-    "cid": 517830125,
-    "ctype": "Group",
-    "pgrowth7": null,
-    "decay": null,
-    "rank": 19,
-    "trend": {
-     "series": [
-      [
-       "2026-10-23",
-       10359
-      ],
-      [
-       "2026-10-24",
-       14951
-      ]
-     ],
-     "peak": 14951,
-     "peakDate": "2026-10-24",
-     "tracked": 2,
-     "d1": {
-      "days": 1.4,
-      "players": 44,
-      "favorites": 7.7,
-      "rating": 0,
-      "visits": 1163414
-     },
-     "d7": null
-    },
-    "deep": {
-     "game": {
-      "maxPlayers": 12,
-      "paid": null,
-      "vip": false,
-      "licensed": null,
-      "restricted": false,
-      "created": "2026-09-24T04:53:01.697Z",
-      "updated": "2026-10-24T22:51:01.27Z"
-     },
-     "products": {
-      "n": 108,
-      "more": false,
-      "range": [
-       3,
-       2999
-      ]
-     },
-     "creator": {
-      "type": "Group",
-      "id": 517830125,
-      "members": 707307,
-      "verified": false,
-      "owner": "xXAlexisrdzXx",
-      "tier": 3,
-      "games": 2,
-      "moreGames": false,
-      "totalVisits": 13173428,
-      "topOther": [
-       "+1 Kick to Break Everything",
-       180787,
-       140153494228671
-      ]
-     },
-     "maturity": {
-      "name": "Mild",
-      "minAge": 0,
-      "has": [
-       "Violence (Repeated/Mild)"
-      ]
-     },
-     "badges": {
-      "n": 3,
-      "more": false,
-      "topAwarded": 4394998
-     }
-    }
-   }
-  ],
-  [
    109440485612336,
    "What If Disasters",
    "random named group i hvent named yet",
@@ -2106,15 +1935,15 @@ window.BR = {
    "Survival",
    "",
    20,
-   12589,
-   1202309,
+   12669,
+   1201492,
    1,
-   4.9,
-   15.1,
+   4.8,
+   15.2,
    90.3,
    8.7,
    2.6,
-   3,
+   0,
    10,
    23,
    0,
@@ -2129,13 +1958,13 @@ window.BR = {
     "passes": 3,
     "pmin": 99,
     "pmax": 299,
-    "members": 5261,
+    "members": 5275,
     "discord": 0,
     "cid": 34216976,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 20,
+    "rank": 18,
     "trend": {
      "series": [
       [
@@ -2144,18 +1973,18 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       12589
+       12669
       ]
      ],
-     "peak": 12589,
+     "peak": 12669,
      "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": 20,
-      "favorites": 36.3,
+      "players": 21,
+      "favorites": 36.5,
       "rating": 0,
-      "visits": 1653185
+      "visits": 1663881
      },
      "d7": null
     },
@@ -2167,7 +1996,7 @@ window.BR = {
       "licensed": null,
       "restricted": false,
       "created": "2026-10-05T13:26:19.779Z",
-      "updated": "2026-10-25T03:56:53.364Z"
+      "updated": "2026-10-25T06:42:11.595Z"
      },
      "products": {
       "n": 22,
@@ -2180,23 +2009,23 @@ window.BR = {
      "servers": {
       "counted": 300,
       "complete": false,
-      "avgPlayers": 15.1,
-      "fill": 75,
-      "atLeast": 836
+      "avgPlayers": 14.9,
+      "fill": 74,
+      "atLeast": 852
      },
      "creator": {
       "type": "Group",
       "id": 34216976,
-      "members": 5269,
+      "members": 5286,
       "verified": false,
       "owner": "PrimeVoxel",
       "tier": 3,
       "games": 3,
       "moreGames": false,
-      "totalVisits": 4902440,
+      "totalVisits": 4917015,
       "topOther": [
        "Grow a Monster",
-       12363,
+       12364,
        99747343205460
       ]
      },
@@ -2211,7 +2040,7 @@ window.BR = {
      "badges": {
       "n": 15,
       "more": false,
-      "topAwarded": 1846167
+      "topAwarded": 1851361
      }
     }
    }
@@ -2224,11 +2053,11 @@ window.BR = {
    "Survival",
    "Escape",
    45,
-   6352,
-   667812,
+   6049,
+   666915,
    1,
    4.5,
-   13.7,
+   13.1,
    90,
    11.5,
    4.1,
@@ -2247,13 +2076,13 @@ window.BR = {
     "passes": 4,
     "pmin": 99,
     "pmax": 349,
-    "members": 37092,
+    "members": 37112,
     "discord": 0,
     "cid": 533436180,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 21,
+    "rank": 19,
     "trend": {
      "series": [
       [
@@ -2262,7 +2091,7 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       6352
+       6049
       ]
      ],
      "peak": 8068,
@@ -2270,10 +2099,10 @@ window.BR = {
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": -21,
-      "favorites": 9.7,
+      "players": -25,
+      "favorites": 9.8,
       "rating": 0.3,
-      "visits": 918247
+      "visits": 923574
      },
      "d7": null
     },
@@ -2298,13 +2127,13 @@ window.BR = {
      "creator": {
       "type": "Group",
       "id": 533436180,
-      "members": 37103,
+      "members": 37132,
       "verified": false,
       "owner": "chelovechek151315",
       "tier": 3,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 6732367,
+      "totalVisits": 6739404,
       "topOther": null
      },
      "maturity": {
@@ -2332,11 +2161,11 @@ window.BR = {
    "Simulation",
    "Incremental Simulator",
    62,
-   2915,
-   160211,
+   2926,
+   160136,
    1,
    3.6,
-   26.2,
+   26.3,
    94,
    53.4,
    1.9,
@@ -2355,13 +2184,13 @@ window.BR = {
     "passes": 10,
     "pmin": 99,
     "pmax": 1499,
-    "members": 147668,
+    "members": 147722,
     "discord": 0,
     "cid": 575557242,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 22,
+    "rank": 20,
     "trend": {
      "series": [
       [
@@ -2370,10 +2199,10 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       2915
+       2926
       ]
      ],
-     "peak": 2915,
+     "peak": 2926,
      "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
@@ -2381,7 +2210,7 @@ window.BR = {
       "players": 26,
       "favorites": 6.1,
       "rating": 0.1,
-      "visits": 220291
+      "visits": 221764
      },
      "d7": null
     },
@@ -2406,13 +2235,13 @@ window.BR = {
      "creator": {
       "type": "Group",
       "id": 575557242,
-      "members": 147692,
+      "members": 147765,
       "verified": false,
       "owner": "voidlindon",
       "tier": 3,
       "games": 2,
       "moreGames": false,
-      "totalVisits": 2795644,
+      "totalVisits": 2797683,
       "topOther": [
        "+1 Greatsword Swing Escape",
        28665,
@@ -2435,6 +2264,116 @@ window.BR = {
    }
   ],
   [
+   131488313787599,
+   "[WORLD 2] Bullets VS Everything",
+   "CCU Explosion",
+   "G",
+   "Simulation",
+   "Incremental Simulator",
+   20,
+   2497,
+   316590,
+   1,
+   3.9,
+   11.4,
+   93.4,
+   33.7,
+   5.8,
+   4,
+   58,
+   89,
+   0,
+   0,
+   48,
+   "rocket",
+   0,
+   "20/16/12/9/0/8",
+   65,
+   null,
+   {
+    "passes": 13,
+    "pmin": 49,
+    "pmax": 299,
+    "members": 174211,
+    "discord": 0,
+    "cid": 358598606,
+    "ctype": "Group",
+    "pgrowth7": null,
+    "decay": null,
+    "rank": 21,
+    "trend": {
+     "series": [
+      [
+       "2026-10-23",
+       4584
+      ],
+      [
+       "2026-10-24",
+       2497
+      ]
+     ],
+     "peak": 4584,
+     "peakDate": "2026-10-23",
+     "tracked": 2,
+     "d1": {
+      "days": 1.4,
+      "players": -46,
+      "favorites": 37.1,
+      "rating": -0.2,
+      "visits": 438428
+     },
+     "d7": null
+    },
+    "deep": {
+     "game": {
+      "maxPlayers": 6,
+      "paid": null,
+      "vip": false,
+      "licensed": null,
+      "restricted": false,
+      "created": "2026-10-05T15:57:33.914Z",
+      "updated": "2026-10-25T02:25:35.574Z"
+     },
+     "products": {
+      "n": 83,
+      "more": false,
+      "range": [
+       5,
+       10000
+      ]
+     },
+     "creator": {
+      "type": "Group",
+      "id": 358598606,
+      "members": 174443,
+      "verified": false,
+      "owner": "DevRylen",
+      "tier": 3,
+      "games": 2,
+      "moreGames": false,
+      "totalVisits": 1593799,
+      "topOther": [
+       "Tanks Vs Noobs",
+       14963,
+       90607574933082
+      ]
+     },
+     "maturity": {
+      "name": "Minimal",
+      "minAge": 0,
+      "has": [
+       "Suitable for everyone"
+      ]
+     },
+     "badges": {
+      "n": 0,
+      "more": false,
+      "topAwarded": 0
+     }
+    }
+   }
+  ],
+  [
    139246468685423,
    "[🎃X150👻] 💪🏻Lifting Simulator: REBORN",
    "Man Of Infinity",
@@ -2442,15 +2381,15 @@ window.BR = {
    "Simulation",
    "Incremental Simulator",
    115,
-   2042,
-   158633,
+   2149,
+   158471,
    1,
    9.7,
-   18.5,
+   19.5,
    88.1,
    2,
    1.3,
-   16,
+   17,
    0,
    0,
    222,
@@ -2465,13 +2404,13 @@ window.BR = {
     "passes": 14,
     "pmin": 99,
     "pmax": 399,
-    "members": 237630,
+    "members": 237755,
     "discord": 0,
     "cid": 631142061,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 23,
+    "rank": 22,
     "trend": {
      "series": [
       [
@@ -2480,18 +2419,18 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       2042
+       2149
       ]
      ],
-     "peak": 2114,
-     "peakDate": "2026-10-23",
+     "peak": 2149,
+     "peakDate": "2026-10-24",
      "tracked": 2,
      "d1": {
       "days": 1.4,
-      "players": -3,
+      "players": 2,
       "favorites": 13,
       "rating": 0,
-      "visits": 218122
+      "visits": 219458
      },
      "d7": null
     },
@@ -2514,25 +2453,25 @@ window.BR = {
       ]
      },
      "servers": {
-      "counted": 233,
+      "counted": 242,
       "complete": true,
-      "avgPlayers": 8.1,
-      "fill": 41,
-      "atLeast": 233
+      "avgPlayers": 7.9,
+      "fill": 40,
+      "atLeast": 242
      },
      "creator": {
       "type": "Group",
       "id": 631142061,
-      "members": 237692,
+      "members": 237878,
       "verified": false,
       "owner": "LonnzixDev",
       "tier": 3,
       "games": 2,
       "moreGames": false,
-      "totalVisits": 2600653,
+      "totalVisits": 2602717,
       "topOther": [
        "[X150🔥] Lifting Infinity 💪🏻",
-       729432,
+       729472,
        105123005835545
       ]
      },
@@ -2546,117 +2485,7 @@ window.BR = {
      "badges": {
       "n": 35,
       "more": false,
-      "topAwarded": 507660
-     }
-    }
-   }
-  ],
-  [
-   106198175232796,
-   "[UPDATE 3] Anime Legacy Simulator",
-   "StarX Inc",
-   "Gbig",
-   "Simulation",
-   "Incremental Simulator",
-   45,
-   10119,
-   492080,
-   1,
-   3,
-   29.6,
-   96.1,
-   10.7,
-   1.3,
-   14,
-   0,
-   0,
-   153,
-   0,
-   0,
-   "rocket",
-   0,
-   "12/21/15/9/4/3",
-   64,
-   null,
-   {
-    "passes": 13,
-    "pmin": 99,
-    "pmax": 799,
-    "members": 1648693,
-    "discord": 0,
-    "cid": 33910482,
-    "ctype": "Group",
-    "pgrowth7": null,
-    "decay": null,
-    "rank": 24,
-    "trend": {
-     "series": [
-      [
-       "2026-10-23",
-       11169
-      ],
-      [
-       "2026-10-24",
-       10119
-      ]
-     ],
-     "peak": 11169,
-     "peakDate": "2026-10-23",
-     "tracked": 2,
-     "d1": {
-      "days": 1.4,
-      "players": -9,
-      "favorites": 7.4,
-      "rating": -0.1,
-      "visits": 676614
-     },
-     "d7": null
-    },
-    "deep": {
-     "game": {
-      "maxPlayers": 10,
-      "paid": null,
-      "vip": false,
-      "licensed": null,
-      "restricted": false,
-      "created": "2026-09-10T14:49:24.241Z",
-      "updated": "2026-10-24T16:39:40.521Z"
-     },
-     "products": {
-      "n": 14,
-      "more": false,
-      "range": [
-       49,
-       4999
-      ]
-     },
-     "creator": {
-      "type": "Group",
-      "id": 33910482,
-      "members": 1648737,
-      "verified": false,
-      "owner": "OwnerStarX",
-      "tier": 3,
-      "games": 4,
-      "moreGames": false,
-      "totalVisits": 158760493,
-      "topOther": [
-       "[HALLOWEEN] Anime Astral Simulator",
-       117027582,
-       102072869879193
-      ]
-     },
-     "maturity": {
-      "name": "Minimal",
-      "minAge": 0,
-      "has": [
-       "Suitable for everyone"
-      ]
-     },
-     "badges": {
-      "n": 12,
-      "more": false,
-      "topAwarded": 474611
+      "topAwarded": 508177
      }
     }
    }
@@ -2669,11 +2498,11 @@ window.BR = {
    "Simulation",
    "Incremental Simulator",
    61,
-   3669,
-   384381,
+   3679,
+   383938,
    1,
    2.2,
-   13.7,
+   13.8,
    98.4,
    16.9,
    8.2,
@@ -2692,13 +2521,13 @@ window.BR = {
     "passes": 8,
     "pmin": 60,
     "pmax": 1995,
-    "members": 278465,
+    "members": 278473,
     "discord": 0,
     "cid": 35939768,
     "ctype": "Group",
     "pgrowth7": null,
     "decay": null,
-    "rank": 25,
+    "rank": 23,
     "trend": {
      "series": [
       [
@@ -2707,7 +2536,7 @@ window.BR = {
       ],
       [
        "2026-10-24",
-       3669
+       3679
       ]
      ],
      "peak": 5093,
@@ -2718,7 +2547,7 @@ window.BR = {
       "players": -28,
       "favorites": 0.9,
       "rating": 0,
-      "visits": 528528
+      "visits": 531694
      },
      "d7": null
     },
@@ -2743,13 +2572,13 @@ window.BR = {
      "creator": {
       "type": "Group",
       "id": 35939768,
-      "members": 278469,
+      "members": 278485,
       "verified": true,
       "owner": "Kashr0om",
       "tier": 3,
       "games": 1,
       "moreGames": false,
-      "totalVisits": 10835761,
+      "totalVisits": 10840234,
       "topOther": null
      },
      "maturity": {
@@ -2762,7 +2591,227 @@ window.BR = {
      "badges": {
       "n": 7,
       "more": false,
-      "topAwarded": 830729
+      "topAwarded": 830780
+     }
+    }
+   }
+  ],
+  [
+   106198175232796,
+   "[UPDATE 3] Anime Legacy Simulator",
+   "StarX Inc",
+   "Gbig",
+   "Simulation",
+   "Incremental Simulator",
+   45,
+   10111,
+   491641,
+   1,
+   3,
+   29.6,
+   96.1,
+   10.7,
+   1.3,
+   14,
+   0,
+   0,
+   153,
+   0,
+   0,
+   "rocket",
+   0,
+   "12/20/15/9/4/3",
+   63,
+   null,
+   {
+    "passes": 13,
+    "pmin": 99,
+    "pmax": 799,
+    "members": 1648757,
+    "discord": 0,
+    "cid": 33910482,
+    "ctype": "Group",
+    "pgrowth7": null,
+    "decay": null,
+    "rank": 24,
+    "trend": {
+     "series": [
+      [
+       "2026-10-23",
+       11169
+      ],
+      [
+       "2026-10-24",
+       10111
+      ]
+     ],
+     "peak": 11169,
+     "peakDate": "2026-10-23",
+     "tracked": 2,
+     "d1": {
+      "days": 1.4,
+      "players": -9,
+      "favorites": 7.4,
+      "rating": -0.1,
+      "visits": 680847
+     },
+     "d7": null
+    },
+    "deep": {
+     "game": {
+      "maxPlayers": 10,
+      "paid": null,
+      "vip": false,
+      "licensed": null,
+      "restricted": false,
+      "created": "2026-09-10T14:49:24.241Z",
+      "updated": "2026-10-24T16:39:40.521Z"
+     },
+     "products": {
+      "n": 14,
+      "more": false,
+      "range": [
+       49,
+       4999
+      ]
+     },
+     "creator": {
+      "type": "Group",
+      "id": 33910482,
+      "members": 1648841,
+      "verified": false,
+      "owner": "OwnerStarX",
+      "tier": 3,
+      "games": 4,
+      "moreGames": false,
+      "totalVisits": 158776628,
+      "topOther": [
+       "[HALLOWEEN] Anime Astral Simulator",
+       117037760,
+       102072869879193
+      ]
+     },
+     "maturity": {
+      "name": "Minimal",
+      "minAge": 0,
+      "has": [
+       "Suitable for everyone"
+      ]
+     },
+     "badges": {
+      "n": 12,
+      "more": false,
+      "topAwarded": 474811
+     }
+    }
+   }
+  ],
+  [
+   126256942507957,
+   "Pixel Lineage [🎃Spear Class + Dragon Race]",
+   "Pixel Lineage",
+   "G",
+   "RPG",
+   "Turn-based RPG",
+   30,
+   6826,
+   1233441,
+   1,
+   1.8,
+   8,
+   98.9,
+   6.7,
+   6.7,
+   38,
+   0,
+   0,
+   56,
+   0,
+   8,
+   "staircase",
+   0,
+   "10/12/12/13/8/8",
+   63,
+   null,
+   {
+    "passes": 1,
+    "pmin": 250,
+    "pmax": 250,
+    "members": 227710,
+    "discord": 0,
+    "cid": 362755399,
+    "ctype": "Group",
+    "pgrowth7": null,
+    "decay": null,
+    "rank": 25,
+    "trend": {
+     "series": [
+      [
+       "2026-10-23",
+       6100
+      ],
+      [
+       "2026-10-24",
+       6826
+      ]
+     ],
+     "peak": 6826,
+     "peakDate": "2026-10-24",
+     "tracked": 2,
+     "d1": {
+      "days": 1.4,
+      "players": 12,
+      "favorites": 7.1,
+      "rating": 0,
+      "visits": 1708125
+     },
+     "d7": null
+    },
+    "deep": {
+     "game": {
+      "maxPlayers": 50,
+      "paid": null,
+      "vip": false,
+      "licensed": null,
+      "restricted": false,
+      "created": "2026-09-25T00:17:21.195Z",
+      "updated": "2026-10-23T17:00:05.975Z"
+     },
+     "products": {
+      "n": 19,
+      "more": false,
+      "range": [
+       15,
+       999
+      ]
+     },
+     "creator": {
+      "type": "Group",
+      "id": 362755399,
+      "members": 227788,
+      "verified": false,
+      "owner": "gankcounter",
+      "tier": 3,
+      "games": 2,
+      "moreGames": false,
+      "totalVisits": 20537227,
+      "topOther": [
+       "🍋 PIXEL Capitalist",
+       133,
+       124389566011190
+      ]
+     },
+     "maturity": {
+      "name": "Minimal",
+      "minAge": 0,
+      "has": [
+       "Suitable for everyone"
+      ]
+     },
+     "badges": {
+      "n": 0,
+      "more": false,
+      "topAwarded": 0
      }
     }
    }
@@ -2777,9 +2826,9 @@ window.BR = {
    "Simulation",
    "Tycoon",
    92,
-   1462544,
-   9389038086,
-   161238818,
+   1520008,
+   9390549259,
+   161184805,
    1,
    91.7,
    "R35 E3"
@@ -2792,9 +2841,9 @@ window.BR = {
    "Simulation",
    "Tycoon",
    50,
-   124560,
-   242696522,
-   10491695,
+   116191,
+   242828215,
+   10512271,
    1,
    97.4,
    "E50"
@@ -2807,27 +2856,12 @@ window.BR = {
    "Simulation",
    "Incremental Simulator",
    71,
-   74632,
-   132611177,
-   3400004,
+   74621,
+   132643940,
+   3399513,
    1,
    99.1,
    "E42"
-  ],
-  [
-   85738654635245,
-   "[🎃]Climb For Animals Eggs🥚",
-   "100% GRIND",
-   "G",
-   "Simulation",
-   "Tycoon",
-   48,
-   73462,
-   50784539,
-   5423376,
-   1,
-   98.8,
-   "T30 E271"
   ],
   [
    94891079210424,
@@ -2837,12 +2871,27 @@ window.BR = {
    "Survival",
    "",
    34,
-   70794,
-   66519545,
-   5521691,
+   72934,
+   66580511,
+   5526496,
    1,
    83.6,
    "E136"
+  ],
+  [
+   85738654635245,
+   "[🎃]Climb For Animals Eggs🥚",
+   "100% GRIND",
+   "G",
+   "Simulation",
+   "Tycoon",
+   48,
+   71946,
+   50846992,
+   5429953,
+   1,
+   98.8,
+   "T30 E271"
   ],
   [
    119958473240233,
@@ -2852,11 +2901,11 @@ window.BR = {
    "Obby & Platformer",
    "Runner",
    8,
-   61513,
-   27741675,
-   10333506,
+   60684,
+   27832741,
+   10325869,
    1,
-   89.1,
+   89,
    "T3 U1"
   ],
   [
@@ -2867,12 +2916,12 @@ window.BR = {
    "Simulation",
    "Incremental Simulator",
    82,
-   52938,
-   17853350,
-   2533604,
+   53202,
+   17878953,
+   2534096,
    1,
    94.7,
-   "T20 U23 E13"
+   "T20 U22 E13"
   ],
   [
    98628861455414,
@@ -2882,9 +2931,9 @@ window.BR = {
    "Simulation",
    "Vehicle Sim",
    28,
-   48662,
-   23283982,
-   6067475,
+   49060,
+   23338339,
+   6063631,
    1,
    85.5,
    "T7 U5 E117"
@@ -2897,9 +2946,9 @@ window.BR = {
    "Entertainment",
    "Showcase & Hub",
    11,
-   46627,
-   59551017,
-   17637039,
+   45841,
+   59690092,
+   17612194,
    1,
    84,
    "T2 U2"
@@ -2912,9 +2961,9 @@ window.BR = {
    "Simulation",
    "Tycoon",
    39,
-   45807,
-   20146112,
-   4007756,
+   45227,
+   20191868,
+   4012331,
    1,
    95.3,
    ""
@@ -2927,9 +2976,9 @@ window.BR = {
    "Simulation",
    "Physics Sim",
    12,
-   42269,
-   8250849,
-   4235572,
+   43097,
+   8289256,
+   4233221,
    1,
    81.7,
    "T15 U3"
@@ -2942,9 +2991,9 @@ window.BR = {
    "Action",
    "Battlegrounds & Fighting",
    55,
-   41950,
-   192860318,
-   7027828,
+   41989,
+   192908651,
+   7012813,
    1,
    87.7,
    "E30"
@@ -2957,27 +3006,12 @@ window.BR = {
    "Sports & Racing",
    "Sports",
    166,
-   39766,
-   233300426,
-   5720608,
+   39129,
+   233343677,
+   5711208,
    1,
    86.5,
    "E66"
-  ],
-  [
-   130906410042392,
-   "Cat Battles 🐾",
-   "Cute Malt Games",
-   "G",
-   "Action",
-   "Battlegrounds & Fighting",
-   19,
-   38334,
-   68525942,
-   10437406,
-   1,
-   73,
-   "T9 U11 E195"
   ],
   [
    132929771812494,
@@ -2987,12 +3021,27 @@ window.BR = {
    "Strategy",
    "Tower Defense",
    60,
-   38185,
-   44236984,
-   4506758,
+   38469,
+   44289979,
+   4513016,
    1,
    98.9,
    "T28 R6 E33"
+  ],
+  [
+   130906410042392,
+   "Cat Battles 🐾",
+   "Cute Malt Games",
+   "G",
+   "Action",
+   "Battlegrounds & Fighting",
+   19,
+   38244,
+   68596904,
+   10414514,
+   1,
+   73,
+   "T9 U11 E195"
   ],
   [
    93523763376122,
@@ -3002,9 +3051,9 @@ window.BR = {
    "Simulation",
    "Tycoon",
    62,
-   36396,
-   16490500,
-   2810906,
+   36576,
+   16516052,
+   2809392,
    1,
    97.9,
    "T13 E78"
@@ -3017,27 +3066,12 @@ window.BR = {
    "Simulation",
    "Tycoon",
    21,
-   35853,
-   19691950,
-   4047302,
+   35928,
+   19735931,
+   4050314,
    1,
    89.2,
-   "T32 U14"
-  ],
-  [
-   94278659624110,
-   "Backseat Rally",
-   "No crash plez",
-   "G",
-   "",
-   "",
-   19,
-   34957,
-   26266276,
-   5214264,
-   1,
-   92.4,
-   "T6 U6 E196"
+   "T32 U15"
   ],
   [
    103363457515322,
@@ -3047,27 +3081,27 @@ window.BR = {
    "Simulation",
    "Incremental Simulator",
    34,
-   34579,
-   27648353,
-   2621474,
+   35334,
+   27674592,
+   2621801,
    1,
    93.1,
    "T11 E43"
   ],
   [
-   74122653145285,
-   "Steel Fighters",
-   "WeShowProjects",
+   94278659624110,
+   "Backseat Rally",
+   "No crash plez",
    "G",
-   "Simulation",
-   "Tycoon",
-   47,
-   33840,
-   8705199,
-   2439386,
+   "",
+   "",
+   19,
+   34366,
+   26312314,
+   5210473,
    1,
-   90.7,
-   "T27 U8"
+   92.4,
+   "T6 U6 E196"
   ],
   [
    78515283254292,
@@ -3077,9 +3111,9 @@ window.BR = {
    "Survival",
    "",
    168,
-   33184,
-   2466198186,
-   4651696,
+   33908,
+   2466236787,
+   4646530,
    1,
    93.1,
    "E83"
@@ -3092,12 +3126,27 @@ window.BR = {
    "Simulation",
    "Tycoon",
    65,
-   33150,
-   19172585,
-   2893920,
+   33844,
+   19201901,
+   2894535,
    1,
    80.9,
    "T42 E264"
+  ],
+  [
+   74122653145285,
+   "Steel Fighters",
+   "WeShowProjects",
+   "G",
+   "Simulation",
+   "Tycoon",
+   47,
+   33516,
+   8728929,
+   2439196,
+   1,
+   90.7,
+   "T27 U9"
   ],
   [
    96510596525082,
@@ -3107,9 +3156,9 @@ window.BR = {
    "Party & Casual",
    "",
    74,
-   31039,
-   160172074,
-   4048725,
+   31322,
+   160211436,
+   4048391,
    1,
    88.8,
    "E67"
@@ -3122,12 +3171,12 @@ window.BR = {
    "Simulation",
    "Vehicle Sim",
    35,
-   23843,
-   44878893,
-   3889967,
+   25863,
+   44909154,
+   3884189,
    1,
    84.1,
-   "T10 U17 E31"
+   "T10 U18 E31"
   ],
   [
    116802325837172,
@@ -3137,9 +3186,9 @@ window.BR = {
    "Survival",
    "",
    40,
-   23184,
-   92291729,
-   4355985,
+   22835,
+   92335402,
+   4356582,
    1,
    73.8,
    ""
@@ -3157,63 +3206,63 @@ window.BR = {
   [
    90611980824716,
    "[🎃] UNDERTALE Fight!",
-   3936,
+   3869,
    10,
    "Name may reference DELTARUNE or Undertale"
   ],
   [
    91413789989696,
    "My Chiikawa Restaurant! 🎃",
-   4851,
+   4857,
    29,
    "Name may reference Chiikawa"
   ],
   [
    124172969655058,
    "Oregon Trail [new!]",
-   4898,
+   4713,
    29,
    "Name may reference The Oregon Trail"
   ],
   [
    132767904294856,
    "[🎃] Blue Lock Farm",
-   11043,
+   10851,
    72,
    "Name may reference Blue Lock"
   ],
   [
    111838814545019,
    "[TUSK + 4 NEW STANDS] Morioh High",
-   1888,
+   1801,
    23,
    "Name may reference JoJo's Bizarre Adventure"
   ],
   [
    138460405368255,
    "[🎃MULTIPLAYER] Start Your Blue Lock Career!",
-   3398,
+   3364,
    48,
    "Name may reference Blue Lock"
   ],
   [
    128913244126628,
    "[ULTRON] Hide From The Hulk",
-   3725,
+   3681,
    25,
    "Name may reference Marvel characters"
   ],
   [
    127403135954624,
    "[ MechaGodzilla2021 Remodel! ] Kaiju Alpha",
-   14770,
+   14272,
    69,
    "Name may reference Toho's kaiju"
   ],
   [
    102053304052438,
    "DELTARUNE Fight [EXPANDED]",
-   2588,
+   2600,
    75,
    "Name may reference DELTARUNE or Undertale"
   ]
@@ -3222,86 +3271,86 @@ window.BR = {
   [
    94629611849859,
    "SUNYI [HORROR]",
-   3632,
+   3711,
    72,
    "65 favorites per 1,000 visits, among the highest this week"
   ],
   [
    77993383305312,
    "[UPD] Feed the Fire 🔥",
-   5272,
+   5365,
    86,
    "Visits jumped 20× its lifetime average"
   ],
   [
    100047964036957,
    "Fart Together [1-4 PLAYER OBBY] 💨",
-   2739,
+   2698,
    12,
-   "Estimated 80 minutes per visit, high for most genres. No fresh visit reading"
+   "Estimated 78 minutes per visit, high for most genres. No fresh visit reading"
   ],
   [
    83948710348121,
    "Be a Soccer Manager ⚽",
-   3448,
+   3680,
    17,
-   "Estimated 73 minutes per visit, high for most genres. No fresh visit reading"
+   "Estimated 78 minutes per visit, high for most genres. No fresh visit reading"
   ],
   [
    98256320592611,
    "[🧪 CHEMISTRY] Build A Striker ⚽",
-   1725,
+   1684,
    23,
-   "Estimated 150 minutes per visit, high for most genres. No fresh visit reading"
-  ],
-  [
-   70875514622841,
-   "[🎃] Truth or LIE 😈",
-   2148,
-   115,
-   "Visits jumped 29× its lifetime average"
+   "Estimated 146 minutes per visit, high for most genres. No fresh visit reading"
   ],
   [
    120680410889596,
    "Dressmaker's Dream",
-   2398,
+   2409,
    29,
    "Estimated 113 minutes per visit, high for most genres. No fresh visit reading"
   ],
   [
+   70875514622841,
+   "[🎃] Truth or LIE 😈",
+   2199,
+   115,
+   "Visits jumped 29× its lifetime average"
+  ],
+  [
    81230874545623,
    "Realistic Ragdoll Engine 🩸",
-   8181,
+   8252,
    12,
    "Estimated 70 minutes per visit, high for most genres. No fresh visit reading"
   ],
   [
    86522629968403,
    "Catch a Plane! [Upd 1]",
-   5634,
+   5611,
    18,
-   "Estimated 116 minutes per visit, high for most genres. No fresh visit reading. 163 favorites per 1,000 visits, among the highest this week"
+   "Estimated 115 minutes per visit, high for most genres. No fresh visit reading. 163 favorites per 1,000 visits, among the highest this week"
   ],
   [
    113815565903772,
    "[🎃] Stick Wars",
-   3944,
+   3919,
    23,
-   "Estimated 80 minutes per visit, high for most genres. No fresh visit reading"
-  ],
-  [
-   74641726785011,
-   "[🌱] Grow a Plant",
-   6625,
-   28,
-   "87 favorites per 1,000 visits, among the highest this week"
+   "Estimated 79 minutes per visit, high for most genres. No fresh visit reading"
   ],
   [
    117043200777029,
    "TROLL Fly & Carry Tower",
-   12197,
+   12501,
    58,
    "95 favorites per 1,000 visits, among the highest this week"
+  ],
+  [
+   74641726785011,
+   "[🌱] Grow a Plant",
+   6414,
+   28,
+   "86 favorites per 1,000 visits, among the highest this week"
   ]
  ]
 };
