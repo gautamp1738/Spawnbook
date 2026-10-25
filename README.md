@@ -8,7 +8,7 @@ Everything the site serves is in `public/`:
 
 | File | What it is |
 | --- | --- |
-| `index.html` | The report page. It reads this week's numbers from `data.js`. |
+| `index.html` | The report page. It reads today's numbers from `data.js`. |
 | `data.js` | Today's board, picks and tables. Replaced automatically every day. |
 | `privacy.html`, `terms.html`, `cookies.html`, `refunds.html`, `legal.css` | The policy pages. |
 | `fonts/` | Big Shoulders and Public Sans, served from the site itself. Both are under the SIL Open Font License (see the `OFL-*.txt` files). |
