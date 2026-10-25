@@ -1,6 +1,7 @@
 # Reads Roblox's public charts once a day, rebuilds the board and publishes it to spawnbook.com.
 # Each run commits the new public/data.js (which makes Cloudflare redeploy the site) and the
 # day's reading to pipeline/state/, which is the history the growth scores are worked out from.
+# For the games on the board it also reads products, servers, maturity, badges and creator details.
 # On Mondays it also logs that week's picks for the weekly report and its track record.
 name: Daily data pull
 

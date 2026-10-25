@@ -819,6 +819,12 @@
     var d = Math.round(c.days);
     return commas(c.visits) + (d !== nominal ? " (over " + d + (d === 1 ? " day)" : " days)") : "");
   }
+  function serversText(sv) {
+    if (!sv) return null;
+    if (sv.complete) return commas(sv.counted) + (sv.counted === 1 ? " server" : " servers") + (sv.fill != null ? ", " + sv.fill + "% full on average" : "");
+    if (sv.atLeast == null) return null; // older data
+    return "At least " + commas(sv.atLeast) + (sv.fill != null ? ". The fullest " + commas(sv.counted) + " are " + sv.fill + "% full on average" : "");
+  }
   function moreData(p) {
     var x = p.x, t = x.trend || {}, d = x.deep || {}, gm = d.game || {}, c = d.creator || {};
     var box = el("div", "more-data");
@@ -858,9 +864,10 @@
         ["Their biggest other game", c.topOther ? (function () { var f = document.createDocumentFragment(); if (c.topOther[2]) f.appendChild(extLink(clean(c.topOther[0]), "https://www.roblox.com/games/" + c.topOther[2], "link")); else f.appendChild(document.createTextNode(clean(c.topOther[0]))); f.appendChild(document.createTextNode(", " + short(c.topOther[1]) + " visits")); return f; })() : c.games === 1 ? "This is their only public game" : null]
       ]),
       mdGroup("Players and audience", [
-        ["Content maturity", d.maturity ? d.maturity.name + (d.maturity.minAge ? " (" + d.maturity.minAge + "+)" : " (all ages)") : null],
+        ["Content maturity", d.maturity && d.maturity.name ? d.maturity.name + (d.maturity.minAge ? ", ages " + d.maturity.minAge + " and up" : "") : null],
+        ["Content Roblox lists", d.maturity && d.maturity.has && d.maturity.has.length ? d.maturity.has.join(", ") : null],
         ["Players per server", gm.maxPlayers ? String(gm.maxPlayers) : null],
-        ["Servers running", d.servers ? "About " + commas(d.servers.est) + (d.servers.fill != null ? ", " + d.servers.fill + "% full on average" : "") : null],
+        ["Servers running", serversText(d.servers)],
         ["Badges", d.badges ? d.badges.n + (d.badges.more ? "+" : "") + " badge" + (d.badges.n === 1 ? "" : "s") + (d.badges.topAwarded ? ". The most-earned one went to " + commas(d.badges.topAwarded) + " players" : "") : null],
         ["Licensed brand", gm.licensed === "official" ? "Officially licensed" : gm.licensed === "community" ? "Community licensed" : d.game ? "No" : null],
         ["Launched", gm.created ? new Date(gm.created).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null]

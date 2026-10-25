@@ -137,17 +137,32 @@ window.BRC = (function () {
         updated: g.updated || null
       };
 
-      var dp = await tryGet("dp", "https://apis.roblox.com/developer-products/v2/universes/" + r.uid + "/developerproducts?limit=50");
-      if (dp) {
-        var forSale = (dp.developerProducts || []).filter(function (x) { return x.IsForSale && x.PriceInRobux; });
-        d.products = { n: forSale.length, more: !!dp.nextPageCursor, range: rng(forSale.map(function (x) { return x.PriceInRobux; })) };
-      }
+      // Developer products: up to 5 pages of 100.
+      var prods = [], cur = "", pages = 0, gotAny = false, more = false;
+      do {
+        var dp = await tryGet("dp", "https://apis.roblox.com/developer-products/v2/universes/" + r.uid + "/developerproducts?limit=100" + (cur ? "&cursor=" + encodeURIComponent(cur) : ""));
+        if (!dp) break;
+        gotAny = true; pages++;
+        prods = prods.concat((dp.developerProducts || []).filter(function (x) { return x.IsForSale && x.PriceInRobux; }));
+        cur = dp.nextPageCursor || ""; more = !!cur;
+      } while (cur && pages < 5);
+      if (gotAny) d.products = { n: prods.length, more: more, range: rng(prods.map(function (x) { return x.PriceInRobux; })) };
 
-      var sv = await tryGet("servers", "https://games.roblox.com/v1/games/" + r.pid + "/servers/Public?limit=100&sortOrder=Desc");
-      if (sv && sv.data && sv.data.length) {
-        var avg = sv.data.reduce(function (a, x) { return a + (x.playing || 0); }, 0) / sv.data.length;
-        var cap = sv.data[0].maxPlayers || g.maxPlayers || null;
-        d.servers = { sampled: sv.data.length, more: !!sv.nextPageCursor, avgPlayers: Math.round(avg * 10) / 10, fill: cap ? Math.round(avg / cap * 100) : null, est: avg > 0 ? Math.max(sv.data.length, Math.round(r.playing / avg)) : sv.data.length };
+      // Public servers, fullest first: up to 5 pages of 100. If there are more, the fullest
+      // servers' average overstates the real one, so playing / average is a floor on the count.
+      var srv = [], scur = "", spages = 0, smore = false;
+      do {
+        var sv = await tryGet("servers", "https://games.roblox.com/v1/games/" + r.pid + "/servers/Public?limit=100&sortOrder=Desc" + (scur ? "&cursor=" + encodeURIComponent(scur) : ""));
+        if (!sv) break;
+        spages++;
+        srv = srv.concat(sv.data || []);
+        scur = sv.nextPageCursor || ""; smore = !!scur;
+      } while (scur && spages < 5);
+      if (srv.length) {
+        var avg = srv.reduce(function (a, x) { return a + (x.playing || 0); }, 0) / srv.length;
+        var cap = srv[0].maxPlayers || g.maxPlayers || null;
+        d.servers = { counted: srv.length, complete: !smore, avgPlayers: Math.round(avg * 10) / 10, fill: cap ? Math.round(avg / cap * 100) : null,
+          atLeast: smore && avg > 0 ? Math.max(srv.length, Math.round(r.playing / avg)) : srv.length };
       }
 
       var c = { type: r.ctype, id: r.cid };
@@ -175,8 +190,13 @@ window.BRC = (function () {
       d.creator = c;
 
       var mat = await tryGet("maturity", "https://apis.roblox.com/experience-guidelines-api/experience-guidelines/get-age-recommendation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ universeId: r.uid }) });
-      var rec = mat && mat.ageRecommendationDetails && mat.ageRecommendationDetails.summary && mat.ageRecommendationDetails.summary.ageRecommendation;
-      if (rec) d.maturity = { name: rec.displayName || null, minAge: rec.minimumAge || 0 };
+      var ard = mat && mat.ageRecommendationDetails;
+      var rec = ard && ard.summary && ard.summary.ageRecommendation;
+      if (rec) d.maturity = {
+        name: rec.contentMaturity === "unrated" ? "Unrated" : rec.displayName || null,
+        minAge: rec.contentMaturity === "unrated" ? 0 : rec.minimumAge || 0,
+        has: (ard.descriptorUsages || []).filter(function (u) { return u.contains !== false && u.descriptor && u.descriptor.displayName; }).map(function (u) { return u.descriptor.displayName; }).slice(0, 6)
+      };
 
       var bd = await tryGet("badges", "https://badges.roblox.com/v1/universes/" + r.uid + "/badges?limit=100&sortOrder=Asc");
       if (bd && bd.data) {
