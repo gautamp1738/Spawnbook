@@ -15,5 +15,7 @@
     "bindings": [{ "name": "STORE", "class_name": "Store" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Store"] }],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // Keep settings added in the Cloudflare dashboard (like ADMIN_KEY) when GitHub redeploys the site.
+  "keep_vars": true
 }
