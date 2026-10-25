@@ -13,6 +13,7 @@ Everything the site serves is in `public/`:
 | `privacy.html`, `terms.html`, `cookies.html`, `refunds.html`, `legal.css` | The policy pages. |
 | `fonts/` | Big Shoulders and Public Sans, served from the site itself. Both are under the SIL Open Font License (see the `OFL-*.txt` files). |
 | `favicon.svg` | The browser-tab icon. |
+| `og.png` | The 1200×630 preview image that LinkedIn, Discord, Slack and others show when someone shares the link. |
 | `_headers` | Security headers. |
 
 `wrangler.jsonc` at the top level tells Cloudflare to serve the `public` folder.
