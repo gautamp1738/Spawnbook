@@ -1,0 +1,24 @@
+{
+ "ok": true,
+ "at": "2026-10-25T03:22:10.056Z",
+ "lists": 26,
+ "gamesSeen": 945,
+ "youngTracked": 343,
+ "pool": 142,
+ "board": 25,
+ "top5": [
+  "[UPD 1⚡] Pixel Basketball (81)",
+  "[🎃] CloverFall  (81)",
+  "[🎃UPD] Harpoon a Fish (79)",
+  "[🎃] Roll A Stickman! (78)",
+  "PINKIE PROMISE [HORROR] (76)"
+ ],
+ "historyDays": 2,
+ "firstDay": "2026-10-23",
+ "visitsBasis": "1-day",
+ "picksLogged": 24,
+ "dataJsLength": 20399,
+ "snapshotDoc": "2026-10-25T03:22:10Z",
+ "databaseWrites": 2,
+ "staleSnapshots": 1
+}
