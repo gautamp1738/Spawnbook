@@ -1,0 +1,31 @@
+name: Roblox reachability test
+on:
+  push:
+    branches: [claude/workflow-push-test]
+permissions:
+  contents: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run the collector once
+        working-directory: actions-test
+        run: |
+          set +e
+          timeout 1800 node --no-warnings runner.mjs --state state --out out > run.log 2>&1
+          echo "exit=$?" >> run.log
+          true
+      - name: Save the results to this branch
+        run: |
+          mkdir -p actions-test/result
+          cp actions-test/run.log actions-test/result/ || true
+          cp actions-test/out/summary.json actions-test/result/ 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git add actions-test/result
+          git commit -m "Test result" && git push
