@@ -43,6 +43,8 @@ GitHub Actions runs `.github/workflows/daily.yml` once a day, at 21:33 UTC (2:33
 - `pipeline/last-run.json`, a summary of the run
 - on Mondays, that week's picks in `pipeline/state/picks/` and `pipeline/picks-log.csv`, for the weekly report and its track record
 
+For each game that makes the board, the run also reads its developer products, live servers, maturity rating and badges, and the creator's group or profile and other games. The board compares each day with the one before to show rank changes, days on the board, a 14-day player line, and how players, favorites and rating moved over a day and a week. If one of those extra sources fails, the board still updates and that part shows as missing.
+
 To start a run by hand, open the **Actions** tab, pick **Daily data pull** and click **Run workflow**. If a run fails, GitHub emails you and the site keeps showing the last good data.
 
 | File in `pipeline/` | What it is |

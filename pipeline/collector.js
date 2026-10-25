@@ -1,7 +1,10 @@
-/* Spawnbook collector, v1.
-   Run inside the Claude desktop app's built-in browser on a https://www.roblox.com page.
-   It reads Roblox's public chart lists and game stats, keeps a daily history in this
-   browser's localStorage (key "br.hist.v1"), scores young games and builds the report's data file.
+/* Spawnbook collector, v2.
+   Runs in Node through pipeline/runner.mjs (GitHub Actions, daily), which gives it a window and a
+   localStorage backed by the files in pipeline/state/. It reads Roblox's public chart lists and game
+   stats, keeps a daily history (key "br.hist.v1"), scores young games and builds the board's data file.
+   v2 adds, for the 25 board games: rank change and days on the board, a 14-day player series, peak
+   players, 1- and 7-day changes, developer products, servers, creator portfolio, content maturity
+   and badges.
 
    Daily:   await BRC.run()                     -> saves today's snapshot, returns a summary
    Weekly:  await BRC.run({ weekly: true })     -> also logs this week's picks and returns dataJs
@@ -29,6 +32,20 @@ window.BRC = (function () {
       } catch (e) { if (i === tries - 1) throw e; await sleep(2000 * (i + 1)); }
     }
     throw new Error("Roblox kept refusing requests (rate limit) for " + url);
+  }
+  // For the extra detail on board games: one retry at most, and no retry on 4xx, so a blocked or
+  // missing source costs seconds rather than minutes. Shares the same 1.2 s spacing as getJSON.
+  async function getOnce(url, init) {
+    for (var i = 0; i < 2; i++) {
+      var wait = Math.max(0, lastCall + 1200 - Date.now());
+      if (wait) await sleep(wait);
+      lastCall = Date.now();
+      var r = await fetch(url, Object.assign({ credentials: "omit" }, init || {}));
+      if (r.status === 429 && i === 0) { await sleep(8000); continue; }
+      if (!r.ok) throw new Error("HTTP " + r.status + " " + url);
+      return await r.json();
+    }
+    throw new Error("Rate limited: " + url);
   }
   function loadJSON(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }
   function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
@@ -95,6 +112,80 @@ window.BRC = (function () {
       await sleep(250);
     }
     return out;
+  }
+
+  // Extra public detail for the games that make the board. Every source is optional: if one fails,
+  // that field is left out and the run carries on. Sources that fail with a network error (blocked)
+  // are skipped for the rest of the run.
+  async function deep(list) {
+    var out = {}, off = {};
+    async function tryGet(key, url, init) {
+      if (off[key]) return null;
+      try { return await getOnce(url, init); }
+      catch (e) { if (!/^(HTTP |Rate limited)/.test(String(e && e.message))) off[key] = true; return null; }
+    }
+    var rng = function (nums) { return nums.length ? [Math.min.apply(null, nums), Math.max.apply(null, nums)] : null; };
+    for (var r of list) {
+      var d = {}, g = r.g || {};
+      d.game = {
+        maxPlayers: g.maxPlayers || null,
+        paid: g.price || null,
+        vip: !!g.createVipServersAllowed,
+        licensed: g.isOfficiallyLicensed ? "official" : g.isCommunityLicensed ? "community" : null,
+        restricted: !!g.isContentRestricted,
+        created: g.created || null,
+        updated: g.updated || null
+      };
+
+      var dp = await tryGet("dp", "https://apis.roblox.com/developer-products/v2/universes/" + r.uid + "/developerproducts?limit=50");
+      if (dp) {
+        var forSale = (dp.developerProducts || []).filter(function (x) { return x.IsForSale && x.PriceInRobux; });
+        d.products = { n: forSale.length, more: !!dp.nextPageCursor, range: rng(forSale.map(function (x) { return x.PriceInRobux; })) };
+      }
+
+      var sv = await tryGet("servers", "https://games.roblox.com/v1/games/" + r.pid + "/servers/Public?limit=100&sortOrder=Desc");
+      if (sv && sv.data && sv.data.length) {
+        var avg = sv.data.reduce(function (a, x) { return a + (x.playing || 0); }, 0) / sv.data.length;
+        var cap = sv.data[0].maxPlayers || g.maxPlayers || null;
+        d.servers = { sampled: sv.data.length, more: !!sv.nextPageCursor, avgPlayers: Math.round(avg * 10) / 10, fill: cap ? Math.round(avg / cap * 100) : null, est: avg > 0 ? Math.max(sv.data.length, Math.round(r.playing / avg)) : sv.data.length };
+      }
+
+      var c = { type: r.ctype, id: r.cid };
+      if (r.ctype === "Group") {
+        var gr = await tryGet("group", "https://groups.roblox.com/v1/groups/" + r.cid);
+        if (gr) {
+          c.members = gr.memberCount || null;
+          c.verified = !!gr.hasVerifiedBadge;
+          c.owner = gr.owner ? gr.owner.username : null;
+          c.tier = gr.communityTier && gr.communityTier.currentTier != null ? gr.communityTier.currentTier : null;
+        }
+      } else if (r.ctype === "User") {
+        var us = await tryGet("user", "https://users.roblox.com/v1/users/" + r.cid);
+        if (us) { c.verified = !!us.hasVerifiedBadge; c.joined = us.created || null; }
+      }
+      var pf = await tryGet("portfolio", "https://games.roblox.com/v2/" + (r.ctype === "Group" ? "groups" : "users") + "/" + r.cid + "/games?accessFilter=Public&limit=50&sortOrder=Desc");
+      if (pf && pf.data) {
+        var others = pf.data.filter(function (x) { return !(x.rootPlace && x.rootPlace.id === r.pid) && x.id !== r.uid; });
+        var top = others.slice().sort(function (a, b) { return (b.placeVisits || 0) - (a.placeVisits || 0); })[0];
+        c.games = pf.data.length;
+        c.moreGames = !!pf.nextPageCursor;
+        c.totalVisits = pf.data.reduce(function (a, x) { return a + (x.placeVisits || 0); }, 0);
+        c.topOther = top ? [top.name, top.placeVisits || 0, top.rootPlace ? top.rootPlace.id : null] : null;
+      }
+      d.creator = c;
+
+      var mat = await tryGet("maturity", "https://apis.roblox.com/experience-guidelines-api/experience-guidelines/get-age-recommendation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ universeId: r.uid }) });
+      var rec = mat && mat.ageRecommendationDetails && mat.ageRecommendationDetails.summary && mat.ageRecommendationDetails.summary.ageRecommendation;
+      if (rec) d.maturity = { name: rec.displayName || null, minAge: rec.minimumAge || 0 };
+
+      var bd = await tryGet("badges", "https://badges.roblox.com/v1/universes/" + r.uid + "/badges?limit=100&sortOrder=Asc");
+      if (bd && bd.data) {
+        var awarded = bd.data.map(function (x) { return (x.statistics && x.statistics.awardedCount) || 0; });
+        d.badges = { n: bd.data.length, more: !!bd.nextPageCursor, topAwarded: awarded.length ? Math.max.apply(null, awarded) : 0 };
+      }
+      out[r.uid] = d;
+    }
+    return { byUid: out, skipped: Object.keys(off) };
   }
 
   function pct(vals) {
@@ -195,10 +286,57 @@ window.BRC = (function () {
     var board = pool.filter(function (r) { return !r.ip && !r.flags.length && r.score >= 55; }).sort(function (a, b) { return b.score - a.score || b.playing - a.playing; }).slice(0, 25);
 
     var r1 = function (x) { return Math.round(x * 10) / 10; };
-    var BOARD = board.map(function (r) {
+
+    // Remember today's board in today's snapshot, so tomorrow can show rank changes and streaks.
+    snap.b = board.map(function (r) { return r.uid; });
+    try { saveJSON(KEY, hist); } catch (e) {}
+
+    // Trends from the daily record. Snapshots from before boards were saved have no "b", so rank
+    // change and days on the board start out unknown and fill in from the next day on.
+    var prevSnap = prior.length ? prior[prior.length - 1] : null;
+    var likeOf = function (a) { return a && a[3] + a[4] ? a[3] / (a[3] + a[4]) : null; };
+    function change(r, then) {
+      var a = then && then.g[r.uid], n = snap.g[r.uid];
+      if (!a || !n) return null;
+      var la = likeOf(a), ln = likeOf(n);
+      return {
+        days: r1(daysAgo(then)),
+        players: a[1] > 0 ? Math.round((n[1] / a[1] - 1) * 100) : null,
+        favorites: a[2] > 0 ? r1((n[2] / a[2] - 1) * 100) : null,
+        rating: la != null && ln != null ? r1((ln - la) * 100) : null,
+        visits: n[0] - a[0]
+      };
+    }
+    function trendOf(r) {
+      var t = {};
+      if (prevSnap && prevSnap.b) {
+        var at = prevSnap.b.indexOf(r.uid);
+        t.prevRank = at >= 0 ? at + 1 : 0;
+        var days = 1, complete = true;
+        for (var i = prior.length - 1; i >= 0; i--) {
+          if (!prior[i].b) { complete = false; break; }
+          if (prior[i].b.indexOf(r.uid) < 0) break;
+          days++;
+        }
+        t.daysOn = days;
+        t.daysOnAtLeast = !complete;
+      }
+      var seen = hist.snaps.filter(function (s) { return s.g[r.uid]; });
+      t.series = seen.slice(-14).map(function (s) { return [s.d, s.g[r.uid][1]]; });
+      t.peak = Math.max.apply(null, seen.map(function (s) { return s.g[r.uid][1]; }));
+      t.peakDate = (seen.filter(function (s) { return s.g[r.uid][1] === t.peak; }).pop() || {}).d || null;
+      t.tracked = seen.length;
+      t.d1 = change(r, p1);
+      t.d7 = change(r, p7);
+      return t;
+    }
+
+    var DEEP = await deep(board);
+    var BOARD = board.map(function (r, i) {
       var e = extra[r.uid] || {};
       return [r.pid, r.name, r.creator, r.own, r.genre, r.genre2, Math.round(r.age), r.playing, Math.round(r.pace), r.fresh, r.accel != null ? r1(r.accel) : null, r1(r.sess), r1(r.like * 100), r1(r.favk), r1(r.vk), Math.round(r.hrs), r.U, r.T, r.E, r.R, r.Gk, r.shape, r.wave ? 1 : 0, r.comp.join("/"), r.score, r.mult,
-        { passes: e.passes, pmin: e.pmin, pmax: e.pmax, members: e.members, discord: /discord/i.test(r.g.description || "") ? 1 : 0, cid: r.cid, ctype: r.ctype, pgrowth7: r.pgrowth7 != null ? r1(r.pgrowth7) : null, decay: r.decay != null ? r1(r.decay * 100) : null }];
+        { passes: e.passes, pmin: e.pmin, pmax: e.pmax, members: e.members, discord: /discord/i.test(r.g.description || "") ? 1 : 0, cid: r.cid, ctype: r.ctype, pgrowth7: r.pgrowth7 != null ? r1(r.pgrowth7) : null, decay: r.decay != null ? r1(r.decay * 100) : null,
+          rank: i + 1, trend: trendOf(r), deep: DEEP.byUid[r.uid] || null }];
     });
     var big = rows.slice().sort(function (a, b) { return b.playing - a.playing; }).slice(0, 25);
     var abbr = { "up-and-coming": "U", "top-trending": "T", "top-earning": "E", "top-revisited": "R" };
@@ -238,7 +376,10 @@ window.BRC = (function () {
       historyDays: hist.snaps.length,
       picksLogged: picks.length,
       firstPicks: pickDates[0] || null,
-      issues: pickDates.length
+      issues: pickDates.length,
+      ranksKnown: !!(prevSnap && prevSnap.b),
+      prevDate: prevSnap ? prevSnap.d : null,
+      deepSkipped: DEEP.skipped
     };
     var BR = { META: META, BOARD: BOARD, BIG: BIG, BIG_NOTES: BIG_NOTES, IP_OFF: IP_OFF, FLAG_OFF: FLAG_OFF };
     var dataJs = "/* Spawnbook data, built " + now.toISOString() + ". The page reads window.BR. */\nwindow.BR = " + JSON.stringify(BR, null, 1) + ";\n";
@@ -248,7 +389,7 @@ window.BRC = (function () {
       ok: true, at: now.toISOString(), lists: data.lists, gamesSeen: data.uids.length, youngTracked: young.length, pool: pool.length,
       board: board.length, top5: board.slice(0, 5).map(function (r) { return r.name + " (" + r.score + ")"; }),
       historyDays: hist.snaps.length, firstDay: first.d, visitsBasis: p7 ? "7-day" : p1 ? "1-day" : "lifetime",
-      picksLogged: picks.length, dataJsLength: dataJs.length
+      picksLogged: picks.length, dataJsLength: dataJs.length, deepSkipped: DEEP.skipped
     };
   }
 

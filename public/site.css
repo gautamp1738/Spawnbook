@@ -495,3 +495,22 @@ th.r, td.r, .mini .r { text-align: right; }
 .page-top { padding-top: clamp(3rem, 7vw, 6rem); }
 .price { font-family: var(--font-display); font-weight: 800; font-size: var(--step-head); line-height: 0.9; }
 .plain-list { display: grid; gap: 0.6rem; padding-left: 1.2rem; margin: 0; }
+
+/* ---------- extra data on the board ---------- */
+.row .r-num { display: grid; justify-items: start; gap: 0.15rem; }
+.r-move { font-family: var(--font-text); font-size: var(--step-small); font-weight: 600; line-height: 1; padding: 0.15rem 0.35rem; background: var(--surface-2); white-space: nowrap; }
+.r-move.up { background: var(--pale); color: var(--ink); }
+.r-move.down { color: var(--muted); }
+.r-move.new { background: var(--accent); color: var(--accent-ink); }
+.r-move.same { color: var(--muted); background: transparent; padding-inline: 0; }
+.spark { display: block; margin-top: 0.3rem; overflow: visible; }
+.spark polyline { fill: none; stroke: var(--green); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.spark circle { fill: var(--ink); }
+.more-data { display: grid; gap: 1.5rem 2.5rem; grid-template-columns: minmax(0, 1fr); font-size: var(--step-small); }
+@media (min-width: 40em) { .more-data { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 60em) { .r-detail .more-data { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.md-group h4 { font-size: var(--step-body); font-weight: 600; margin: 0 0 0.5rem; }
+.md-group dl { display: grid; gap: 0.55rem; margin: 0; }
+.md-group dt { color: var(--muted); }
+.md-group dd { margin: 0; font-weight: 600; }
+.md-group a { font-weight: 600; }

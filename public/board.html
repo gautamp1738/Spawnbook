@@ -96,6 +96,8 @@
           <option value="price">Estimated price</option>
           <option value="playing">Players</option>
           <option value="age">Newest</option>
+          <option value="rising">Players vs yesterday</option>
+          <option value="streak">Days on the board</option>
         </select>
       </label>
     </div>
@@ -435,6 +437,7 @@
       </div>
       <div class="method-body c-r">
         <p id="method-readings" data-reveal>We read Roblox's public chart lists and pulled each game's public stats.</p>
+        <p class="small muted" data-reveal>For the games that make the board, we also read their developer products, live servers, the creator's other games, the content maturity rating and badges, all from Roblox's public data. Rank changes and days on the board compare each day's board with the one before.</p>
         <p data-reveal>Minutes per visit is players × 1,440 ÷ visits a day.</p>
         <p data-reveal>Momentum and stickiness are ranked against the rest of today's pool. Each unusual-number flag takes off 5 points and moves the game to the check-first list. The weights are our judgment, not a tested model.</p>
         <p class="formula" data-reveal>Revenue a month = visits a month × 1–3% who pay × 150 Robux × 70% creator share × $0.0038 per Robux, or about $0.004 to $0.012 per visit</p>
@@ -758,6 +761,115 @@
   }
   function band(p) { return el("span", "band-chip" + (p.score >= 75 ? " hot" : ""), p.score >= 75 ? "Contact this week" : "Watch"); }
 
+  // ---------- extra data: trends, money, creator, audience ----------
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  function signed(v, unit) { return v == null ? null : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + unit; }
+  function dayLabel(d) {
+    var q = String(d || "").split("-");
+    if (q.length !== 3) return String(d || "");
+    return new Date(Date.UTC(+q[0], +q[1] - 1, +q[2], 12)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  }
+  function moveOf(p) {
+    var t = p.x.trend;
+    if (!META.ranksKnown || !t || t.prevRank == null) return null;
+    var now = p.x.rank || p.rank;
+    if (t.prevRank === 0) return { cls: "new", text: "New", label: "New on the board today" };
+    var d = t.prevRank - now;
+    if (d > 0) return { cls: "up", text: "▲" + d, label: "Up " + d + (d === 1 ? " place" : " places") + " since yesterday" };
+    if (d < 0) return { cls: "down", text: "▼" + (-d), label: "Down " + (-d) + (d === -1 ? " place" : " places") + " since yesterday" };
+    return { cls: "same", text: "=", label: "Same place as yesterday" };
+  }
+  function sparkline(series) {
+    if (!series || series.length < 2) return null;
+    var w = 64, h = 18, vals = series.map(function (s) { return s[1]; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals), span = hi - lo || 1;
+    var pts = vals.map(function (v, i) { return [(i / (vals.length - 1)) * (w - 4) + 2, h - 2 - ((v - lo) / span) * (h - 4)]; });
+    var svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("viewBox", "0 0 " + w + " " + h); svg.setAttribute("width", w); svg.setAttribute("height", h);
+    svg.setAttribute("class", "spark"); svg.setAttribute("aria-hidden", "true"); svg.setAttribute("focusable", "false");
+    var line = document.createElementNS(SVG_NS, "polyline");
+    line.setAttribute("points", pts.map(function (q) { return q[0].toFixed(1) + "," + q[1].toFixed(1); }).join(" "));
+    svg.appendChild(line);
+    var dot = document.createElementNS(SVG_NS, "circle");
+    var last = pts[pts.length - 1]; dot.setAttribute("cx", last[0]); dot.setAttribute("cy", last[1]); dot.setAttribute("r", 2.2);
+    svg.appendChild(dot);
+    return svg;
+  }
+  function mdGroup(title, rows) {
+    rows = rows.filter(function (r) { return r && r[1] != null && r[1] !== ""; });
+    if (!rows.length) return null;
+    var g = el("div", "md-group");
+    g.appendChild(el("h4", null, title));
+    var dl = el("dl");
+    rows.forEach(function (r) {
+      var d = el("div"); d.appendChild(el("dt", null, r[0]));
+      var dd = el("dd"); if (typeof r[1] === "string") dd.textContent = r[1]; else dd.appendChild(r[1]);
+      d.appendChild(dd); dl.appendChild(d);
+    });
+    g.appendChild(dl);
+    return g;
+  }
+  function changeText(c, key, unit, nominal) {
+    if (!c || c[key] == null) return null;
+    var d = Math.round(c.days);
+    return signed(c[key], unit) + (d !== nominal ? " (over " + d + (d === 1 ? " day)" : " days)") : "");
+  }
+  function visitsText(c, nominal) {
+    if (!c || c.visits == null || c.visits < 0) return null;
+    var d = Math.round(c.days);
+    return commas(c.visits) + (d !== nominal ? " (over " + d + (d === 1 ? " day)" : " days)") : "");
+  }
+  function moreData(p) {
+    var x = p.x, t = x.trend || {}, d = x.deep || {}, gm = d.game || {}, c = d.creator || {};
+    var box = el("div", "more-data");
+    var mv = moveOf(p);
+    var rankTxt = !META.ranksKnown ? "Rank changes start tomorrow" : mv && mv.cls === "new" ? "#" + (x.rank || p.rank) + ", new today" : t.prevRank ? "#" + (x.rank || p.rank) + " today, #" + t.prevRank + " on " + dayLabel(META.prevDate) : null;
+    var streak = t.daysOn == null ? null : t.daysOn === 1 ? "First day" : (t.daysOnAtLeast ? "At least " : "") + t.daysOn + " days in a row";
+    var groups = [
+      mdGroup("Trend", [
+        ["Board rank", rankTxt],
+        ["Days on the board", streak],
+        ["Highest players we've seen", t.peak ? commas(t.peak) + (t.peakDate ? " on " + dayLabel(t.peakDate) : "") : null],
+        ["Players vs yesterday", changeText(t.d1, "players", "%", 1)],
+        ["Players vs a week ago", changeText(t.d7, "players", "%", 7)],
+        ["Favorites vs yesterday", changeText(t.d1, "favorites", "%", 1)],
+        ["Favorites vs a week ago", changeText(t.d7, "favorites", "%", 7)],
+        ["Rating vs yesterday", changeText(t.d1, "rating", " points", 1)],
+        ["Rating vs a week ago", changeText(t.d7, "rating", " points", 7)],
+        ["Visits since yesterday", visitsText(t.d1, 1)],
+        ["Visits in the past week", visitsText(t.d7, 7)],
+        ["Days we've tracked it", t.tracked ? String(t.tracked) : null]
+      ]),
+      mdGroup("Money", [
+        ["Estimated revenue a month", "About " + money(p.val.rev[1]) + " (" + money(p.val.rev[0]) + " to " + money(p.val.rev[2]) + ")"],
+        ["Game passes", passesText(x)],
+        ["Developer products", d.products ? (d.products.n ? d.products.n + (d.products.more ? "+" : "") + " for sale" + (d.products.range ? ", " + commas(d.products.range[0]) + (d.products.range[1] !== d.products.range[0] ? " to " + commas(d.products.range[1]) : "") + " Robux" : "") : "None for sale") : null],
+        ["Cost to play", gm.paid ? commas(gm.paid) + " Robux to join" : d.game ? "Free to play" : null],
+        ["Private servers", d.game ? (gm.vip ? "Sells private servers" : "Doesn't sell private servers") : null],
+        ["Top Earning rank", p.E ? "#" + p.E : "Not on the list"]
+      ]),
+      mdGroup("Creator", [
+        ["Owned by", c.type === "Group" ? (c.owner ? "A group owned by " + c.owner : "A group") : c.type === "User" ? "A solo account" : null],
+        ["Group members", c.members ? commas(c.members) : null],
+        ["Verified badge", c.verified == null ? null : c.verified ? "Yes" : "No"],
+        ["Roblox community tier", c.tier != null ? "Tier " + c.tier : null],
+        ["Account created", c.joined ? new Date(c.joined).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null],
+        ["Public games by this creator", c.games != null ? c.games + (c.moreGames ? "+" : "") + (c.totalVisits ? ", " + short(c.totalVisits) + " visits in total" : "") : null],
+        ["Their biggest other game", c.topOther ? (function () { var f = document.createDocumentFragment(); if (c.topOther[2]) f.appendChild(extLink(clean(c.topOther[0]), "https://www.roblox.com/games/" + c.topOther[2], "link")); else f.appendChild(document.createTextNode(clean(c.topOther[0]))); f.appendChild(document.createTextNode(", " + short(c.topOther[1]) + " visits")); return f; })() : c.games === 1 ? "This is their only public game" : null]
+      ]),
+      mdGroup("Players and audience", [
+        ["Content maturity", d.maturity ? d.maturity.name + (d.maturity.minAge ? " (" + d.maturity.minAge + "+)" : " (all ages)") : null],
+        ["Players per server", gm.maxPlayers ? String(gm.maxPlayers) : null],
+        ["Servers running", d.servers ? "About " + commas(d.servers.est) + (d.servers.fill != null ? ", " + d.servers.fill + "% full on average" : "") : null],
+        ["Badges", d.badges ? d.badges.n + (d.badges.more ? "+" : "") + " badge" + (d.badges.n === 1 ? "" : "s") + (d.badges.topAwarded ? ". The most-earned one went to " + commas(d.badges.topAwarded) + " players" : "") : null],
+        ["Licensed brand", gm.licensed === "official" ? "Officially licensed" : gm.licensed === "community" ? "Community licensed" : d.game ? "No" : null],
+        ["Launched", gm.created ? new Date(gm.created).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null]
+      ])
+    ].filter(Boolean);
+    groups.forEach(function (g) { box.appendChild(g); });
+    return groups.length ? box : null;
+  }
+
   // ---------- top five ----------
   (function renderPicks() {
     var box = $("picks-list");
@@ -766,7 +878,8 @@
       var a = el("a", "pick-row"); a.href = "#pr-" + p.pid; a.setAttribute("data-open", p.pid);
       a.appendChild(el("span", "pk-score", String(p.score)));
       var mid = el("span"); mid.appendChild(el("span", "pk-name", p.name));
-      mid.appendChild(el("span", "pk-sub", commas(p.playing) + " players. " + p.age + " days old. " + (p.score >= 75 ? "Contact this week." : "Watch.")));
+      var mvp = moveOf(p);
+      mid.appendChild(el("span", "pk-sub", commas(p.playing) + " players. " + p.age + " days old. " + (p.score >= 75 ? "Contact this week." : "Watch.") + (mvp ? " " + mvp.label + "." : "")));
       a.appendChild(mid);
       a.appendChild(el("span", "pk-price", "About " + money(p.val.fair[1])));
       li.appendChild(a);
@@ -807,6 +920,11 @@
       if (bstate.sort === "price") return b.val.fair[1] - a.val.fair[1];
       if (bstate.sort === "playing") return b.playing - a.playing;
       if (bstate.sort === "age") return a.age - b.age;
+      if (bstate.sort === "rising") {
+        var ga = a.x.trend && (a.x.trend.d1 || a.x.trend.d7), gb = b.x.trend && (b.x.trend.d1 || b.x.trend.d7);
+        return ((gb && gb.players != null) ? gb.players : -1e9) - ((ga && ga.players != null) ? ga.players : -1e9);
+      }
+      if (bstate.sort === "streak") return ((b.x.trend && b.x.trend.daysOn) || 0) - ((a.x.trend && a.x.trend.daysOn) || 0) || b.score - a.score;
       return b.score - a.score || b.playing - a.playing;
     });
     var box = $("board-list");
@@ -819,7 +937,11 @@
       row.setAttribute("aria-labelledby", "pr-h-" + p.pid);
 
       var line = el("div", "r-line");
-      var num = el("span", "r-num", String(p.score)); num.setAttribute("aria-label", "Score " + p.score + " of 100, rank " + p.rank);
+      var num = el("span", "r-num");
+      num.appendChild(el("span", null, String(p.score)));
+      var mv = moveOf(p);
+      num.setAttribute("aria-label", "Score " + p.score + " of 100, rank " + p.rank + (mv ? ". " + mv.label : ""));
+      if (mv) { var mvEl = el("span", "r-move " + mv.cls, mv.text); mvEl.setAttribute("aria-hidden", "true"); num.appendChild(mvEl); }
       line.appendChild(num);
       var nm = el("div", "r-name");
       var h = el("h3"); h.id = "pr-h-" + p.pid; h.appendChild(extLink(p.name, "https://www.roblox.com/games/" + p.pid)); nm.appendChild(h);
@@ -827,8 +949,11 @@
       line.appendChild(nm);
       var bd = el("div", "r-band"); bd.appendChild(band(p)); line.appendChild(bd);
       var st = el("dl", "r-stats");
-      [["Players", commas(p.playing)], ["Visits a day", short(p.pace)], ["Rating", p.like + "%"]].forEach(function (s) {
-        var d = el("div"); d.appendChild(el("dt", null, s[0])); d.appendChild(el("dd", null, s[1])); st.appendChild(d);
+      [["Players", commas(p.playing)], ["Visits a day", short(p.pace)], ["Rating", p.like + "%"]].forEach(function (s, i) {
+        var d = el("div"); d.appendChild(el("dt", null, s[0]));
+        var dd = el("dd", null, s[1]);
+        if (i === 0) { var sp = sparkline(p.x.trend && p.x.trend.series); if (sp) dd.appendChild(sp); }
+        d.appendChild(dd); st.appendChild(d);
       });
       line.appendChild(st);
       var v = el("div", "r-price");
@@ -860,6 +985,7 @@
         why.appendChild(wl);
       });
       det.appendChild(why);
+      var md = moreData(p); if (md) det.appendChild(md);
       var mm = el("div", "money-math");
       var kv = el("dl", "kv");
       [["Players now (measured)", commas(p.playing)], ["Visits a day (" + visitsLabel(p) + ")", short(p.pace)], ["Minutes per visit (estimate)", String(p.sess)], ["Rating (measured)", p.like + "%"]].forEach(function (s) {
@@ -867,10 +993,9 @@
       });
       mm.appendChild(kv);
       mm.appendChild(el("p", null, "Price range: " + money(p.val.fair[0]) + " to " + money(p.val.fair[2]) + ". If it holds its players for a year: about " + money(p.val.lasts) + "."));
-      mm.appendChild(el("p", null, "Estimated revenue: about " + money(p.val.rev[1]) + " a month (" + money(p.val.rev[0]) + " to " + money(p.val.rev[2]) + "), from about " + short(p.pace * 30) + " visits a month."));
+      mm.appendChild(el("p", null, "Estimated revenue comes from about " + short(p.pace * 30) + " visits a month at $0.004 to $0.012 of developer revenue per visit."));
       mm.appendChild(el("p", null, monthsText(p)));
       var cp = el("p"); cp.appendChild(el("strong", null, "Public contact: ")); cp.appendChild(contactNodes(p)); mm.appendChild(cp);
-      var gp = el("p"); gp.appendChild(el("strong", null, "Game passes: ")); gp.appendChild(document.createTextNode(passesText(p.x) + (p.E ? ". #" + p.E + " on Top Earning." : "."))); mm.appendChild(gp);
       mm.appendChild(el("p", null, "Owner's age is unknown. Ask before any offer, since a minor can generally cancel a contract in California."));
       if (!p.fresh) mm.appendChild(el("p", "muted", "Visits use the lifetime average because we don't have a recent reading for this game yet."));
       det.appendChild(mm);
