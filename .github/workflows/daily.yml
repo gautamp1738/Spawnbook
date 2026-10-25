@@ -27,7 +27,7 @@ concurrency:
 jobs:
   pull:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
 
@@ -48,7 +48,7 @@ jobs:
           node -e 'const fs=require("fs");fs.writeFileSync("state/code/collector.json",JSON.stringify({src:fs.readFileSync("collector.js","utf8")}))'
           WEEKLY=""
           if [ "${{ steps.day.outputs.weekday }}" = "1" ]; then WEEKLY="--weekly"; fi
-          timeout 1800 node --no-warnings runner.mjs --state state --out out $WEEKLY
+          timeout 2700 node --no-warnings runner.mjs --state state --out out $WEEKLY
           node -e 'const s=require("./out/summary.json"); if (!s.ok) { console.error(s.error); process.exit(1); } console.log(s.board + " games on the board. Top 5: " + s.top5.join(", "))'
 
       - name: Save the history and publish the board

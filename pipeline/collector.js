@@ -124,6 +124,19 @@ window.BRC = (function () {
       try { return await getOnce(url, init); }
       catch (e) { if (!/^(HTTP |Rate limited)/.test(String(e && e.message))) off[key] = true; return null; }
     }
+    // The servers endpoint rate-limits hard from shared IPs like GitHub's, so its pages get
+    // patient retries, up to about five minutes of waiting in a whole run.
+    var serverWait = 300000;
+    async function serverPage(url) {
+      for (var a = 0; a < 3; a++) {
+        var res = await tryGet("servers", url);
+        if (res || off.servers) return res;
+        var w = a === 0 ? 12000 : 30000;
+        if (a === 2 || serverWait < w) return null;
+        serverWait -= w; await sleep(w);
+      }
+      return null;
+    }
     var rng = function (nums) { return nums.length ? [Math.min.apply(null, nums), Math.max.apply(null, nums)] : null; };
     for (var r of list) {
       var d = {}, g = r.g || {};
@@ -148,16 +161,16 @@ window.BRC = (function () {
       } while (cur && pages < 5);
       if (gotAny) d.products = { n: prods.length, more: more, range: rng(prods.map(function (x) { return x.PriceInRobux; })) };
 
-      // Public servers, fullest first: up to 5 pages of 100. If there are more, the fullest
+      // Public servers, fullest first: up to 3 pages of 100. If there are more, the fullest
       // servers' average overstates the real one, so playing / average is a floor on the count.
       var srv = [], scur = "", spages = 0, smore = false;
       do {
-        var sv = await tryGet("servers", "https://games.roblox.com/v1/games/" + r.pid + "/servers/Public?limit=100&sortOrder=Desc" + (scur ? "&cursor=" + encodeURIComponent(scur) : ""));
+        var sv = await serverPage("https://games.roblox.com/v1/games/" + r.pid + "/servers/Public?limit=100&sortOrder=Desc" + (scur ? "&cursor=" + encodeURIComponent(scur) : ""));
         if (!sv) break;
         spages++;
         srv = srv.concat(sv.data || []);
         scur = sv.nextPageCursor || ""; smore = !!scur;
-      } while (scur && spages < 5);
+      } while (scur && spages < 3);
       if (srv.length) {
         var avg = srv.reduce(function (a, x) { return a + (x.playing || 0); }, 0) / srv.length;
         var cap = srv[0].maxPlayers || g.maxPlayers || null;
