@@ -8,8 +8,11 @@ name: Daily data pull
 on:
   schedule:
     # GitHub schedules run in UTC: 21:33 UTC is 2:33 PM Pacific in summer and 1:33 PM in winter.
-    # GitHub can start scheduled runs a little late when it's busy.
+    # GitHub sometimes starts scheduled runs late or drops them when it's busy, so two backups
+    # follow. Each backup quits straight away if today's board is already out.
     - cron: "33 21 * * *"
+    - cron: "7 23 * * *"
+    - cron: "41 0 * * *"
   # Lets you start a run by hand from the Actions tab.
   workflow_dispatch:
   # Runs once whenever this file changes, to check a new version works.
@@ -41,7 +44,23 @@ jobs:
           echo "date=$(TZ=America/Los_Angeles date +%F)" >> "$GITHUB_OUTPUT"
           echo "weekday=$(TZ=America/Los_Angeles date +%u)" >> "$GITHUB_OUTPUT"
 
+      # Runs started by hand always go ahead. Scheduled ones skip if an earlier run already
+      # published today's board.
+      - name: Skip if today's board is already out
+        id: done
+        run: |
+          last=""
+          if [ -f pipeline/last-run.json ]; then
+            last=$(node -e 'const d=new Date(require("./pipeline/last-run.json").at); process.stdout.write(d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }))')
+          fi
+          echo "Last board: ${last:-none}. Today: ${{ steps.day.outputs.date }}."
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] && [ "$last" = "${{ steps.day.outputs.date }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Today's board is already out, so this run stops here."
+          fi
+
       - name: Read Roblox and build the board
+        if: steps.done.outputs.skip != 'true'
         working-directory: pipeline
         run: |
           mkdir -p state/code
@@ -52,6 +71,7 @@ jobs:
           node -e 'const s=require("./out/summary.json"); if (!s.ok) { console.error(s.error); process.exit(1); } console.log(s.board + " games on the board. Top 5: " + s.top5.join(", "))'
 
       - name: Save the history and publish the board
+        if: steps.done.outputs.skip != 'true'
         run: |
           node pipeline/apply-batch.mjs pipeline/out/batch.json pipeline/state
           cp pipeline/out/data.js public/data.js
