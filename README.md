@@ -21,6 +21,8 @@ Everything the site serves is in `public/`:
 
 The site is plain HTML with no build step. It runs on Cloudflare Workers: connect this repository, leave the build command empty and keep the deploy command `npx wrangler deploy`.
 
+Visits are counted with Cloudflare Web Analytics, which Cloudflare adds to each page automatically. The Content-Security-Policy in `_headers` allows its script from `static.cloudflareinsights.com`; it reports back to the site's own `/cdn-cgi/rum`, which `connect-src 'self'` already covers.
+
 ## How the data updates
 
 A scheduled task reads Roblox's public charts once a day and keeps a daily record. On Mondays it writes a new `public/data.js` and commits it here, which redeploys the site.
