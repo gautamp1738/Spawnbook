@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Value your Roblox game | Spawnbook</title>
+<meta name="description" content="Type what your Roblox game earned in the last 30 days and see what it could sell for. Free, and nothing you type leaves your browser.">
+<link rel="canonical" href="https://spawnbook.com/value">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Spawnbook">
+<meta property="og:url" content="https://spawnbook.com/value">
+<meta property="og:title" content="What could your Roblox game sell for?">
+<meta property="og:description" content="Type what your game earned in the last 30 days and see a price range. Free, and nothing you type leaves your browser.">
+<meta property="og:image" content="https://spawnbook.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to the valuation</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks">
+      <li class="m-hide"><a href="#value">Value your game</a></li>
+      <li class="s-hide"><a href="#request">Real valuation</a></li>
+      <li class="m-hide"><a href="#sale">How a sale works</a></li>
+      <li><a class="keep" href="/">For buyers</a></li>
+    </ul>
+  </nav>
+</div>
+
+<main id="main" tabindex="-1">
+
+  <section id="value" class="sec wrap value page-top" aria-labelledby="value-h">
+    <h1 id="value-h"><label for="vq">Value your game. Type what it earned in the last 30 days, in Robux, visits or dollars.</label></h1>
+    <div class="vq-line" data-ui>
+      <input id="vq" type="text" inputmode="text" autocomplete="off" spellcheck="false" value="2,500,000 Robux" aria-describedby="vq-help">
+      <span class="caret" aria-hidden="true"></span>
+      <span class="vq-measure" aria-hidden="true"></span>
+    </div>
+    <p class="sr-only" id="vq-help">For example 2,500,000 Robux, 40 million visits or $9,500. The estimate below updates as you type.</p>
+    <div class="examples">
+      <span class="lbl">Try</span>
+      <button type="button" data-q="800,000 Robux">800,000 Robux</button>
+      <button type="button" data-q="40 million visits">40 million visits</button>
+      <button type="button" data-q="$9,500">$9,500</button>
+    </div>
+    <div class="grid vq-body">
+      <div class="answer c-l6" data-ui>
+        <div class="a-out" aria-live="polite">
+          <span class="a-cap">Estimated price now</span>
+          <span class="a-range" id="v-range">$0</span>
+          <span class="a-line" id="v-line"></span>
+          <span id="v-lasts"></span>
+        </div>
+        <div class="a-fade">
+          <span class="lbl" id="fade-lbl">How is it doing?</span>
+          <div class="seg" role="group" aria-labelledby="fade-lbl">
+            <button type="button" id="f-rocket" aria-pressed="false">Rising: trend, sim or copy game</button>
+            <button type="button" id="f-stair" aria-pressed="true">Rising: competitive, social or fishing</button>
+            <button type="button" id="f-measured" aria-pressed="false">I know how fast it's losing players</button>
+          </div>
+          <div class="decline-field" id="wrap-decline" hidden>
+            <label for="decline">Players lost per month</label>
+            <input id="decline" inputmode="decimal" value="15%" autocomplete="off" aria-describedby="decline-help">
+            <span class="help" id="decline-help">For example, 15%</span>
+          </div>
+        </div>
+      </div>
+      <div class="movers c-r5" data-reveal style="--i:1">
+        <h3>What moves a game up its range</h3>
+        <p>Buyers pay for staying power. Voldex has said it buys established communities because marketing can't cheaply rebuild them, and it moved Brookhaven to weekly updates.</p>
+        <ul>
+          <li>Each update leaves a higher low point than the last</li>
+          <li>Players come back on many days, not one long session</li>
+          <li>Ownership sits in a group, with IP assignments from every contributor</li>
+          <li>No borrowed characters, brands or music</li>
+          <li>Kids and Select audiences already unlocked</li>
+          <li>Most traffic comes from Roblox recommendations, not ads</li>
+        </ul>
+        <p class="small muted">A starting range, not an appraisal. Everything stays in your browser. Robux convert at the DevEx rate, $0.0038 each. Visits convert at $0.004 to $0.012 of developer revenue each. We cap the price at 12 months of revenue even for durable games, because buyers discount for risk.</p>
+        <p><a class="link" href="#request">Want a real valuation? Send us your game</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="request" class="sec wrap grid" aria-labelledby="req-h">
+    <div class="c-l stick">
+      <h2 id="req-h" class="head" data-reveal>Get a real valuation</h2>
+      <div class="req-notes">
+        <p data-reveal style="--i:1">Send us your game and we'll reply with a value range and what would raise it. It's free. This page doesn't send or store anything: fill in the form, copy the message it writes, and send it to us yourself.</p>
+        <p data-reveal style="--i:2" class="small muted">We never share a developer's private numbers without written permission, and we never take a fee from both sides of a deal. Never send passwords, account cookies or payment card numbers.</p>
+        <div class="mailline" data-reveal style="--i:3">
+          <span>Send it to <span class="addr">gautamuprasanna@gmail.com</span></span>
+          <button type="button" class="button quiet" id="mail-copy">Copy address</button>
+          <span class="status small" id="mail-status" aria-live="polite"></span>
+        </div>
+      </div>
+    </div>
+    <div class="c-r" data-reveal style="--i:1">
+      <form class="form" id="sell" aria-labelledby="req-h" novalidate>
+        <p class="hint">For developers. We reply with a value range and what would raise it. Free.</p>
+        <div class="fields">
+          <div class="field full">
+            <label for="s-link">Game link <span class="opt">(required)</span></label>
+            <input id="s-link" type="url" placeholder="https://www.roblox.com/games/…" autocomplete="off" aria-required="true">
+          </div>
+          <div class="field">
+            <label for="s-role">Your role</label>
+            <select id="s-role">
+              <option>Owner</option>
+              <option>Co-owner</option>
+              <option>Developer on the team</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="s-age">Your age</label>
+            <select id="s-age" aria-describedby="s-age-help">
+              <option value="adult">18 or older</option>
+              <option value="teen">13 to 17</option>
+              <option value="child">Under 13</option>
+            </select>
+            <span class="help" id="s-age-help">Under 18, a parent or guardian has to send this with you.</span>
+          </div>
+          <div class="field">
+            <label for="s-robux">Robux, last 30 days <span class="opt">(optional)</span></label>
+            <input id="s-robux" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="s-contact">Discord name or email <span class="opt">(required)</span></label>
+            <input id="s-contact" autocomplete="off" aria-required="true">
+          </div>
+          <div class="field full">
+            <label for="s-notes">Anything else <span class="opt">(optional)</span></label>
+            <textarea id="s-notes" rows="2" placeholder="Team size, who built what, any offers so far" aria-describedby="s-notes-help"></textarea>
+            <span class="help" id="s-notes-help">Don't include other people's personal details.</span>
+          </div>
+          <label class="consent full" for="s-agree">
+            <input type="checkbox" id="s-agree" aria-required="true">
+            <span>I agree that Spawnbook can use these details to reply to me, as described in the <a class="link" href="privacy.html">Privacy Policy</a>, and I accept the <a class="link" href="terms.html">Terms</a>.</span>
+          </label>
+        </div>
+        <div class="form-row">
+          <button class="button" type="submit">Write my message</button>
+          <span class="err" id="s-err" role="alert"></span>
+        </div>
+        <div class="out" id="s-out" hidden>
+          <label class="small" for="s-msg">Your message. Copy it and send it to us.</label>
+          <textarea id="s-msg" readonly></textarea>
+          <div class="rowline"><button class="button quiet" type="button" id="s-copy">Copy message</button><span class="status" id="s-status" aria-live="polite"></span></div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section id="sale" class="sec wrap" aria-labelledby="sale-h">
+    <div class="grid sec-head">
+      <h2 id="sale-h" class="head c-l6" data-reveal>How a sale works</h2>
+      <p class="c-r" data-reveal style="--i:1">Roblox has allowed official ownership transfers since December 2024. What changes hands is the game and the right to earn Robux from it. Robux already earned stays with the seller. This is general information, not legal advice, and we don't take part in sales.</p>
+    </div>
+    <ol class="stagebar" data-ui data-reveal aria-label="The five stages of a sale, sized by how long each takes">
+      <li style="flex: 2 1 0; --i:0"><span class="blk">Before anything moves</span><p class="clause"><strong>First, put it in writing.</strong> A purchase agreement, plus written IP assignments from everyone who built the game. Without a company, co-developers may count as partners.</p></li>
+      <li style="flex: 2 1 0; --i:1"><span class="blk">Before the transfer</span><p class="clause"><strong>Then fund escrow.</strong> The buyer pays a licensed escrow service, timed to the transfer. Nobody sends money or the game first.</p></li>
+      <li style="flex: 7 1 0; --i:2"><span class="blk">Up to 7 days</span><p class="clause"><strong>Then start the transfer.</strong> The owner starts Roblox's ownership transfer to the buyer from the game's settings. The request expires after 7 days.</p></li>
+      <li style="flex: 1 1 0; --i:3"><span class="blk">Up to 24 hours</span><p class="clause"><strong>Expect a short outage.</strong> Servers close while the game moves, and discovery can dip for up to 24 hours. Private modules and packages have to be re-uploaded.</p></li>
+      <li style="flex: 30 1 0; --i:4"><span class="blk">Then 30 days locked</span><p class="clause"><strong>Last, escrow releases.</strong> Payment goes out once the transfer shows complete. The new owner can't transfer it again for 30 days.</p></li>
+    </ol>
+    <p class="small sale-foot">If the seller is under 18, a parent or guardian should sign too, and both sides should get legal advice first. In California, a minor can generally cancel a contract they signed.</p>
+  </section>
+
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <p><a class="link" href="/">For game buyers: the daily board</a></p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <h2 class="foot-mail"><span class="sr-only">Email us at </span><a href="mailto:gautamuprasanna@gmail.com">gautamuprasanna<span class="at">@gmail.com</span></a></h2>
+  <div class="foot-copy"><button type="button" class="button" id="foot-copy">Copy email address</button><span class="status" id="foot-status" aria-live="polite"></span></div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent report. Not affiliated with, endorsed by or sponsored by Roblox Corporation.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script>
+(function () {
+  var $ = SB.$;
+  var MULT = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6] };
+  var PER_VISIT = [0.004, 0.008, 0.012];
+  var DEVEX = 0.0038;
+  function trim(v) { var s = v >= 100 ? v.toFixed(0) : v.toFixed(1); return s.indexOf(".") >= 0 ? s.replace(/0+$/, "").replace(/\.$/, "") : s; }
+  function money(x) {
+    if (!isFinite(x) || x <= 0) return "$0";
+    if (x >= 999.5e6) return "$" + trim(x / 1e9) + "B";
+    if (x >= 999.5e3) return "$" + trim(x / 1e6) + "M";
+    if (x >= 1e3) return "$" + Math.round(x / 1e3) + "K";
+    return "$" + Math.round(x);
+  }
+  function short(n) {
+    if (n >= 1e9) return trim(n / 1e9) + "B";
+    if (n >= 1e6) return trim(n / 1e6) + "M";
+    if (n >= 1e4) return Math.round(n / 1e3) + "K";
+    if (n >= 1e3) return trim(n / 1e3) + "K";
+    return String(Math.round(n));
+  }
+  function commas(n) { return Math.round(n).toLocaleString("en-US"); }
+  function parseNum(s) { var n = Number(String(s || "").replace(/[^0-9.]/g, "")); return isFinite(n) ? n : 0; }
+
+  // ---------- value: the headline you can type ----------
+  var fade = "stair";
+  var FADES = { rocket: "f-rocket", stair: "f-stair", measured: "f-measured" };
+  function parseQuery(str) {
+    var t = String(str || "").toLowerCase();
+    var mm = t.match(/([\d][\d,]*(?:\.\d+)?|\.\d+)\s*(k|thousand|m|mil|million|b|billion)?\b/);
+    if (!mm) return null;
+    var n = parseFloat(mm[1].replace(/,/g, ""));
+    var mul = { k: 1e3, thousand: 1e3, m: 1e6, mil: 1e6, million: 1e6, b: 1e9, billion: 1e9 }[mm[2]] || 1;
+    n = n * mul;
+    if (!(n > 0)) return null;
+    var kind = /visit|play/.test(t) ? "visits" : (/\$|usd|dollar/.test(t) ? "usd" : "robux");
+    return { n: n, kind: kind };
+  }
+  function calc() {
+    var q = parseQuery($("vq").value);
+    $("wrap-decline").hidden = fade !== "measured";
+    if (!q) { $("v-range").textContent = "Type a number"; $("v-line").textContent = "Try 2,500,000 Robux, 40 million visits or $9,500."; $("v-lasts").textContent = ""; return; }
+    var rev;
+    if (q.kind === "robux") { var r = q.n * DEVEX; rev = [r, r, r]; }
+    else if (q.kind === "usd") rev = [q.n, q.n, q.n];
+    else rev = PER_VISIT.map(function (k) { return q.n * k; });
+    var mult, multTxt;
+    if (fade === "rocket") { mult = MULT.rocket; multTxt = "1–2 months"; }
+    else if (fade === "stair") { mult = MULT.staircase; multTxt = "3–6 months"; }
+    else {
+      var d = parseNum($("decline").value) / 100;
+      if (!(d > 0)) { $("v-range").textContent = "Enter a decline"; $("v-line").textContent = "Type the share of players it loses in a month, like 15%."; $("v-lasts").textContent = ""; return; }
+      var cl = function (x) { return Math.max(1, Math.min(12, x)); };
+      mult = [cl(1 / (d * 4 / 3)), cl(1 / d), cl(1 / (d * 2 / 3))];
+      multTxt = trim(mult[0]) + "–" + trim(mult[2]) + " months";
+    }
+    var fair = [rev[0] * mult[0], rev[1] * mult[1], rev[2] * mult[2]];
+    $("v-range").textContent = money(fair[0]) + "–" + money(fair[2]);
+    var basis = q.kind === "robux" ? commas(q.n) + " Robux is about " + money(rev[1]) + " at the DevEx rate. " : q.kind === "visits" ? short(q.n) + " visits is about " + money(rev[0]) + "–" + money(rev[2]) + " of revenue. " : "";
+    var revTxt = rev[0] === rev[2] ? money(rev[1]) + " a month" : money(rev[0]) + "–" + money(rev[2]) + " a month";
+    $("v-line").textContent = basis + "Middle about " + money(fair[1]) + ": " + revTxt + " × " + multTxt + ".";
+    $("v-lasts").textContent = "If it holds its players for a year: " + money(rev[1] * 12);
+  }
+  function placeCaret() {
+    var inp = $("vq"), meas = document.querySelector(".vq-measure"), caret = document.querySelector(".vq-line .caret");
+    meas.textContent = inp.value || " ";
+    caret.style.left = Math.min(meas.offsetWidth + 6, inp.clientWidth - 8) + "px";
+  }
+  Object.keys(FADES).forEach(function (k) {
+    $(FADES[k]).addEventListener("click", function () {
+      fade = k;
+      Object.keys(FADES).forEach(function (j) { $(FADES[j]).setAttribute("aria-pressed", j === k ? "true" : "false"); });
+      calc();
+    });
+  });
+  $("vq").addEventListener("input", function () { calc(); placeCaret(); });
+  $("decline").addEventListener("input", calc);
+  document.querySelectorAll(".examples [data-q]").forEach(function (b) {
+    b.addEventListener("click", function () { $("vq").value = b.getAttribute("data-q"); calc(); placeCaret(); });
+  });
+  calc();
+  placeCaret();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeCaret);
+  window.addEventListener("resize", placeCaret);
+
+  // ---------- valuation request ----------
+  $("s-copy").addEventListener("click", function () { SB.copyText($("s-msg").value, $("s-status"), $("s-msg")); });
+  function fail(msg, fieldId) {
+    $("s-err").textContent = msg;
+    $("s-out").hidden = true;
+    var f = $(fieldId);
+    if (f) { f.setAttribute("aria-invalid", "true"); f.focus(); }
+  }
+  $("sell").addEventListener("submit", function (e) {
+    e.preventDefault();
+    this.querySelectorAll("[aria-invalid]").forEach(function (x) { x.removeAttribute("aria-invalid"); });
+    var link = $("s-link").value.trim(), contact = $("s-contact").value.trim(), age = $("s-age").value;
+    if (!/^https?:\/\/(www\.)?roblox\.com\/games\/\d+/i.test(link)) return fail("Paste the game's roblox.com/games/ link.", "s-link");
+    if (age === "child") return fail("We can't take requests from anyone under 13. A parent or guardian can contact us instead.", "s-age");
+    if (!contact) return fail("Add a Discord name or email so we can reply.", "s-contact");
+    if (!$("s-agree").checked) return fail("Check the box to agree before writing your message.", "s-agree");
+    $("s-err").textContent = "";
+    var robux = parseNum($("s-robux").value);
+    var lines = [
+      "Valuation request (Spawnbook)",
+      "Game: " + link,
+      "My role: " + $("s-role").value,
+      "Age: " + (age === "adult" ? "18 or older" : "13 to 17. My parent or guardian is sending this with me"),
+      "Robux earned, last 30 days: " + (robux ? commas(robux) : "not shared"),
+      "Contact: " + contact
+    ];
+    var notes = $("s-notes").value.trim();
+    if (notes) lines.push("Notes: " + notes);
+    lines.push("I agree to the Spawnbook Terms and Privacy Policy.");
+    $("s-msg").value = lines.join("\n");
+    $("s-status").textContent = "";
+    $("s-out").hidden = false;
+    $("s-msg").focus();
+  });
+})();
+</script>
+</body>
+</html>

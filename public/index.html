@@ -19,502 +19,25 @@
 <meta property="og:image:alt" content="The Spawnbook name with a rising player chart between the words, above the line: daily scouting on small Roblox games that are growing fast. New picks every day.">
 <meta name="twitter:card" content="summary_large_image">
 <script>document.documentElement.classList.add('js')</script>
-<style>
-@font-face { font-family: "Big Shoulders"; src: url("fonts/big-shoulders-800.woff") format("woff"); font-weight: 800; font-style: normal; font-display: swap; }
-@font-face { font-family: "Public Sans"; src: url("fonts/public-sans-400-600.woff") format("woff"); font-weight: 400 600; font-style: normal; font-display: swap; }
-[hidden] { display: none !important; }
-/* Layout: the name is the sentence, with a crop of the report's own chart set into it like a letter.
-   Every section after it is a statement on the left and its evidence on the right. */
-:root {
-  --bg: #f7f7f7;
-  --surface: #ebebeb;
-  --surface-2: #dde3df;
-  --ink: #0d2a1c;
-  --muted: #55625a;
-  --accent: #f6e016;
-  --accent-ink: #0d2a1c;
-  --inv-bg: #0d2a1c;
-  --inv-ink: #f7f7f7;
-  --inv-muted: #b7c4bc;
-  --field: #6b7b72;
-  --green: #3f7d5c;
-  --ochre: #8a6a00;
-  --pale: #cddad2;
-  --slot-bg: #0d2a1c;
-  --slot-ink: #f7f7f7;
-
-  --font-display: "Big Shoulders", "Arial Narrow", "Roboto Condensed", sans-serif;
-  --font-text: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-
-  --step-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
-  --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
-  --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
-  --step-head: clamp(2.5rem, 1.2rem + 5vw, 5.5rem);
-  --step-display: clamp(4.5rem, 0.4rem + 11.2vw, 11rem);
-
-  --margin: clamp(1.125rem, 2.4vw, 2rem);
-  --gutter: clamp(1rem, 2vw, 2rem);
-  --section: clamp(7rem, 13vw, 13rem);
-
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.76, 0, 0.24, 1);
-  --ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
-  --t-press: 140ms;
-  --t-hover: 180ms;
-  --t-ui: 240ms;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0b1d14; --surface: #13291e; --surface-2: #1c3528; --ink: #edf2ee; --muted: #a7b6ad;
-    --inv-bg: #edf2ee; --inv-ink: #0d2a1c; --inv-muted: #4d5d53; --field: #8b9c92;
-    --green: #7cc59c; --ochre: #e0bf4f; --pale: #24432f; --slot-bg: #13291e; --slot-ink: #edf2ee;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0b1d14; --surface: #13291e; --surface-2: #1c3528; --ink: #edf2ee; --muted: #a7b6ad;
-  --inv-bg: #edf2ee; --inv-ink: #0d2a1c; --inv-muted: #4d5d53; --field: #8b9c92;
-  --green: #7cc59c; --ochre: #e0bf4f; --pale: #24432f; --slot-bg: #13291e; --slot-ink: #edf2ee;
-  color-scheme: dark;
-}
-
-*, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: var(--step-body); line-height: 1.5; -webkit-font-smoothing: antialiased; }
-h1, h2, h3, p, figure, ul, ol, dl, dd, blockquote { margin: 0; }
-ul[class], ol[class] { list-style: none; padding: 0; }
-img, svg { display: block; max-width: 100%; }
-button, input, select, textarea { font: inherit; color: inherit; }
-button { background: none; border: 0; padding: 0; cursor: pointer; }
-a { color: inherit; text-decoration-thickness: 0.07em; text-underline-offset: 0.2em; }
-:target { scroll-margin-top: 2rem; }
-::selection { background: var(--accent); color: var(--accent-ink); }
-:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
-.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.skip { position: absolute; left: max(var(--margin), env(safe-area-inset-left, 0px)); top: 0.75rem; z-index: 40; padding: 0.7rem 1rem; background: var(--accent); color: var(--accent-ink); font-weight: 600; clip-path: inset(50%); }
-.skip:focus { clip-path: none; }
-
-/* type */
-.display-face, h1, .head, .fig { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: -0.005em; line-height: 0.88; }
-.head { font-size: var(--step-head); text-wrap: balance; }
-.lead { font-size: var(--step-lead); line-height: 1.35; }
-.small { font-size: var(--step-small); line-height: 1.45; }
-.muted { color: var(--muted); }
-p { max-width: 64ch; text-wrap: pretty; }
-.soft { color: var(--muted); }
-.nums, .fig, td.r, .r { font-variant-numeric: tabular-nums lining-nums; }
-
-/* frame */
-.wrap { padding-left: max(var(--margin), env(safe-area-inset-left, 0px)); padding-right: max(var(--margin), env(safe-area-inset-right, 0px)); }
-.sec { padding-block: calc(var(--section) / 2); }
-.grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem var(--gutter); }
-@media (min-width: 60em) {
-  .grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
-  .c-l { grid-column: 1 / span 5; }
-  .c-r { grid-column: 7 / span 6; }
-  .c-l6 { grid-column: 1 / span 6; }
-  .c-r5 { grid-column: 8 / span 5; }
-  .c-full { grid-column: 1 / -1; }
-}
-
-@media (min-width: 60em) { .stick { position: sticky; top: 2.5rem; align-self: start; } }
-.stack { display: grid; gap: 1.5rem; align-content: start; }
-
-/* controls */
-.button { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0 1.5rem; background: var(--accent); color: var(--accent-ink); font-weight: 600; text-decoration: none; white-space: nowrap; transition: transform var(--t-press) var(--ease-out), background-color var(--t-hover) ease, color var(--t-hover) ease; }
-.button:active { transform: scale(0.97); }
-.button.quiet { background: var(--surface); color: var(--ink); }
-.link { text-decoration: underline; text-decoration-color: currentColor; text-underline-offset: 0.22em; transition: text-decoration-color var(--t-hover) ease, color var(--t-hover) ease; }
-@media (hover: hover) and (pointer: fine) {
-  .button:hover { background: var(--ink); color: var(--bg); }
-  .button.quiet:hover { background: var(--ink); color: var(--bg); }
-  .navlinks a:hover, .plainlink:hover { text-decoration-color: currentColor; }
-}
-.plainlink { text-decoration: underline; text-decoration-color: transparent; transition: text-decoration-color var(--t-hover) ease; }
-
-/* ---------- top bar: stays at the top, slides away while you read down, comes back on any scroll up ---------- */
-.bar { position: sticky; top: 0; z-index: 30; background: var(--bg); padding-block: 1.1rem; border-bottom: 2px solid transparent; transition: transform var(--t-ui) var(--ease-out), border-color var(--t-hover) ease, visibility 0s; }
-.bar.is-away { border-bottom-color: var(--surface-2); }
-/* Hidden means out of the tab order too, so keyboard focus never lands on a link nobody can see. */
-.bar.is-hidden { transform: translateY(-100%); visibility: hidden; transition: transform var(--t-ui) var(--ease-out), border-color var(--t-hover) ease, visibility 0s linear var(--t-ui); }
-@media (prefers-reduced-motion: reduce) { .bar, .bar.is-hidden { transition: none; } }
-/* "Back to top" lands at the very top of the page, above the bar. */
-#top { scroll-margin-top: 100vh; }
-
-/* ---------- hero ---------- */
-.hero { min-height: max(36rem, calc(86svh - 4.5rem)); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr auto; padding-block: 0 clamp(2rem, 5vw, 4rem); }
-.topbar { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem 2rem; flex-wrap: wrap; }
-.wordmark { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; font-size: var(--step-lead); line-height: 1; text-decoration: none; letter-spacing: 0.01em; }
-.navlinks { display: flex; gap: 0.4rem clamp(1rem, 3vw, 3rem); flex-wrap: wrap; font-size: var(--step-small); font-weight: 600; }
-.navlinks a { text-decoration: underline; text-decoration-color: transparent; transition: text-decoration-color var(--t-hover) ease; padding-block: 0.4rem; }
-.hero-name { align-self: center; display: flex; align-items: baseline; justify-content: center; gap: 0.12em; font-size: var(--step-display); line-height: 0.82; margin-block: clamp(2rem, 6vh, 4rem); white-space: nowrap; }
-.hero-name .mask { display: block; overflow: clip; padding-block: 0.06em; }
-.hero-name .w { display: block; }
-.slot { position: relative; flex: 0 0 auto; width: 1.9em; height: 0.74em; align-self: baseline; background: var(--slot-bg); overflow: clip; }
-.slot svg { width: 100%; height: 100%; }
-.slot .tag { font-family: var(--font-text); font-weight: 600; text-transform: none; letter-spacing: 0; }
-.hero-foot { display: grid; gap: 1.5rem var(--gutter); align-items: end; }
-.hero-foot .lead { max-width: 40ch; }
-.hero-act { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; }
-.hero-act .plainlink { font-weight: 600; text-decoration-color: currentColor; }
-.hero-data { color: var(--muted); }
-@media (min-width: 60em) {
-  .hero-foot { grid-template-columns: repeat(12, minmax(0, 1fr)); }
-  .hero-foot .lead { grid-column: 1 / span 6; }
-  .hero-foot .hero-data { grid-column: 7 / span 3; }
-  .hero-foot .hero-act { grid-column: 10 / span 3; justify-content: flex-end; }
-}
-@media (max-width: 47.99em) { .navlinks li:nth-child(3), .navlinks li:nth-child(4) { display: none; } }
-@media (max-width: 22.49em) { .navlinks li:nth-child(2) { display: none; } }
-@media (max-width: 47.99em) {
-  .hero { min-height: auto; }
-  .hero-name { flex-direction: column; align-items: center; font-size: 25vw; line-height: 0.84; gap: 0; margin-block: 2.5rem 2rem; }
-  .slot { width: 100%; height: auto; aspect-ratio: 3 / 2; margin: 0.08em 0 0.1em; font-size: 1rem; }
-}
-
-/* ---------- picks: statement, list pushed right ---------- */
-.picks h2 { font-size: var(--step-head); }
-.picks h2 .l1 { display: block; padding-left: 3vw; }
-.picks-body { margin-top: clamp(3rem, 6vw, 6rem); align-items: end; }
-.picks-right { display: grid; gap: 2rem; align-content: start; }
-.pick-rows { display: grid; gap: 1.6rem; }
-.pick-row { display: grid; grid-template-columns: 3.2rem minmax(0, 1fr) auto; gap: 0 1rem; align-items: baseline; text-decoration: none; padding-block: 0.2rem; }
-.pick-row .pk-score { font-family: var(--font-display); font-weight: 800; font-size: var(--step-lead); color: var(--muted); }
-.pick-row .pk-name { font-weight: 600; text-decoration: underline; text-decoration-color: transparent; transition: text-decoration-color var(--t-hover) ease; }
-.pick-row .pk-sub { display: block; font-size: var(--step-small); color: var(--muted); }
-.pick-row .pk-price { font-weight: 600; text-align: right; }
-@media (hover: hover) and (pointer: fine) { .pick-row:hover .pk-name { text-decoration-color: currentColor; } }
-@media (min-width: 60em) {
-  .picks-card { grid-column: 1 / span 4; }
-  .picks-right { grid-column: 6 / span 7; }
-}
-
-/* the #1 card: a real fragment of the report */
-.card { background: var(--surface); padding: 1.5rem; display: grid; gap: 1.1rem; max-width: 26rem; }
-.card .c-top { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
-.card .c-name { font-weight: 600; font-size: var(--step-lead); line-height: 1.2; }
-.card .c-score { font-family: var(--font-display); font-weight: 800; font-size: var(--step-head); line-height: 0.85; }
-.card .c-bars { display: grid; gap: 0.45rem; }
-.card .c-bar { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) 3rem; gap: 0.6rem; align-items: center; font-size: var(--step-small); }
-.card .c-bar .t { height: 0.55rem; background: var(--surface-2); }
-.card .c-bar .t b { display: block; height: 100%; background: var(--ink); }
-.card .c-bar .v { text-align: right; color: var(--muted); }
-.card .c-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
-.card .c-stats dt { font-size: var(--step-small); color: var(--muted); }
-.card .c-stats dd { font-weight: 600; }
-.card .c-price { display: grid; gap: 0.2rem; padding-top: 1rem; border-top: 2px solid var(--surface-2); }
-.card .c-price strong { font-size: var(--step-lead); white-space: nowrap; }
-
-.band-chip { display: inline-block; padding: 0.15rem 0.5rem; font-size: var(--step-small); font-weight: 600; background: var(--surface-2); white-space: nowrap; }
-.band-chip.hot { background: var(--accent); color: var(--accent-ink); }
-
-/* ---------- board ---------- */
-.sec-head { align-items: start; }
-.sec-head .note p + p { margin-top: 0.8rem; }
-.controls { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; margin-top: 3rem; padding: 1rem; background: var(--surface); }
-.seg { display: inline-flex; flex-wrap: wrap; }
-.seg button { min-height: 2.75rem; padding: 0 1rem; font-size: var(--step-small); font-weight: 600; border: 2px solid var(--ink); margin-right: -2px; background: var(--bg); transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
-.seg button:active { transform: scale(0.97); }
-.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
-@media (hover: hover) and (pointer: fine) { .seg button[aria-pressed="false"]:hover { background: var(--surface-2); } }
-.check { display: inline-flex; gap: 0.5rem; align-items: center; font-size: var(--step-small); font-weight: 600; min-height: 2.75rem; cursor: pointer; }
-.check input { width: 1.2rem; height: 1.2rem; accent-color: var(--ink); }
-.sortlabel { display: inline-flex; gap: 0.5rem; align-items: center; font-size: var(--step-small); font-weight: 600; }
-.sortlabel select { min-height: 2.75rem; padding: 0 0.75rem; border: 2px solid var(--field); background: var(--bg); }
-.board-count { margin-top: 1.25rem; color: var(--muted); }
-.board { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
-/* one line per game; the reasons open beneath it */
-.row { background: var(--surface); padding: 0.9rem 1rem; }
-.r-line { display: grid; gap: 0.6rem 1rem; align-items: center; grid-template-columns: 2.4rem minmax(0, 1fr) auto; grid-template-areas: "num name name" "num stats stats" "num price price" "num band more"; }
-.row .r-num { grid-area: num; align-self: start; font-family: var(--font-display); font-weight: 800; font-size: var(--step-lead); line-height: 1.1; }
-.row .r-name { grid-area: name; min-width: 0; }
-.row h3 { font-size: var(--step-body); line-height: 1.3; font-weight: 600; }
-.row h3 a { text-decoration: underline; text-decoration-color: transparent; transition: text-decoration-color var(--t-hover) ease; }
-@media (hover: hover) and (pointer: fine) { .row h3 a:hover { text-decoration-color: currentColor; } }
-.row .who { font-size: var(--step-small); color: var(--muted); }
-.row .r-band { grid-area: band; }
-.row .r-stats { grid-area: stats; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem 1rem; }
-.row .r-stats dt { font-size: var(--step-small); color: var(--muted); }
-.row .r-stats dd { font-weight: 600; font-variant-numeric: tabular-nums; }
-.row .r-price { grid-area: price; display: flex; flex-wrap: wrap; gap: 0 0.6rem; align-items: baseline; }
-.row .r-price .v { font-weight: 600; white-space: nowrap; }
-.row .r-price .conf { font-size: var(--step-small); color: var(--muted); white-space: nowrap; }
-.chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-.chip { font-size: var(--step-small); padding: 0.1rem 0.5rem; background: var(--surface-2); white-space: nowrap; }
-.chip.good { background: var(--pale); }
-.chip.risk { background: var(--ink); color: var(--bg); }
-.more { grid-area: more; justify-self: end; min-height: 2.75rem; padding-inline: 0.25rem; font-size: var(--step-small); font-weight: 600; text-decoration: underline; text-underline-offset: 0.22em; white-space: nowrap; }
-.more::after { content: " +"; }
-.more[aria-expanded="true"]::after { content: " −"; }
-.r-detail { display: grid; gap: 1.25rem 2.5rem; margin-top: 1rem; padding-top: 1.25rem; border-top: 2px solid var(--surface-2); }
-.r-detail .comp { max-width: 70ch; }
-.why { display: grid; gap: 0.7rem; font-size: var(--step-small); align-content: start; }
-.why .wl { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) 3rem; gap: 0.25rem 0.75rem; align-items: center; }
-.why .wl .n { font-weight: 600; }
-.why .wl .t { height: 0.55rem; background: var(--surface-2); }
-.why .wl .t b { display: block; height: 100%; background: var(--ink); }
-.why .wl .pts { color: var(--muted); text-align: right; }
-.why .wl .txt { grid-column: 1 / -1; }
-.money-math { display: grid; gap: 0.5rem; font-size: var(--step-small); align-content: start; }
-.money-math .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem 1rem; padding: 0.8rem 0; }
-.money-math .kv dt { color: var(--muted); }
-.money-math .kv dd { font-weight: 600; }
-@media (min-width: 60em) {
-  .r-line { grid-template-columns: 3.4rem minmax(0, 1fr) 9.5rem minmax(0, 19rem) 10.5rem 8.5rem; grid-template-areas: "num name band stats price more"; }
-  .row .r-num { align-self: center; }
-  .row .r-price { display: grid; justify-items: end; text-align: right; }
-  .r-detail { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .r-detail .chips, .r-detail .comp { grid-column: 1 / -1; }
-}
-.empty { padding: 2rem; background: var(--surface); }
-.board-foot { margin-top: clamp(3rem, 6vw, 5rem); }
-.asks h3 { font-size: var(--step-lead); line-height: 1.2; font-weight: 600; margin-bottom: 1rem; }
-.asks ul { display: grid; gap: 0.6rem; padding-left: 1.2rem; }
-
-/* ---------- comps ---------- */
-.takeaways { display: grid; gap: 1.5rem; margin-top: 2.5rem; }
-.takeaways strong { font-weight: 600; }
-.chart-frag { background: var(--surface); padding: 1.25rem; display: grid; gap: 1rem; align-self: start; }
-.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; font-size: var(--step-small); }
-.legend li { display: inline-flex; gap: 0.45rem; align-items: center; }
-.chart-box { position: relative; min-height: 18rem; }
-.chart-box svg { width: 100%; height: auto; overflow: visible; }
-.chart-box text { fill: var(--muted); font-size: 14px; font-family: var(--font-text); }
-.chart-box .grid line { stroke: var(--surface-2); stroke-width: 1; }
-.chart-box .ln { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
-.chart-box .seed-band { fill: var(--accent); opacity: 0.35; }
-.chart-box .seed-txt { fill: var(--ink); font-weight: 600; }
-.chart-box .end-lbl { fill: var(--ink); font-weight: 600; }
-.chart-box .ann { fill: var(--ink); }
-.tip { position: absolute; z-index: 3; max-width: 16rem; padding: 0.6rem 0.75rem; background: var(--ink); color: var(--bg); font-size: var(--step-small); pointer-events: none; }
-.tip strong { display: block; }
-details.data summary { cursor: pointer; font-weight: 600; font-size: var(--step-small); min-height: 2.75rem; display: flex; align-items: center; }
-.scroll { overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; }
-.mini { font-size: var(--step-small); }
-.mini th, .mini td { padding: 0.45rem 0.6rem; text-align: left; border-bottom: 1px solid var(--surface-2); vertical-align: top; }
-th.r, td.r, .mini .r { text-align: right; }
-
-/* ---------- pricing ledger ---------- */
-.ledger-head { display: grid; gap: 2rem; align-content: start; }
-.ledger { width: 100%; }
-.ledger td { padding: 0 0 1.6rem; vertical-align: baseline; }
-.ledger .fw { font-family: var(--font-display); font-weight: 800; font-size: var(--step-head); line-height: 1; text-align: right; padding-right: 0; white-space: nowrap; }
-.ledger .fd { font-family: var(--font-display); font-weight: 800; font-size: var(--step-head); line-height: 1; text-align: left; padding-right: clamp(1rem, 2.5vw, 2.5rem); white-space: nowrap; width: 1%; }
-.ledger .fw { width: 1%; }
-.ledger .cap { font-size: var(--step-body); }
-.ledger .cap .g { font-weight: 600; display: block; }
-.ledger .cap .x { color: var(--muted); display: block; }
-#pricing-h .l1 { display: block; }
-.table-more { margin-top: 1rem; }
-@media (min-width: 60em) { .c-chart { grid-column: 6 / span 7; } }
-
-/* ---------- already charting ---------- */
-.table-box { margin-top: 3rem; overflow-x: auto; background: var(--surface); }
-.big { font-size: var(--step-small); min-width: 62rem; }
-.big th, .big td { padding: 0.8rem 0.75rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--surface-2); }
-.big thead th { font-weight: 600; background: var(--surface); position: sticky; top: 0; }
-.big th button { font-weight: 600; text-decoration: underline; text-decoration-color: transparent; min-height: 2rem; text-align: inherit; }
-.big th[aria-sort] button { text-decoration-color: currentColor; }
-.big th[aria-sort="descending"] button::after { content: " ↓"; }
-.big th[aria-sort="ascending"] button::after { content: " ↑"; }
-.big td.g a { font-weight: 600; }
-.big .sub { display: block; color: var(--muted); }
-.big .chips { margin-top: 0.4rem; }
-.big .chip { background: var(--surface-2); }
-.big .chip.risk { background: var(--ink); color: var(--bg); }
-.big .chip.good { background: var(--pale); }
-.big td.val { font-weight: 600; }
-.big td.r { white-space: nowrap; }
-
-/* ---------- check first ---------- */
-.offlists { display: grid; gap: 3rem; }
-.offlists h3 { font-size: var(--step-lead); line-height: 1.2; font-weight: 600; }
-.offlists .small { margin-top: 0.6rem; color: var(--muted); }
-.offlists ul { display: grid; gap: 1.1rem; margin-top: 1.4rem; list-style: none; padding: 0; }
-.offlists li a { font-weight: 600; }
-.offlists li .p { display: block; font-size: var(--step-small); color: var(--muted); }
-.offlists li .why-off { display: block; font-size: var(--step-small); }
-
-/* ---------- bands ---------- */
-.band { padding-block: calc(var(--section) / 2); }
-.band.inv { background: var(--inv-bg); color: var(--inv-ink); }
-.band.inv .soft, .band.inv .muted { color: var(--inv-muted); }
-.band.inv :focus-visible { outline-color: var(--accent); }
-.figs { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2.5rem clamp(1rem, 3vw, 2rem); align-items: baseline; }
-.figs > div { display: contents; }
-.figs .fig { font-size: var(--step-head); line-height: 0.9; white-space: nowrap; }
-.figs p { font-size: var(--step-body); max-width: 36ch; }
-
-/* ---------- value: the headline you can type ---------- */
-.value h2 { font-size: var(--step-lead); line-height: 1.3; font-weight: 600; max-width: 40ch; }
-.vq-line { position: relative; margin-top: 1.5rem; }
-.vq-line input { width: 100%; border: 0; background: transparent; padding: 0; font-family: var(--font-display); font-weight: 800; text-transform: uppercase; font-size: var(--step-display); line-height: 1; letter-spacing: -0.005em; outline: none; caret-color: var(--ink); }
-.vq-line:focus-within { outline: 3px solid var(--ink); outline-offset: 8px; }
-.vq-line .caret { position: absolute; top: 0.08em; width: 0.08em; height: 0.82em; background: var(--ink); font-size: var(--step-display); pointer-events: none; }
-.vq-line:focus-within .caret { display: none; }
-.vq-measure { position: absolute; right: 100%; top: 0; visibility: hidden; white-space: pre; font-family: var(--font-display); font-weight: 800; text-transform: uppercase; font-size: var(--step-display); letter-spacing: -0.005em; }
-.vq-body { margin-top: 3rem; align-items: start; }
-.answer { background: var(--surface); padding: 1.5rem; display: grid; gap: 1.1rem; max-width: 35rem; }
-.answer .a-out { display: grid; gap: 0.6rem; }
-.answer .a-cap { font-size: var(--step-small); color: var(--muted); }
-.about-facts dl { display: grid; gap: 1rem; }
-.answer .a-range { font-family: var(--font-display); font-weight: 800; font-size: var(--step-head); line-height: 0.9; }
-.answer .a-line { font-weight: 600; }
-.answer .a-fade { display: grid; gap: 0.6rem; }
-.answer .a-fade .lbl { font-size: var(--step-small); font-weight: 600; }
-.answer .a-fade .seg { display: grid; }
-.answer .a-fade .seg button { background: var(--bg); text-align: left; margin: 0 0 -2px 0; padding: 0.6rem 1rem; }
-.answer .a-fade .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
-.decline-field { display: grid; gap: 0.35rem; max-width: 14rem; }
-.decline-field label { font-size: var(--step-small); font-weight: 600; }
-.examples { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 1.5rem; align-items: center; }
-.examples button { font-size: var(--step-body); text-decoration: underline; text-underline-offset: 0.22em; min-height: 2.75rem; transition: color var(--t-hover) ease; }
-.examples .lbl { font-size: var(--step-small); color: var(--muted); }
-.movers h3 { font-size: var(--step-lead); line-height: 1.2; font-weight: 600; }
-.movers ul { display: grid; gap: 0.6rem; margin-top: 1rem; padding-left: 1.2rem; }
-.movers p { margin-top: 1rem; }
-@media (max-width: 47.99em) {
-  .vq-line input, .vq-line .caret, .vq-measure { font-size: 13vw; }
-  .examples button { background: var(--surface); padding: 0 1rem; text-decoration: none; }
-}
-
-/* ---------- requests ---------- */
-.tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.tabs [role="tab"] { min-height: 3rem; padding: 0 1.25rem; font-weight: 600; background: var(--surface); transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
-.tabs [role="tab"]:active { transform: scale(0.97); }
-.tabs [role="tab"][aria-selected="true"] { background: var(--ink); color: var(--bg); }
-.form { background: var(--surface); padding: clamp(1.25rem, 3vw, 2.25rem); display: grid; gap: 1.25rem; margin-top: 0.5rem; }
-.form .hint { max-width: 60ch; }
-.fields { display: grid; gap: 1rem 1.25rem; grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 40em) { .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fields .full { grid-column: 1 / -1; } }
-.field { display: grid; gap: 0.35rem; align-content: start; }
-.field label { font-weight: 600; font-size: var(--step-small); }
-.opt { font-weight: 400; color: var(--muted); }
-.field input, .field select, .field textarea, .decline-field input { width: 100%; min-height: 3rem; padding: 0.6rem 0.75rem; border: 2px solid var(--field); background: var(--bg); border-radius: 0; font-size: max(1rem, var(--step-body)); }
-.field textarea { min-height: 5rem; resize: vertical; }
-.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible, .decline-field input:focus-visible { outline: 3px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
-[aria-invalid="true"] { border-color: var(--ink) !important; outline: 3px solid var(--accent); }
-.help { font-size: var(--step-small); color: var(--muted); }
-.consent { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.75rem; align-items: start; font-size: var(--step-small); cursor: pointer; }
-.consent input { width: 1.3rem; height: 1.3rem; margin-top: 0.1rem; accent-color: var(--ink); }
-.form-row { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: center; }
-.err { font-weight: 600; font-size: var(--step-small); }
-.out { display: grid; gap: 0.5rem; }
-.out textarea { width: 100%; min-height: 9rem; padding: 0.75rem; border: 2px solid var(--field); background: var(--bg); font-size: var(--step-small); }
-.out .rowline { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: center; }
-.status { font-size: var(--step-small); }
-.req-notes { display: grid; gap: 1.25rem; margin-top: 2rem; }
-.mailline { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; }
-.mailline .addr { font-weight: 600; user-select: all; }
-
-/* ---------- sale: stages as one bar ---------- */
-.stagebar { display: flex; gap: 6px; margin-top: 4rem; }
-.stagebar li { min-width: 12%; display: grid; grid-template-rows: minmax(13rem, 24vh) auto; gap: 1rem; }
-.stagebar .blk { padding: 1.1rem; font-family: var(--font-display); font-weight: 800; text-transform: uppercase; font-size: var(--step-lead); line-height: 1; }
-.stagebar li:nth-child(1) .blk { background: var(--surface); }
-.stagebar li:nth-child(2) .blk { background: var(--pale); }
-.stagebar li:nth-child(3) .blk { background: var(--ink); color: var(--bg); }
-.stagebar li:nth-child(4) .blk { background: var(--accent); color: var(--accent-ink); }
-.stagebar li:nth-child(5) .blk { background: var(--green); color: var(--bg); }
-.stagebar .clause { font-size: var(--step-small); max-width: 26ch; }
-.stagebar .clause strong { display: block; font-size: var(--step-body); }
-@media (max-width: 59.99em) {
-  .stagebar { flex-direction: column; }
-  .stagebar li { min-width: 0; flex: none !important; grid-template-rows: auto auto; }
-  .stagebar .blk { min-height: 4.5rem; }
-  .stagebar .clause { max-width: 60ch; }
-}
-.sale-foot { margin-top: 2.5rem; color: var(--muted); }
-
-/* ---------- method ---------- */
-.method-body { display: grid; gap: 1.25rem; }
-.weights { font-size: var(--step-small); margin-block: 0.5rem; }
-.weights th, .weights td { padding: 0.75rem 0.6rem 0.75rem 0; vertical-align: top; text-align: left; border-bottom: 1px solid var(--surface-2); }
-.weights th { font-weight: 600; white-space: nowrap; }
-.weights td.w { font-family: var(--font-display); font-weight: 800; font-size: var(--step-lead); line-height: 1; padding-right: 1rem; }
-.formula { background: var(--surface); padding: 1rem 1.25rem; font-weight: 600; }
-.sources { margin-top: clamp(3rem, 6vw, 5rem); }
-.sources h3 { font-size: var(--step-lead); font-weight: 600; }
-.sources ul { margin-top: 1.25rem; display: grid; gap: 0.75rem 2rem; font-size: var(--step-small); }
-@media (min-width: 48em) { .sources ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 75em) { .sources ul { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-
-/* ---------- about ---------- */
-.about-facts { display: grid; gap: 1.25rem; align-content: start; font-size: var(--step-small); }
-.about-facts h2 { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; font-size: var(--step-lead); line-height: 1; }
-.about-facts dt { color: var(--muted); }
-.about-facts dd { font-weight: 600; }
-.about-text { display: grid; gap: 1.2em; }
-.about-text p { font-size: var(--step-lead); line-height: 1.3; max-width: 58ch; }
-.about-text p:first-child::first-letter { float: left; font-family: var(--font-display); font-weight: 800; font-size: 3.9em; line-height: 0.82; padding: 0.06em 0.12em 0 0.08em; margin: 0.04em 0.18em 0 0; background: var(--accent); color: var(--accent-ink); }
-@media (min-width: 60em) {
-  .about-facts { grid-column: 1 / span 3; }
-  .about-text { grid-column: 4 / span 9; }
-}
-
-/* ---------- footer: contact as the headline ---------- */
-.foot { background: var(--accent); color: var(--accent-ink); min-height: 78svh; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto auto; gap: 2rem; padding-block: 2.5rem 2rem; }
-.foot :focus-visible { outline-color: var(--accent-ink); }
-.foot a { color: var(--accent-ink); }
-.foot-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem 2rem; font-size: var(--step-small); }
-.foot-top p { max-width: 34ch; }
-.foot-mail { align-self: end; font-family: var(--font-display); font-weight: 800; font-size: min(11rem, calc((100vw - 2.6rem) / 7.3)); line-height: 0.86; letter-spacing: -0.005em; text-transform: none; }
-.foot-mail a { text-decoration: none; overflow-wrap: anywhere; }
-.foot-mail .at { display: block; }
-.foot-copy { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; font-size: var(--step-small); }
-.foot-copy .button { background: var(--accent-ink); color: var(--accent); }
-@media (hover: hover) and (pointer: fine) { .foot-copy .button:hover { background: var(--bg); color: var(--ink); } }
-.foot-meta { display: grid; gap: 1rem 2rem; font-size: var(--step-small); }
-.foot-meta ul { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; list-style: none; padding: 0; margin: 0; }
-.foot-meta ul a { display: inline-block; padding-block: 0.4rem; }
-@media (min-width: 60em) { .foot-meta { grid-template-columns: 1fr auto auto; align-items: baseline; } }
-
-/* ---------- motion ---------- */
-@media (prefers-reduced-motion: no-preference) {
-  .js .hero-name .w { transform: translateY(105%); animation: rise-line 900ms var(--ease-expo) forwards; animation-delay: calc(120ms + var(--i, 0) * 110ms); }
-  .js .slot { clip-path: inset(100% 0 0 0); animation: open-up 1100ms var(--ease-in-out) 200ms forwards; }
-  .js .slot svg { transform: scale(1.12); animation: settle 1500ms var(--ease-soft) 200ms forwards; }
-  .js .slot .curve { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1600ms var(--ease-expo) 900ms forwards; }
-  .js [data-load] { opacity: 0; transform: translateY(14px); animation: rise 600ms var(--ease-out) forwards; animation-delay: var(--d, 400ms); }
-  /* Content rests visible; entering the screen only adds arrival. */
-  .js [data-reveal].is-in { animation: enter 850ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 80ms); }
-  .vq-line .caret { animation: blink 1.05s steps(1) infinite; }
-  .card .c-bar .t b { transform-origin: left; }
-  .js .card.is-in .c-bar .t b { animation: grow-x 900ms var(--ease-expo) both; animation-delay: calc(300ms + var(--i, 0) * 70ms); }
-  .stagebar .blk { transform-origin: left; }
-  .js .stagebar.is-in .blk { animation: grow-x 900ms var(--ease-expo) both; animation-delay: calc(var(--i, 0) * 110ms); }
-}
-@keyframes rise-line { to { transform: none; } }
-@keyframes open-up { to { clip-path: inset(0 0 0 0); } }
-@keyframes settle { to { transform: none; } }
-@keyframes draw { to { stroke-dashoffset: 0; } }
-@keyframes rise { to { opacity: 1; transform: none; } }
-@keyframes enter { from { opacity: 0; transform: translateY(24px); } }
-@keyframes blink { 50% { opacity: 0; } }
-@keyframes grow-x { from { transform: scaleX(0); } to { transform: none; } }
-</style>
+<link rel="stylesheet" href="site.css">
 </head>
 <body>
 
-<a class="skip" href="#main">Skip to the report</a>
+<a class="skip" href="#main">Skip to the sign-up</a>
 
 <div class="bar wrap">
   <nav class="topbar" aria-label="Main">
     <a class="wordmark" href="#top">Spawnbook</a>
     <ul class="navlinks">
-      <li><a href="#picks">Picks</a></li>
-      <li><a href="#board">Board</a></li>
-      <li><a href="#pricing">Prices</a></li>
-      <li><a href="#value">Value a game</a></li>
-      <li><a class="keep" href="#requests">Free issue</a></li>
+      <li class="m-hide"><a href="#what">What you get</a></li>
+      <li class="m-hide"><a href="subscribe">Pricing</a></li>
+      <li class="s-hide"><a href="value">Value your game</a></li>
+      <li><a class="keep" href="#signup">Free board</a></li>
     </ul>
   </nav>
 </div>
 
 <header class="hero wrap" id="top">
-
   <h1 class="hero-name">
     <span class="mask"><span class="w" style="--i:0">Spawn</span></span>
     <span class="slot" data-ui aria-hidden="true">
@@ -532,435 +55,101 @@ th.r, td.r, .mini .r { text-align: right; }
 
   <div class="hero-foot">
     <p class="lead" data-load style="--d:420ms">Grow a Garden had about 500 to 1,000 players when a studio bought into it. Spawnbook finds the next ones every day: small Roblox games growing fast, scored on public data and priced against past hits.</p>
-    <p class="small hero-data" data-load style="--d:520ms"><span id="issue-date">Data as of Oct 23, 2026</span>. <span id="issue-note">Players counted at 1:29 AM Pacific.</span></p>
+    <p class="small hero-data" data-load style="--d:520ms" id="hero-data">A new board every afternoon, Pacific time.</p>
     <div class="hero-act" data-load style="--d:480ms">
-      <a class="button" href="#picks">See today's picks</a>
-      <a class="plainlink" href="#requests" data-tab="tab-weekly">Get your first issue free</a>
+      <a class="button" href="#signup" id="hero-cta">See today's board free</a>
+      <a class="plainlink" href="value">Making a game? Get it valued</a>
     </div>
   </div>
 </header>
 
 <main id="main" tabindex="-1">
 
-  <section id="picks" class="sec wrap picks" aria-labelledby="picks-h">
-    <h2 id="picks-h" class="head" data-reveal><span class="l1">Today's</span>top five</h2>
-    <div class="grid picks-body">
-      <figure class="card picks-card" id="top-card" data-ui data-reveal style="--i:2" aria-label="Today's top pick in detail"></figure>
-      <div class="picks-right">
-        <ol class="pick-rows" id="picks-list" data-reveal style="--i:1"></ol>
-        <p data-reveal style="--i:2">Free trackers show player counts. This report adds an estimated price, red flags and a public way to reach each owner. Prices are estimates from public numbers, so treat them as a starting point.</p>
-        <p data-reveal style="--i:3"><a class="button quiet" href="#board" id="see-board">See the full board</a></p>
-      </div>
-    </div>
-  </section>
-
-  <section id="board" class="sec wrap" aria-labelledby="board-h">
-    <div class="grid sec-head">
-      <div class="c-l stack">
-        <h2 id="board-h" class="head" data-reveal>The full board</h2>
-        <p class="small muted" data-reveal style="--i:1">Contact this week means a score of 75 or more; Watch means 60 to 74. Open "Why this score" on any game to see its six parts: momentum, stickiness, updates, originality, earnings and ease of buying. Players and rating are measured. Minutes per visit and prices are estimates. Splitting Point bought into Grow a Garden at about 500 to 1,000 players, so the small ones count.</p>
-      </div>
-      <p class="c-r lead" id="lede-sub" data-reveal style="--i:1">Every game that made today's cut, scored out of 100.</p>
-    </div>
-    <div class="controls" data-ui>
-      <div class="seg" role="group" aria-label="Filter by players">
-        <button type="button" id="t-all" aria-pressed="true">All sizes</button>
-        <button type="button" id="t-seed" aria-pressed="false">Under 3K</button>
-        <button type="button" id="t-break" aria-pressed="false">3K–10K</button>
-        <button type="button" id="t-chart" aria-pressed="false">10K+</button>
-      </div>
-      <div class="seg" role="group" aria-label="Filter by genre type">
-        <button type="button" id="s-any" aria-pressed="true">Any genre</button>
-        <button type="button" id="s-stair" aria-pressed="false">Slow-build</button>
-        <button type="button" id="s-rocket" aria-pressed="false">Fast-rise</button>
-      </div>
-      <label class="check" for="hide-wave"><input type="checkbox" id="hide-wave"> Hide games that follow a trend</label>
-      <label class="sortlabel" for="sort">Sort by
-        <select id="sort">
-          <option value="score">Score</option>
-          <option value="price">Estimated price</option>
-          <option value="playing">Players</option>
-          <option value="age">Newest</option>
-        </select>
-      </label>
-    </div>
-    <p class="small board-count" id="board-count" aria-live="polite"></p>
-    <div class="board" id="board-list"><p class="empty">Loading today's games.</p></div>
-    <div class="grid board-foot">
-      <p class="small muted c-l" data-reveal>Fast-rise genres are trend and sim games that tend to grow fast and fade. Slow-build genres are competitive, social or fishing games that tend to grow over months and last longer. Prices are estimates from public numbers, not reported earnings, and they aren't offers or appraisals.</p>
-      <div class="asks c-r" data-reveal style="--i:1">
-        <h3>Before you make an offer, ask the creator for</h3>
-        <ul>
-          <li>Retention by traffic source from Creator Analytics</li>
-          <li>3 to 6 months of revenue and DevEx history</li>
-          <li>Ad spend, to see how much traffic was paid for</li>
-          <li>Whether it has unlocked the Kids and Select audiences</li>
-          <li>Written IP assignments from everyone who built it</li>
-          <li>The private modules and packages that must be re-uploaded after a transfer</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section id="comps" class="sec wrap grid" aria-labelledby="comps-h">
-    <div class="c-l stick">
-      <h2 id="comps-h" class="head" data-reveal>Hits start small</h2>
-      <div class="takeaways">
-        <p data-reveal style="--i:1"><strong id="tk1">Every game on the board is already bigger than Grow a Garden was at its buy-in.</strong> Grow a Garden had about 500 to 1,000 players at two to three weeks old when Splitting Point bought into it. The creator kept 50%.</p>
-        <p data-reveal style="--i:2"><strong>The gap opens fast after that.</strong> Grow a Garden reached about 100,000 players by day 32. Steal An Egg had 371,000 on day 27. <span id="tk2">No game on the board is near that pace</span>, so price them on the money they make now.</p>
-        <p data-reveal style="--i:3"><strong>Most hits also crash.</strong> Grow a Garden 2 opened with 400,000 players and is down to about 2,000. Kick a Lucky Block fell from 1.7 million to about 7,000. In our method, how fast a game fades sets its price.</p>
-      </div>
-    </div>
-    <figure class="chart-frag c-chart" data-ui data-reveal style="--i:1" aria-labelledby="chart-cap">
-      <figcaption id="chart-cap" class="small">Players by days since launch, on a log scale. Each step up the chart is 10 times more players.</figcaption>
-      <ul class="legend" aria-label="Chart key">
-        <li><svg width="22" height="10" aria-hidden="true"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--ink)" stroke-width="2.5"/><circle cx="11" cy="5" r="3.5" fill="var(--ink)"/></svg>Grow a Garden</li>
-        <li><svg width="22" height="10" aria-hidden="true"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--green)" stroke-width="2.5"/><circle cx="11" cy="5" r="3.5" fill="var(--green)"/></svg>Steal a Brainrot</li>
-        <li><svg width="22" height="10" aria-hidden="true"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--ochre)" stroke-width="2.5"/><rect x="7.5" y="1.5" width="7" height="7" fill="var(--ochre)"/></svg>Steal An Egg</li>
-        <li><svg width="22" height="10" aria-hidden="true"><line x1="0" y1="5" x2="22" y2="5" stroke="var(--muted)" stroke-width="2.5" stroke-dasharray="4 3"/></svg>Grow a Garden 2 (faded)</li>
-        <li><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="5" fill="var(--ink)"/></svg>Today's board</li>
-        <li><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.5" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.5"/></svg>Scored 75+</li>
-        <li><svg width="16" height="12" aria-hidden="true"><rect x="0" y="0" width="16" height="12" fill="var(--accent)" opacity="0.35"/></svg>Seed tier, 300 to 3,000 players</li>
-      </ul>
-      <div class="chart-box" id="chart" role="img" aria-label="Log-scale chart of players by days since launch. Past hits Grow a Garden, Steal a Brainrot and Steal An Egg climb from thousands to millions of players within two months. Grow a Garden 2 opens near 1 million and falls to about 2,000. Today's board games sit far below the past hits."></div>
-      <p class="small muted" id="chart-note">Past hits show reported peaks and live counts, so they run high. Hover or tap a point for details, or open the numbers below.</p>
-      <details class="data">
-        <summary>Show the chart's numbers</summary>
-        <div class="scroll"><table class="mini" id="chart-table"><caption class="sr-only">Every point on the chart</caption><thead><tr><th scope="col">Game</th><th scope="col" class="r">Day</th><th scope="col" class="r">Players</th><th scope="col">Note</th></tr></thead><tbody></tbody></table></div>
-      </details>
-    </figure>
-  </section>
-
-  <section id="pricing" class="sec wrap grid" aria-labelledby="pricing-h">
-    <div class="ledger-head c-l6 stick">
-      <h2 id="pricing-h" class="head" data-reveal><span class="soft l1">How fast it fades</span> sets the price</h2>
-      <p data-reveal style="--i:1">If a game loses a share of its players every month, its future revenue adds up to about one month's revenue divided by that share. Analyst David Taylor says short-lived games sell for one to two months of revenue and durable ones for about 12, so we cap it at 12. These past games line up with the few deal prices that have been reported.</p>
-      <p class="small muted" data-reveal style="--i:2">The decline rates are our estimates from reported player counts, and the fast-fade rows start from event peaks, so they overstate the drop. A game under six weeks old, or still rising, has no fade to measure yet. We price fast-rise games at 1 to 2 months and slow-build games at 3 to 6. Upside is better bought with a stake or revenue share than with a bigger upfront price.</p>
-    </div>
-    <div class="c-r" data-reveal style="--i:1">
-      <table class="ledger" data-ui>
-        <caption class="sr-only">Months of revenue implied by how fast past games lost players</caption>
-        <thead class="sr-only"><tr><th scope="col" colspan="2">Months of revenue</th><th scope="col">Game, what happened and players lost per month</th></tr></thead>
-        <tbody>
-          <tr><td class="fw">1</td><td class="fd">.3</td><td class="cap"><span class="g">Grow a Garden 2</span>976,000 players in June 2026, about 2,000 now.<span class="x">Lost about 79% a month.</span></td></tr>
-          <tr><td class="fw">1</td><td class="fd">.4</td><td class="cap"><span class="g">Animal Hospital</span>1.3 million in July 2026, about 24,000 now.<span class="x">Lost about 74% a month.</span></td></tr>
-          <tr><td class="fw">1</td><td class="fd">.5</td><td class="cap"><span class="g">Kick a Lucky Block</span>1.7 million in May 2026, about 7,000 now.<span class="x">Lost about 67% a month.</span></td></tr>
-          <tr><td class="fw">2</td><td class="fd">.1</td><td class="cap"><span class="g">Blue Lock: Rivals</span>Sold for more than $3 million near its 1 million peak, about 50,000 four months later.<span class="x">Lost about 50% a month.</span></td></tr>
-          <tr><td class="fw">4</td><td class="fd"></td><td class="cap"><span class="g">Grow a Garden</span>2.7 million average in June 2025, 15,000 to 30,000 now.<span class="x">Lost 25 to 28% a month.</span></td></tr>
-          <tr><td class="fw">6–8</td><td class="fd"></td><td class="cap"><span class="g">Steal a Brainrot</span>About 1 million average in Sept 2025, 90,000 to 170,000 now.<span class="x">Lost 13 to 17% a month.</span></td></tr>
-          <tr><td class="fw">12</td><td class="fd"></td><td class="cap"><span class="g">RIVALS</span>Down about 7% month over month in Sept 2026.<span class="x">Lost about 7% a month. 12 is our cap.</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section id="charted" class="sec wrap" aria-labelledby="charted-h">
-    <div class="grid sec-head">
-      <h2 id="charted-h" class="head c-l6" data-reveal>Already charting</h2>
-      <p class="c-r" data-reveal style="--i:1">The 25 biggest games under six months old. Big buyers are more likely to know these already, so they're here for context. Use the column buttons to sort.</p>
-    </div>
-    <div class="table-box">
-      <table class="big">
-        <caption class="sr-only">The 25 biggest games under six months old, with estimated revenue and price</caption>
-        <thead>
-          <tr>
-            <th scope="col">Rank</th>
-            <th scope="col">Game</th>
-            <th scope="col" class="r" data-key="age"><button type="button">Age</button></th>
-            <th scope="col" class="r" data-key="playing" aria-sort="descending"><button type="button">Players</button></th>
-            <th scope="col" class="r" data-key="pace"><button type="button">Visits a day</button></th>
-            <th scope="col" class="r" data-key="like"><button type="button">Rating</button></th>
-            <th scope="col" class="r" data-key="rev"><button type="button">Est. revenue a month</button></th>
-            <th scope="col" class="r" data-key="fair"><button type="button">Est. price now</button></th>
-            <th scope="col" class="r" data-key="lasts"><button type="button">If it holds a year</button></th>
-          </tr>
-        </thead>
-        <tbody id="big-rows"></tbody>
-      </table>
-    </div>
-    <p class="table-more"><button type="button" class="button quiet" id="big-all" aria-expanded="false" aria-controls="big-rows">Show all 25 games</button></p>
-  </section>
-
-  <section id="leftoff" class="sec wrap grid" aria-labelledby="leftoff-h">
-    <div class="c-l stick stack">
-      <h2 id="leftoff-h" class="head" data-reveal>Check these first</h2>
-      <p data-reveal style="--i:1" class="lead" >These scored well enough for the board, but each has one thing a buyer should check before going further.</p>
-      <p data-reveal style="--i:2" class="small muted" >Nothing here is an accusation against the creators.</p>
-    </div>
-    <div class="offlists c-r">
-      <div data-reveal style="--i:1">
-        <h3>Names that reference other brands</h3>
-        <p class="small">Lawyers call unlicensed characters or brands a major red flag in a game sale. We haven't checked whether these are licensed, and some may be through Roblox's License Manager.</p>
-        <ul id="ip-list"></ul>
-      </div>
-      <div data-reveal style="--i:2">
-        <h3>Unusual numbers to check first</h3>
-        <p class="small">Bots and AFK farms can inflate players and play time, and they tend not to vote or favorite. These numbers stand out from the rest of today's pool. There can be ordinary reasons, so ask the creator before pricing.</p>
-        <ul id="flag-list"></ul>
-      </div>
-    </div>
-  </section>
-
-  <section id="record" class="band inv" aria-labelledby="record-h">
-    <div class="wrap grid">
-      <div class="c-l stack">
-        <h2 id="record-h" class="head" data-reveal>Track record</h2>
-        <p data-reveal style="--i:1" class="soft">We log every pick with its score and the date. Eight weeks after each issue, we check how every logged game did and publish the results here, good or bad.</p>
-      </div>
-      <div class="figs c-r">
-        <div data-reveal style="--i:1"><span class="fig" id="rec-picks">24</span><p id="rec-picks-note">picks logged so far, starting Oct 23, 2026</p></div>
-        <div data-reveal style="--i:2"><span class="fig" id="rec-first">Dec 18</span><p id="rec-first-note">first results, 8 weeks after the first issue. A game counts as a hit if its players grow at least 5× and hold.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="value" class="sec wrap value" aria-labelledby="value-h">
-    <h2 id="value-h" data-reveal><label for="vq">Value your game. Type what it earned in the last 30 days, in Robux, visits or dollars.</label></h2>
-    <div class="vq-line" data-ui>
-      <input id="vq" type="text" inputmode="text" autocomplete="off" spellcheck="false" value="2,500,000 Robux" aria-describedby="vq-help">
-      <span class="caret" aria-hidden="true"></span>
-      <span class="vq-measure" aria-hidden="true"></span>
-    </div>
-    <p class="sr-only" id="vq-help">For example 2,500,000 Robux, 40 million visits or $9,500. The estimate below updates as you type.</p>
-    <div class="examples">
-      <span class="lbl">Try</span>
-      <button type="button" data-q="800,000 Robux">800,000 Robux</button>
-      <button type="button" data-q="40 million visits">40 million visits</button>
-      <button type="button" data-q="$9,500">$9,500</button>
-    </div>
-    <div class="grid vq-body">
-      <div class="answer c-l6" data-ui>
-        <div class="a-out" aria-live="polite">
-          <span class="a-cap">Estimated price now</span>
-          <span class="a-range" id="v-range">$0</span>
-          <span class="a-line" id="v-line"></span>
-          <span id="v-lasts"></span>
-        </div>
-        <div class="a-fade">
-          <span class="lbl" id="fade-lbl">How is it doing?</span>
-          <div class="seg" role="group" aria-labelledby="fade-lbl">
-            <button type="button" id="f-rocket" aria-pressed="false">Rising: trend, sim or copy game</button>
-            <button type="button" id="f-stair" aria-pressed="true">Rising: competitive, social or fishing</button>
-            <button type="button" id="f-measured" aria-pressed="false">I know how fast it's losing players</button>
+  <section id="signup" class="sec wrap grid signup" aria-labelledby="signup-h">
+    <div class="c-l stack">
+      <h2 id="signup-h" class="head" data-reveal>Today's board</h2>
+      <figure class="card teaser" data-ui data-reveal style="--i:1" aria-labelledby="t-cap">
+        <div class="c-top">
+          <div>
+            <span class="small muted" id="t-cap">Today's top pick</span>
+            <p class="c-name"><span class="redacted" role="img" aria-label="Game name hidden until you sign up"></span></p>
           </div>
-          <div class="decline-field" id="wrap-decline" hidden>
-            <label for="decline">Players lost per month</label>
-            <input id="decline" inputmode="decimal" value="15%" autocomplete="off" aria-describedby="decline-help">
-            <span class="help" id="decline-help">For example, 15%</span>
-          </div>
+          <span class="c-score" id="t-score">–</span>
         </div>
-      </div>
-      <div class="movers c-r5" data-reveal style="--i:1">
-        <h3>What moves a game up its range</h3>
-        <p>Buyers pay for staying power. Voldex has said it buys established communities because marketing can't cheaply rebuild them, and it moved Brookhaven to weekly updates.</p>
-        <ul>
-          <li>Each update leaves a higher low point than the last</li>
-          <li>Players come back on many days, not one long session</li>
-          <li>Ownership sits in a group, with IP assignments from every contributor</li>
-          <li>No borrowed characters, brands or music</li>
-          <li>Kids and Select audiences already unlocked</li>
-          <li>Most traffic comes from Roblox recommendations, not ads</li>
-        </ul>
-        <p class="small muted">A starting range, not an appraisal. Everything stays in your browser. Robux convert at the DevEx rate, $0.0038 each. Visits convert at $0.004 to $0.012 of developer revenue each. We cap the price at 12 months of revenue even for durable games, because buyers discount for risk.</p>
-        <p><a class="link" href="#requests" data-tab="tab-sell">Want a real valuation? Send us your game</a></p>
-      </div>
+        <dl class="c-stats">
+          <div><dt>Days old</dt><dd id="t-age">–</dd></div>
+          <div><dt>Players</dt><dd id="t-players">–</dd></div>
+          <div><dt>Visits a day</dt><dd id="t-visits">–</dd></div>
+        </dl>
+        <p class="t-more" id="t-more">Sign up to see which game it is, plus the rest of today's board with prices and red flags.</p>
+      </figure>
     </div>
-  </section>
 
-  <section id="requests" class="sec wrap grid" aria-labelledby="req-h">
-    <div class="c-l stick">
-      <h2 id="req-h" class="head" data-reveal>Get the report or a valuation</h2>
-      <div class="req-notes">
-        <p data-reveal style="--i:1">This page doesn't send or store anything. Fill in a form, copy the message it writes, and send it to us yourself. Only include what's asked. Never send passwords, account cookies or payment card numbers.</p>
-        <p data-reveal style="--i:2" class="small muted">We value developers' games for free and sell a report to buyers. We never share a developer's private numbers without written permission, and we never take a fee from both sides of a deal.</p>
-        <div class="mailline" data-reveal style="--i:3">
-          <span>Send it to <span class="addr" id="mail-a">gautamuprasanna@gmail.com</span></span>
-          <button type="button" class="button quiet" id="mail-copy">Copy address</button>
-          <span class="status small" id="mail-status" aria-live="polite"></span>
-        </div>
-        <p class="small muted" data-reveal style="--i:3">Or reply in the thread where you got this link.</p>
-      </div>
-    </div>
     <div class="c-r" data-reveal style="--i:1">
-      <div class="tabs" role="tablist" aria-label="Request type">
-        <button type="button" role="tab" id="tab-weekly" aria-selected="true" aria-controls="weekly" tabindex="0">Get the weekly report</button>
-        <button type="button" role="tab" id="tab-sell" aria-selected="false" aria-controls="sell" tabindex="-1">Get my game valued</button>
-      </div>
-
-      <form class="form" id="weekly" role="tabpanel" aria-labelledby="tab-weekly" novalidate>
-        <p class="hint">For studios and investors buying games. Weekly: the prospect board, comps, price ranges and red flags. Your first issue is free and doesn't start a subscription. After that, the pilot price is $500 a month, billed monthly until you cancel. See the <a class="link" href="terms.html#subscription">Terms</a> and <a class="link" href="refunds.html">Refund Policy</a>.</p>
+      <form class="form" id="signup-form" method="post" action="/api/signup" novalidate>
+        <p class="hint">For studios and investors who buy Roblox games. Sign up to see today's full board free for 24 hours. No card needed.</p>
         <div class="fields">
           <div class="field">
-            <label for="b-name">Your name <span class="opt">(required)</span></label>
-            <input id="b-name" autocomplete="name" aria-required="true">
+            <label for="f-name">Your name <span class="opt">(required)</span></label>
+            <input id="f-name" name="name" autocomplete="name" maxlength="120" aria-required="true">
           </div>
           <div class="field">
-            <label for="b-co">Studio or fund <span class="opt">(required)</span></label>
-            <input id="b-co" autocomplete="organization" aria-required="true">
+            <label for="f-email">Work email <span class="opt">(required)</span></label>
+            <input id="f-email" name="email" type="email" autocomplete="email" maxlength="200" aria-required="true">
           </div>
           <div class="field">
-            <label for="b-genres">Genres you buy <span class="opt">(optional)</span></label>
-            <input id="b-genres" placeholder="Tycoon, survival, sports" autocomplete="off">
+            <label for="f-co">Studio or fund <span class="opt">(required)</span></label>
+            <input id="f-co" name="company" autocomplete="organization" maxlength="160" aria-required="true">
           </div>
           <div class="field">
-            <label for="b-size">Typical deal size <span class="opt">(optional)</span></label>
-            <select id="b-size">
-              <option value="">Prefer not to say</option>
-              <option>Under $100K</option>
-              <option>$100K to $1M</option>
-              <option>$1M to $10M</option>
-              <option>$10M+</option>
+            <label for="f-role">What do you do?</label>
+            <select id="f-role" name="role">
+              <option>I buy games for a studio</option>
+              <option>I invest in games or studios</option>
+              <option>I make Roblox games</option>
+              <option>Something else</option>
             </select>
           </div>
-          <div class="field full">
-            <label for="b-contact">Email or Discord name <span class="opt">(required)</span></label>
-            <input id="b-contact" autocomplete="email" aria-required="true">
+          <div class="field full" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">
+            <label for="f-site">Leave this empty</label>
+            <input id="f-site" name="website" tabindex="-1" autocomplete="off">
           </div>
-          <label class="consent full" for="b-agree">
-            <input type="checkbox" id="b-agree" aria-required="true">
-            <span>I'm 18 or older. I agree that Spawnbook can use these details to send me the free issue and reply to me, as described in the <a class="link" href="privacy.html">Privacy Policy</a>, and I accept the <a class="link" href="terms.html">Terms</a>.</span>
+          <label class="consent full" for="f-agree">
+            <input type="checkbox" id="f-agree" name="agree" value="yes" aria-required="true">
+            <span>I'm 18 or older. I agree that Spawnbook can store these details to give me access and contact me about subscribing, as described in the <a class="link" href="privacy.html">Privacy Policy</a>, and I accept the <a class="link" href="terms.html">Terms</a>.</span>
           </label>
         </div>
         <div class="form-row">
-          <button class="button" type="submit">Write my message</button>
-          <span class="err" id="b-err" role="alert"></span>
+          <button class="button" type="submit">See today's board</button>
+          <span class="err" id="f-err" role="alert"></span>
         </div>
-        <div class="out" id="b-out" hidden>
-          <label class="small" for="b-msg">Your message. Copy it and send it to us.</label>
-          <textarea id="b-msg" readonly></textarea>
-          <div class="rowline"><button class="button quiet" type="button" id="b-copy">Copy message</button><span class="status" id="b-status" aria-live="polite"></span></div>
-        </div>
+        <p class="note">Signed up before? Enter the same email to get back in. After your free day, the pilot price is $500 a month. <a class="link" href="subscribe">See pricing</a>.</p>
       </form>
 
-      <form class="form" id="sell" role="tabpanel" aria-labelledby="tab-sell" novalidate hidden>
-        <p class="hint">For developers. We reply with a value range and what would raise it. Free.</p>
-        <div class="fields">
-          <div class="field full">
-            <label for="s-link">Game link <span class="opt">(required)</span></label>
-            <input id="s-link" type="url" placeholder="https://www.roblox.com/games/…" autocomplete="off" aria-required="true">
-          </div>
-          <div class="field">
-            <label for="s-role">Your role</label>
-            <select id="s-role">
-              <option>Owner</option>
-              <option>Co-owner</option>
-              <option>Developer on the team</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="s-age">Your age</label>
-            <select id="s-age" aria-describedby="s-age-help">
-              <option value="adult">18 or older</option>
-              <option value="teen">13 to 17</option>
-              <option value="child">Under 13</option>
-            </select>
-            <span class="help" id="s-age-help">Under 18, a parent or guardian has to send this with you.</span>
-          </div>
-          <div class="field">
-            <label for="s-robux">Robux, last 30 days <span class="opt">(optional)</span></label>
-            <input id="s-robux" inputmode="numeric" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="s-contact">Discord name or email <span class="opt">(required)</span></label>
-            <input id="s-contact" autocomplete="off" aria-required="true">
-          </div>
-          <div class="field full">
-            <label for="s-notes">Anything else <span class="opt">(optional)</span></label>
-            <textarea id="s-notes" rows="2" placeholder="Team size, who built what, any offers so far" aria-describedby="s-notes-help"></textarea>
-            <span class="help" id="s-notes-help">Don't include other people's personal details.</span>
-          </div>
-          <label class="consent full" for="s-agree">
-            <input type="checkbox" id="s-agree" aria-required="true">
-            <span>I agree that Spawnbook can use these details to reply to me, as described in the <a class="link" href="privacy.html">Privacy Policy</a>, and I accept the <a class="link" href="terms.html">Terms</a>.</span>
-          </label>
-        </div>
-        <div class="form-row">
-          <button class="button" type="submit">Write my message</button>
-          <span class="err" id="s-err" role="alert"></span>
-        </div>
-        <div class="out" id="s-out" hidden>
-          <label class="small" for="s-msg">Your message. Copy it and send it to us.</label>
-          <textarea id="s-msg" readonly></textarea>
-          <div class="rowline"><button class="button quiet" type="button" id="s-copy">Copy message</button><span class="status" id="s-status" aria-live="polite"></span></div>
-        </div>
-      </form>
-    </div>
-  </section>
-
-  <section id="sale" class="sec wrap" aria-labelledby="sale-h">
-    <div class="grid sec-head">
-      <h2 id="sale-h" class="head c-l6" data-reveal>How a sale works</h2>
-      <p class="c-r" data-reveal style="--i:1">Roblox has allowed official ownership transfers since December 2024. What changes hands is the game and the right to earn Robux from it. Robux already earned stays with the seller. This is general information, not legal advice, and we don't take part in sales.</p>
-    </div>
-    <ol class="stagebar" data-ui data-reveal aria-label="The five stages of a sale, sized by how long each takes">
-      <li style="flex: 2 1 0; --i:0"><span class="blk">Before anything moves</span><p class="clause"><strong>First, put it in writing.</strong> A purchase agreement, plus written IP assignments from everyone who built the game. Without a company, co-developers may count as partners.</p></li>
-      <li style="flex: 2 1 0; --i:1"><span class="blk">Before the transfer</span><p class="clause"><strong>Then fund escrow.</strong> The buyer pays a licensed escrow service, timed to the transfer. Nobody sends money or the game first.</p></li>
-      <li style="flex: 7 1 0; --i:2"><span class="blk">Up to 7 days</span><p class="clause"><strong>Then start the transfer.</strong> The owner starts Roblox's ownership transfer to the buyer from the game's settings. The request expires after 7 days.</p></li>
-      <li style="flex: 1 1 0; --i:3"><span class="blk">Up to 24 hours</span><p class="clause"><strong>Expect a short outage.</strong> Servers close while the game moves, and discovery can dip for up to 24 hours. Private modules and packages have to be re-uploaded.</p></li>
-      <li style="flex: 30 1 0; --i:4"><span class="blk">Then 30 days locked</span><p class="clause"><strong>Last, escrow releases.</strong> Payment goes out once the transfer shows complete. The new owner can't transfer it again for 30 days.</p></li>
-    </ol>
-    <p class="small sale-foot">If the seller is under 18, a parent or guardian should sign too, and both sides should get legal advice first. In California, a minor can generally cancel a contract they signed.</p>
-  </section>
-
-  <section id="method" class="sec wrap" aria-labelledby="method-h">
-    <div class="grid">
-      <div class="c-l stack">
-        <h2 id="method-h" class="head" data-reveal>How we score and price</h2>
-        <table class="weights" data-reveal>
-          <caption class="sr-only">Score weights</caption>
-          <tbody>
-            <tr><th scope="row">Momentum</th><td class="w">25</td><td>Latest visits against the lifetime average, Up-and-Coming and Top Trending ranks</td></tr>
-            <tr><th scope="row">Stickiness</th><td class="w">25</td><td>Minutes per visit against GameAnalytics benchmarks (median 6.6, top quarter 14.5, top tenth 26.4), rating, favorites and votes per 1,000 visits, Top Revisited</td></tr>
-            <tr><th scope="row">Updates</th><td class="w">15</td><td>How recently it updated, and whether it's still shipping after a month</td></tr>
-            <tr><th scope="row">Originality</th><td class="w">15</td><td>Slow-build genres score higher. Games built on a current trend lose points, because Roblox says it no longer prioritizes close look-alikes in recommendations</td></tr>
-            <tr><th scope="row">Earnings</th><td class="w">10</td><td>Rank on Top Earning, the main public sign of revenue</td></tr>
-            <tr><th scope="row">Ease of buying</th><td class="w">10</td><td>Group or solo ownership, verified badge, group size, names that reference other brands</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="method-body c-r">
-        <p id="method-readings" data-reveal>We read Roblox's public chart lists and pulled each game's public stats.</p>
-        <p data-reveal>Minutes per visit is players × 1,440 ÷ visits a day.</p>
-        <p data-reveal>Momentum and stickiness are ranked against the rest of today's pool. Each unusual-number flag takes off 5 points and moves the game to the check-first list. The weights are our judgment, not a tested model.</p>
-        <p class="formula" data-reveal>Revenue a month = visits a month × 1–3% who pay × 150 Robux × 70% creator share × $0.0038 per Robux, or about $0.004 to $0.012 per visit</p>
-        <p data-reveal>The price we show is middle revenue × middle months, marked low confidence. The full range in each game's details runs from low revenue × low months to high revenue × high months, a 6× spread that reflects how little you can see from outside a game. Once we've tracked a game for 4 weeks, the months come from its measured decline instead of its genre. Rebuild the price on real revenue once the seller shares it. A 2026 game probably earns less per player than the 2025 hits did.</p>
+      <div class="signed-in" id="signed-in" hidden>
+        <p class="lead" id="signed-in-text">You're signed in.</p>
+        <p><a class="button" id="signed-in-link" href="board">Open today's board</a></p>
       </div>
     </div>
-    <div class="sources">
-      <h3 data-reveal>Sources</h3>
-      <ul>
-        <li><a class="link" href="https://www.roblox.com/charts" target="_blank" rel="noopener">Roblox charts<span class="sr-only"> (opens in a new tab)</span></a> and Roblox's public games data</li>
-        <li><a class="link" href="https://gamesbeat.com/janzen-madsen-interview/" target="_blank" rel="noopener">GamesBeat: Grow a Garden's creator on its early numbers<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://en.wikipedia.org/wiki/Grow_a_Garden" target="_blank" rel="noopener">Wikipedia: Grow a Garden<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://en.wikipedia.org/wiki/Steal_a_Brainrot" target="_blank" rel="noopener">Wikipedia: Steal a Brainrot<span class="sr-only"> (opens in a new tab)</span></a> and <a class="link" href="https://www.guinnessworldrecords.com/world-records/503322-most-concurrent-players-for-a-videogame-made-in-roblox" target="_blank" rel="noopener">Guinness<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://x.com/MisfitsGG/status/2090785862632038706" target="_blank" rel="noopener">Misfits Gaming: Steal An Egg at day 27<span class="sr-only"> (opens in a new tab)</span></a> and <a class="link" href="https://www.player.one/robloxs-steal-egg-beating-some-platforms-biggest-games-164086" target="_blank" rel="noopener">Player.One: day 46<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li>RoWatcher: <a class="link" href="https://rowatcher.com/games/10563114921/steal-an-egg/dying" target="_blank" rel="noopener">Steal An Egg<span class="sr-only"> (opens in a new tab)</span></a>, <a class="link" href="https://rowatcher.com/games/10004244222/kick-a-lucky-block" target="_blank" rel="noopener">Kick a Lucky Block<span class="sr-only"> (opens in a new tab)</span></a>, <a class="link" href="https://rowatcher.com/games/10148749921/animal-hospital-anomaly" target="_blank" rel="noopener">Animal Hospital<span class="sr-only"> (opens in a new tab)</span></a>, <a class="link" href="https://rowatcher.com/games/10200395747/grow-a-garden-2" target="_blank" rel="noopener">Grow a Garden 2<span class="sr-only"> (opens in a new tab)</span></a>, <a class="link" href="https://rowatcher.com/games/6035872082/rivals" target="_blank" rel="noopener">RIVALS<span class="sr-only"> (opens in a new tab)</span></a>, <a class="link" href="https://rowatcher.com/games/6701277882/upd-fish-it/dying" target="_blank" rel="noopener">Fish It!<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://en.wikipedia.org/wiki/Dress_to_Impress_(video_game)" target="_blank" rel="noopener">Wikipedia: Dress to Impress<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://www.dallasnews.com/business/technology/2025/07/12/roblox-game-buying-frenzy-is-turning-teens-into-millionaires/" target="_blank" rel="noopener">Bloomberg via Dallas News: Blue Lock: Rivals sale and the months-of-revenue rule<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://www.tubefilter.com/2025/07/14/indie-game-creators-are-making-millions-selling-their-roblox-worlds/" target="_blank" rel="noopener">Tubefilter: Blue Lock: Rivals after the sale<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://www.netinfluencer.com/how-voldex-grows-roblox-biggest-games-and-connects-brands-with-their-communities/" target="_blank" rel="noopener">Net Influencer: how Voldex buys and runs games<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://investgame.net/news/voldex-becomes-the-1-developer-on-the-roblox-platform/" target="_blank" rel="noopener">InvestGame: Brookhaven price estimate<span class="sr-only"> (opens in a new tab)</span></a> and <a class="link" href="https://rowatcher.com/news/the-10-highest-earning-roblox-games-in-2026-and-what-they-mean-for-the-platform" target="_blank" rel="noopener">RoWatcher: revenue estimates<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://www.gameanalytics.com/cn/reports/2025-roblox-report" target="_blank" rel="noopener">GameAnalytics 2025 Roblox report<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://create.roblox.com/docs/en-us/discovery.md" target="_blank" rel="noopener">Roblox: how discovery ranks games<span class="sr-only"> (opens in a new tab)</span></a> and <a class="link" href="https://create.roblox.com/docs/production/promotion/ads-manager" target="_blank" rel="noopener">look-alike games<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://profitable.app/tools/roblox-revenue-calculator" target="_blank" rel="noopener">Profitable: revenue formula<span class="sr-only"> (opens in a new tab)</span></a> and <a class="link" href="https://create.roblox.com/docs/production/monetization/developer-exchange" target="_blank" rel="noopener">Roblox: DevEx rates<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://create.roblox.com/docs/projects/experience-ownership-transfer" target="_blank" rel="noopener">Roblox: ownership transfer<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://www.hcrlaw.com/news-and-insights/buying-or-selling-a-roblox-game/" target="_blank" rel="noopener">HCR Law: buying or selling a Roblox game<span class="sr-only"> (opens in a new tab)</span></a></li>
-      </ul>
-    </div>
   </section>
 
-  <section id="about" class="sec wrap grid" aria-labelledby="about-h">
-    <div class="about-facts" data-reveal>
-      <h2 id="about-h">About</h2>
-      <dl>
-        <div><dt>Run by</dt><dd>Gautam Prasanna</dd></div>
-        <div><dt>First issue</dt><dd>October 23, 2026</dd></div>
-        <div><dt>Independent</dt><dd>Not affiliated with Roblox</dd></div>
-      </dl>
-    </div>
-    <div class="about-text">
-      <p data-reveal style="--i:1">Spawnbook is run by Gautam Prasanna. We value developers' games for free and sell a weekly report to the studios and investors who buy them. We never share a developer's private numbers without written permission, and we never take a fee from both sides of a deal.</p>
-      <p class="soft" data-reveal style="--i:2">We publish information and estimates. We don't negotiate deals, act as a broker, take part in sales or hold money. Nothing here is an appraisal or financial, legal or investment advice. Roblox and game names belong to their owners and are used only to identify games, and game names link to their public Roblox pages.</p>
+  <section id="what" class="sec wrap grid" aria-labelledby="what-h">
+    <h2 id="what-h" class="head c-l6" data-reveal>What you get</h2>
+    <ul class="what c-r">
+      <li data-reveal style="--i:1"><strong>Every young game, scored out of 100</strong><span>Games under four months old with 500 to 15,000 players, ranked on momentum, stickiness, updates, originality, earnings and how easy they'd be to buy.</span></li>
+      <li data-reveal style="--i:2"><strong>An estimated price for each</strong><span>Worked out from what the game earns and how fast games like it fade, checked against past deals like Grow a Garden and Blue Lock: Rivals.</span></li>
+      <li data-reveal style="--i:3"><strong>Red flags before you make an offer</strong><span>Borrowed names, unusual numbers and copycat games are marked, so you know what to ask the creator first.</span></li>
+      <li data-reveal style="--i:4"><strong>A public way to reach each owner</strong><span>Links to every game and the group or creator behind it, refreshed every day.</span></li>
+    </ul>
+  </section>
+
+  <section class="band inv" aria-labelledby="sell-h">
+    <div class="wrap band-cta">
+      <h2 id="sell-h" class="head" data-reveal>Making a Roblox game?</h2>
+      <div class="side" data-reveal style="--i:1">
+        <p>See what your game could sell for in a few seconds. It's free, and nothing you type leaves your browser.</p>
+        <a class="button" href="value">Value your game</a>
+      </div>
     </div>
   </section>
 
@@ -969,7 +158,7 @@ th.r, td.r, .mini .r { text-align: right; }
 <footer class="foot wrap">
   <div class="foot-top">
     <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
-    <p id="foot-data">Data as of Oct 23, 2026.</p>
+    <p id="foot-data"></p>
     <a class="link" href="#top">Back to top</a>
   </div>
   <h2 class="foot-mail"><span class="sr-only">Email us at </span><a href="mailto:gautamuprasanna@gmail.com">gautamuprasanna<span class="at">@gmail.com</span></a></h2>
@@ -988,743 +177,74 @@ th.r, td.r, .mini .r { text-align: right; }
   </div>
 </footer>
 
-<script src="data.js"></script>
+<script src="site.js"></script>
 <script>
 (function () {
-  document.documentElement.lang = "en";
-  function $(id) { return document.getElementById(id); }
-  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-  var MAIL = "gautamuprasanna@gmail.com";
+  var $ = function (id) { return document.getElementById(id); };
+  var commas = function (n) { return Math.round(n).toLocaleString("en-US"); };
+  var short = function (n) { return n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : commas(n); };
 
-  // ---------- reveal on scroll (once) ----------
-  var revealIO = ("IntersectionObserver" in window) ? new IntersectionObserver(function (entries) {
-    entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("is-in"); revealIO.unobserve(e.target); } });
-  }, { rootMargin: "0px 0px 12% 0px", threshold: 0 }) : null;
-  function watch(node) { if (revealIO) revealIO.observe(node); else node.classList.add("is-in"); }
-  document.querySelectorAll("[data-reveal]").forEach(watch);
+  // Errors sent back by the sign-up form.
+  var ERRORS = {
+    missing: "Fill in your name, work email and studio or fund.",
+    email: "That email doesn't look right. Check it and try again.",
+    agree: "Check the box to agree before signing up.",
+    server: "Something went wrong on our side. Try again in a minute."
+  };
+  var code = new URLSearchParams(location.search).get("e");
+  if (code && ERRORS[code]) {
+    $("f-err").textContent = ERRORS[code];
+    if (location.hash !== "#signup") location.hash = "signup";
+  }
 
-  // ---------- copy helpers ----------
-  function copyText(text, statusEl, area) {
-    function fallback() {
-      if (area) { area.focus(); area.select(); statusEl.textContent = "Selected. Press Ctrl+C or Cmd+C to copy."; }
-      else statusEl.textContent = "Copy didn't work here. Select the address and copy it.";
+  // Check the form before it's sent.
+  $("signup-form").addEventListener("submit", function (e) {
+    var name = $("f-name").value.trim(), email = $("f-email").value.trim(), co = $("f-co").value.trim();
+    var msg = "", field = null;
+    if (!name) { msg = ERRORS.missing; field = "f-name"; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg = ERRORS.email; field = "f-email"; }
+    else if (!co) { msg = ERRORS.missing; field = "f-co"; }
+    else if (!$("f-agree").checked) { msg = ERRORS.agree; field = "f-agree"; }
+    this.querySelectorAll("[aria-invalid]").forEach(function (x) { x.removeAttribute("aria-invalid"); });
+    if (msg) {
+      e.preventDefault();
+      $("f-err").textContent = msg;
+      $(field).setAttribute("aria-invalid", "true");
+      $(field).focus();
     }
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { statusEl.textContent = area ? "Copied. Now paste it into your message to us." : "Copied."; }, fallback);
-      else fallback();
-    } catch (e) { fallback(); }
-  }
-  $("mail-copy").addEventListener("click", function () { copyText(MAIL, $("mail-status")); });
-  $("foot-copy").addEventListener("click", function () { copyText(MAIL, $("foot-status")); });
-
-  // ---------- request tabs ----------
-  var tabs = [$("tab-weekly"), $("tab-sell")];
-  function selectTab(t, focus) {
-    tabs.forEach(function (x) {
-      var on = x === t;
-      x.setAttribute("aria-selected", on ? "true" : "false");
-      x.tabIndex = on ? 0 : -1;
-      $(x.getAttribute("aria-controls")).hidden = !on;
-    });
-    if (focus) t.focus();
-  }
-  tabs.forEach(function (t, i) {
-    t.addEventListener("click", function () { selectTab(t); });
-    t.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); selectTab(tabs[(i + 1) % 2], true); }
-      if (e.key === "Home") { e.preventDefault(); selectTab(tabs[0], true); }
-      if (e.key === "End") { e.preventDefault(); selectTab(tabs[1], true); }
-    });
-  });
-  document.querySelectorAll("[data-tab]").forEach(function (a) {
-    a.addEventListener("click", function () { selectTab($(a.getAttribute("data-tab"))); });
   });
 
-  // ---------- top bar: hides while you read down, comes back on any scroll up ----------
-  var bar = document.querySelector(".bar");
-  var barY = window.scrollY, barHold = 0, barQueued = false;
-  function setBar(hidden) { bar.classList.toggle("is-hidden", hidden); }
-  function onBarScroll() {
-    barQueued = false;
-    var y = Math.max(0, window.scrollY), dy = y - barY;
-    bar.classList.toggle("is-away", y > 4);
-    if (y <= bar.offsetHeight) { setBar(false); barY = y; return; }
-    if (performance.now() < barHold) { setBar(true); barY = y; return; }
-    if (dy > 8) { setBar(true); barY = y; }
-    else if (dy < -4) { setBar(false); barY = y; }
-  }
-  window.addEventListener("scroll", function () { if (!barQueued) { barQueued = true; requestAnimationFrame(onBarScroll); } }, { passive: true });
-  bar.addEventListener("focusin", function () { barHold = 0; setBar(false); });
-  // After a link jumps to a section, keep the bar tucked away so it doesn't cover the heading.
-  document.addEventListener("click", function (e) {
-    var a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
-    var href = a && a.getAttribute("href");
-    if (href && href.length > 1 && href !== "#top") barHold = performance.now() + 600;
-  });
-  onBarScroll();
-
-  // ---------- fit the name to the measure on wide screens ----------
-  var nameEl = document.querySelector(".hero-name");
-  function fitName() {
-    nameEl.style.fontSize = "";
-    if (window.innerWidth < 768) return;
-    var avail = nameEl.clientWidth, used = 0;
-    Array.prototype.forEach.call(nameEl.children, function (c) { used += c.getBoundingClientRect().width; });
-    var gap = parseFloat(getComputedStyle(nameEl).columnGap) || 0;
-    used += gap * (nameEl.children.length - 1);
-    if (!used) return;
-    var size = parseFloat(getComputedStyle(nameEl).fontSize);
-    var next = Math.min(size * (avail * 0.97) / used, window.innerHeight * 0.42);
-    nameEl.style.fontSize = next + "px";
-  }
-  fitName();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitName);
-  window.addEventListener("resize", fitName);
-
-  var BR = window.BR;
-  if (!BR || !BR.BOARD) {
-    $("board-list").textContent = "";
-    $("board-list").appendChild(el("p", "empty", "Today's data didn't load. Refresh the page to try again."));
-    return;
-  }
-  var META = BR.META, BOARD = BR.BOARD, BIG = BR.BIG, BIG_NOTES = BR.BIG_NOTES || {}, IP_OFF = BR.IP_OFF || [], FLAG_OFF = BR.FLAG_OFF || [];
-
-  var W = [25, 25, 15, 15, 10, 10];
-  var WN = ["Momentum", "Stickiness", "Updates", "Originality", "Earnings", "Ease of buying"];
-  var MULT = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6] };
-  var PER_VISIT = [0.004, 0.008, 0.012];
-  var DEVEX = 0.0038;
-  var NEWTAB = " (opens in a new tab)";
-
-  // Game names on Roblox often carry emoji and tags like [🎃]; show the words only.
-  function clean(name) {
-    var s = String(name || "");
-    try { s = s.replace(/\p{Extended_Pictographic}|️|‍|⃣/gu, ""); } catch (e) {}
-    s = s.replace(/\[\s*\]|\(\s*\)/g, "").replace(/\[\s+/g, "[").replace(/\s+\]/g, "]").replace(/\s{2,}/g, " ").trim();
-    return s || String(name || "");
-  }
-  function trim(v) { var s = v >= 100 ? v.toFixed(0) : v.toFixed(1); return s.indexOf(".") >= 0 ? s.replace(/0+$/, "").replace(/\.$/, "") : s; }
-  function money(x) {
-    if (!isFinite(x) || x <= 0) return "$0";
-    if (x >= 999.5e6) return "$" + trim(x / 1e9) + "B";
-    if (x >= 999.5e3) return "$" + trim(x / 1e6) + "M";
-    if (x >= 1e3) return "$" + Math.round(x / 1e3) + "K";
-    return "$" + Math.round(x);
-  }
-  function short(n) {
-    if (n >= 1e9) return trim(n / 1e9) + "B";
-    if (n >= 1e6) return trim(n / 1e6) + "M";
-    if (n >= 1e4) return Math.round(n / 1e3) + "K";
-    if (n >= 1e3) return trim(n / 1e3) + "K";
-    return String(Math.round(n));
-  }
-  function commas(n) { return Math.round(n).toLocaleString("en-US"); }
-  function parseNum(s) { var n = Number(String(s || "").replace(/[^0-9.]/g, "")); return isFinite(n) ? n : 0; }
-  function extLink(text, href, cls) {
-    var a = el("a", cls || null, text); a.href = href; a.target = "_blank"; a.rel = "noopener"; a.dir = "auto";
-    a.appendChild(el("span", "sr-only", NEWTAB));
-    return a;
-  }
-  function valueOf(pace, mult) {
-    var monthly = pace * 30;
-    var rev = PER_VISIT.map(function (k) { return monthly * k; });
-    return { rev: rev, fair: [rev[0] * mult[0], rev[1] * mult[1], rev[2] * mult[2]], lasts: rev[1] * 12 };
-  }
-  function tierOf(p) { return p < 3000 ? "seed" : p < 10000 ? "break" : "chart"; }
-  var TIER_NAME = { seed: "Under 3K players", "break": "3K–10K players", chart: "10K+ players" };
-  function sessBand(s) { return s < 6.62 ? "below the Roblox median" : s < 14.53 ? "above the Roblox median" : s < 26.38 ? "in Roblox's top quarter" : "in Roblox's top tenth"; }
-  function ownerText(o) {
-    if (o === "Gv") return "Owned by a group with a verified badge.";
-    if (o === "U") return "Owned by a solo account. Confirm the owner's age and who else built it.";
-    if (o === "Gbig") return "Owned by a group with over 1 million members, so it may be an established studio.";
-    return "Owned by a group, which makes a transfer simpler.";
-  }
-  function ownerChip(o) {
-    if (o === "Gv") return ["", "Verified group"];
-    if (o === "U") return ["risk", "Solo account"];
-    if (o === "Gbig") return ["", "1M+ member group"];
-    return ["", "Group-owned"];
-  }
-
-  var P = BOARD.map(function (r) {
-    var o = { pid: r[0], name: clean(r[1]), creator: r[2], own: r[3], genre: r[4], g2: r[5], age: r[6], playing: r[7], pace: r[8], fresh: r[9],
-      accel: r[10], sess: r[11], like: r[12], favk: r[13], vk: r[14], hrs: r[15], U: r[16], T: r[17], E: r[18], R: r[19], G: r[20],
-      shape: r[21], wave: r[22], comp: r[23].split("/").map(Number), score: r[24], mult: r[25] || null, x: r[26] || {} };
-    o.tier = tierOf(o.playing);
-    o.val = valueOf(o.pace, o.mult || MULT[o.shape]);
-    return o;
-  });
-  P.slice().sort(function (a, b) { return b.score - a.score; }).forEach(function (p, i) { p.rank = i + 1; });
-  var byScore = P.slice().sort(function (a, b) { return b.score - a.score || b.playing - a.playing; });
-
-  // ---------- page text from today's data ----------
-  var hot = P.filter(function (p) { return p.score >= 75; }).length;
-  $("issue-date").textContent = "Data as of " + META.snapshot;
-  $("issue-note").textContent = META.issueNote;
-  $("foot-data").textContent = "Data as of " + META.snapshot + ".";
-  $("lede-sub").textContent = "Every game that made today's cut, scored out of 100. We checked " + commas(META.checked) + " games across Roblox's public chart lists. " + META.pool + " were under four months old, had 500 to 15,000 players and were rated 85% or better. " + P.length + " made the board. " + hot + " scored 75 or higher.";
-  $("method-readings").textContent = META.readings;
-  $("chart-note").textContent = "Past hits show reported peaks and live counts, so they run high. Today's games show " + META.playersNote + ", so they run low. Hover or tap a point for details, or open the numbers below.";
-  var minP = Math.min.apply(null, P.map(function (p) { return p.playing; }));
-  if (minP <= 1000) $("tk1").textContent = "Most games on the board are already bigger than Grow a Garden was at its buy-in.";
-  if (P.some(function (p) { return p.age <= 32 && p.playing >= 50000; })) $("tk2").textContent = "Check any game near that pace closely";
-
-  function compLine(p) {
-    if (p.accel != null && p.accel >= 8 && p.age > 30) {
-      return "Created " + p.age + " days ago, but its latest visits ran " + p.accel + "× its lifetime average. Fish It! and Ink Game also took off months after launch, so its real clock may be starting now.";
-    }
-    if (p.shape === "rocket") {
-      if (p.age <= 32) {
-        var need = Math.max(2, Math.round(100000 / p.playing));
-        var left = 32 - p.age;
-        return "Grow a Garden went from about 1,000 players to 100,000 between days 18 and 32. To keep that pace this needs about " + need + "× today's players by day 32" + (left > 0 ? ", " + left + " days from now." : ".");
-      }
-      if (p.age <= 56) return "Past the window where recent rockets took off. Grow a Garden had about 1 million players by day 48 and Steal An Egg about 1.3 million by day 46. Price it on today's revenue.";
-      return "Recent rockets peaked between days 56 and 150, and several later lost 67–99% of their players. Price it on today's revenue and watch the weekly decline.";
-    }
-    if (/fish/i.test(p.name)) return "Fish It! launched in October 2024 and didn't peak until 13 months later, near 1.4 million. Fishing games can build slowly, so the low point after each update matters most.";
-    if (p.genre === "Roleplay & Avatar Sim") return "Dress to Impress stayed small for months and hit 651,000 players at about 9 months, on a collab. Watch whether each update leaves a higher low.";
-    if (p.genre === "Action" || p.genre === "Shooter" || p.genre === "Sports & Racing") return "RIVALS took about 22 months to reach about 964,000 players and lost only about 7% month over month in Sept 2026. Competitive games can build slowly and hold value longer.";
-    return "Staircase games can sit under 100,000 players for months, then step up on big updates, peaking at 250,000 to 1.5 million between 9 and 22 months in. Watch the low point after each update.";
-  }
-
-  function reasons(p) {
-    var m = p.fresh ? "Recent visits ran " + p.accel + "× its lifetime daily average." : "No recent visit reading yet, so this uses its lifetime average.";
-    if (p.x.pgrowth7) m += " Players " + (p.x.pgrowth7 >= 1 ? "up " + Math.round((p.x.pgrowth7 - 1) * 100) : "down " + Math.round((1 - p.x.pgrowth7) * 100)) + "% over the past week.";
-    if (p.U) m += " #" + p.U + " on Up-and-Coming.";
-    if (p.T) m += " #" + p.T + " on Top Trending.";
-    if (p.G) m += " #" + p.G + " in its genre's trending list.";
-    var s = "About " + p.sess + " minutes per visit, " + sessBand(p.sess) + ". Rated " + p.like + "%. " + p.favk + " favorites and " + p.vk + " votes per 1,000 visits.";
-    if (p.R) s += " #" + p.R + " on Top Revisited.";
-    var u = p.hrs < 1 ? "Updated within the hour before our reading." : p.hrs < 48 ? "Updated " + p.hrs + " hours before our reading." : "Updated " + Math.round(p.hrs / 24) + " days before our reading.";
-    if (p.age > 30 && p.hrs < 72) u += " Still shipping after a month.";
-    var o = p.shape === "staircase" ? "Slow-build genre: these tend to grow over months and last." : "Fast-rise genre: these tend to grow fast and fade.";
-    if (p.wave) o += " It follows a current trend, and Roblox says it no longer prioritizes close look-alikes in recommendations.";
-    var e = p.E ? "#" + p.E + " on Top Earning, the main public sign of revenue." : "Not on Top Earning yet.";
-    return [m, s, u, o, e, ownerText(p.own)];
-  }
-
-  function visitsLabel(p) { return p.fresh === 7 ? "7-day average" : p.fresh === 1 ? "recent reading" : "lifetime average"; }
-  function passesText(x) {
-    if (x.passes == null) return "Not checked yet";
-    if (!x.passes) return "No game passes for sale";
-    return x.passes + " game pass" + (x.passes === 1 ? "" : "es") + " for sale, " + commas(x.pmin) + (x.pmax !== x.pmin ? " to " + commas(x.pmax) : "") + " Robux";
-  }
-  function contactNodes(p) {
-    var x = p.x, frag = document.createDocumentFragment();
-    if (!x.ctype) { frag.appendChild(document.createTextNode("Not checked yet")); return frag; }
-    if (x.ctype === "Group" && x.cid) {
-      frag.appendChild(extLink("Group page", "https://www.roblox.com/communities/" + x.cid, "link"));
-      var tail = x.members ? " (" + commas(x.members) + " members)" : "";
-      tail += x.discord ? ", plus a Discord link in the game description" : "";
-      frag.appendChild(document.createTextNode(tail + "."));
+  // Already signed in? Point straight at the board, or at pricing once the free day is over.
+  fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+    if (!m || m.access === "none") return;
+    $("signup-form").hidden = true;
+    $("signed-in").hidden = false;
+    if (m.access === "active") {
+      var when = new Date(m.until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+      $("signed-in-text").textContent = "You're signed in. Your access runs until " + when + ".";
+      $("hero-cta").textContent = "Open today's board";
+      $("hero-cta").href = "board";
     } else {
-      frag.appendChild(document.createTextNode("Solo account with no public business contact" + (x.discord ? ". The game description links a Discord." : ".")));
+      $("signed-in-text").textContent = "Your free day is over. Subscribe to keep seeing the board every day.";
+      $("signed-in-link").textContent = "See pricing";
+      $("signed-in-link").href = "subscribe";
     }
-    return frag;
-  }
-  function monthsText(p) {
-    if (p.mult) return "Measured decline of about " + p.x.decay + "% a month, so we price it at " + p.mult[0] + " to " + p.mult[2] + " months of revenue.";
-    return (p.shape === "rocket" ? "Fast-rise genre, so we price it at 1 to 2 months of revenue." : "Slow-build genre, so we price it at 3 to 6 months of revenue.") + " If it holds its players, it could be worth up to 12.";
-  }
-  function band(p) { return el("span", "band-chip" + (p.score >= 75 ? " hot" : ""), p.score >= 75 ? "Contact this week" : "Watch"); }
+  }).catch(function () {});
 
-  // ---------- top five ----------
-  (function renderPicks() {
-    var box = $("picks-list");
-    byScore.slice(0, 5).forEach(function (p) {
-      var li = el("li");
-      var a = el("a", "pick-row"); a.href = "#pr-" + p.pid; a.setAttribute("data-open", p.pid);
-      a.appendChild(el("span", "pk-score", String(p.score)));
-      var mid = el("span"); mid.appendChild(el("span", "pk-name", p.name));
-      mid.appendChild(el("span", "pk-sub", commas(p.playing) + " players. " + p.age + " days old. " + (p.score >= 75 ? "Contact this week." : "Watch.")));
-      a.appendChild(mid);
-      a.appendChild(el("span", "pk-price", "About " + money(p.val.fair[1])));
-      li.appendChild(a);
-      box.appendChild(li);
-    });
-    var top = byScore[0], card = $("top-card");
-    var t = el("div", "c-top");
-    var nm = el("div"); nm.appendChild(el("span", "small muted", "Today's top pick")); nm.appendChild(el("p", "c-name", top.name)); t.appendChild(nm);
-    var sc = el("div"); sc.appendChild(el("span", "c-score", String(top.score))); t.appendChild(sc);
-    card.appendChild(t);
-    card.appendChild(band(top));
-    var bars = el("div", "c-bars");
-    top.comp.forEach(function (v, i) {
-      var b = el("div", "c-bar"); b.style.setProperty("--i", i);
-      b.appendChild(el("span", null, WN[i]));
-      var tr = el("span", "t"); var f = el("b"); f.style.width = Math.max(4, Math.round(v / W[i] * 100)) + "%"; tr.appendChild(f); b.appendChild(tr);
-      b.appendChild(el("span", "v", v + "/" + W[i]));
-      bars.appendChild(b);
-    });
-    card.appendChild(bars);
-    var st = el("dl", "c-stats");
-    [["Players", commas(top.playing)], ["Visits a day", short(top.pace)], ["Rating", top.like + "%"]].forEach(function (s) { var d = el("div"); d.appendChild(el("dt", null, s[0])); d.appendChild(el("dd", null, s[1])); st.appendChild(d); });
-    card.appendChild(st);
-    var pr = el("div", "c-price"); pr.appendChild(el("span", "small muted", "Estimated price, low confidence")); pr.appendChild(el("strong", null, "About " + money(top.val.fair[1]))); card.appendChild(pr);
-  })();
-
-  // ---------- board ----------
-  var bstate = { tier: "all", shape: "any", hideWave: false, sort: "score" };
-  var detailOpen = {};
-  function renderBoard() {
-    var list = P.filter(function (p) {
-      if (bstate.tier !== "all" && p.tier !== bstate.tier) return false;
-      if (bstate.shape !== "any" && p.shape !== bstate.shape) return false;
-      if (bstate.hideWave && p.wave) return false;
-      return true;
-    });
-    list.sort(function (a, b) {
-      if (bstate.sort === "price") return b.val.fair[1] - a.val.fair[1];
-      if (bstate.sort === "playing") return b.playing - a.playing;
-      if (bstate.sort === "age") return a.age - b.age;
-      return b.score - a.score || b.playing - a.playing;
-    });
-    var box = $("board-list");
-    box.textContent = "";
-    if (!list.length) box.appendChild(el("p", "empty", "No games match these filters. Choose All sizes or Any genre to see more."));
-    list.forEach(function (p) {
-      var row = el("article", "row");
-      row.id = "pr-" + p.pid;
-      row.setAttribute("data-ui", "");
-      row.setAttribute("aria-labelledby", "pr-h-" + p.pid);
-
-      var line = el("div", "r-line");
-      var num = el("span", "r-num", String(p.score)); num.setAttribute("aria-label", "Score " + p.score + " of 100, rank " + p.rank);
-      line.appendChild(num);
-      var nm = el("div", "r-name");
-      var h = el("h3"); h.id = "pr-h-" + p.pid; h.appendChild(extLink(p.name, "https://www.roblox.com/games/" + p.pid)); nm.appendChild(h);
-      nm.appendChild(el("p", "who", "by " + p.creator + ". " + p.age + " days old. " + (p.g2 || p.genre || "No genre listed") + "."));
-      line.appendChild(nm);
-      var bd = el("div", "r-band"); bd.appendChild(band(p)); line.appendChild(bd);
-      var st = el("dl", "r-stats");
-      [["Players", commas(p.playing)], ["Visits a day", short(p.pace)], ["Rating", p.like + "%"]].forEach(function (s) {
-        var d = el("div"); d.appendChild(el("dt", null, s[0])); d.appendChild(el("dd", null, s[1])); st.appendChild(d);
-      });
-      line.appendChild(st);
-      var v = el("div", "r-price");
-      v.appendChild(el("span", "v", "About " + money(p.val.fair[1])));
-      v.appendChild(el("span", "conf", "est. price, low confidence"));
-      line.appendChild(v);
-      var btn = el("button", "more", "Why this score"); btn.type = "button";
-      btn.setAttribute("aria-label", "Why " + p.name + " scored " + p.score);
-      line.appendChild(btn);
-      row.appendChild(line);
-
-      var det = el("div", "r-detail"); det.id = "det-" + p.pid;
-      btn.setAttribute("aria-controls", det.id);
-      var chips = el("div", "chips");
-      [["", TIER_NAME[p.tier]], ["", p.shape === "rocket" ? "Fast-rise genre" : "Slow-build genre"], ownerChip(p.own)].forEach(function (c) { chips.appendChild(el("span", "chip " + c[0], c[1])); });
-      if (p.E) chips.appendChild(el("span", "chip good", "Top Earning #" + p.E));
-      if (p.U) chips.appendChild(el("span", "chip good", "Up-and-Coming #" + p.U));
-      if (p.wave) chips.appendChild(el("span", "chip risk", "Follows a trend"));
-      det.appendChild(chips);
-      det.appendChild(el("p", "comp", compLine(p)));
-      var why = el("div", "why");
-      var rs = reasons(p);
-      WN.forEach(function (n, i) {
-        var wl = el("div", "wl");
-        wl.appendChild(el("span", "n", n));
-        var tr = el("span", "t"); tr.setAttribute("aria-hidden", "true"); var f = el("b"); f.style.width = Math.max(4, Math.round(p.comp[i] / W[i] * 100)) + "%"; tr.appendChild(f); wl.appendChild(tr);
-        wl.appendChild(el("span", "pts", p.comp[i] + "/" + W[i]));
-        wl.appendChild(el("span", "txt", rs[i]));
-        why.appendChild(wl);
-      });
-      det.appendChild(why);
-      var mm = el("div", "money-math");
-      var kv = el("dl", "kv");
-      [["Players now (measured)", commas(p.playing)], ["Visits a day (" + visitsLabel(p) + ")", short(p.pace)], ["Minutes per visit (estimate)", String(p.sess)], ["Rating (measured)", p.like + "%"]].forEach(function (s) {
-        var d = el("div"); d.appendChild(el("dt", null, s[0])); d.appendChild(el("dd", null, s[1])); kv.appendChild(d);
-      });
-      mm.appendChild(kv);
-      mm.appendChild(el("p", null, "Price range: " + money(p.val.fair[0]) + " to " + money(p.val.fair[2]) + ". If it holds its players for a year: about " + money(p.val.lasts) + "."));
-      mm.appendChild(el("p", null, "Estimated revenue: about " + money(p.val.rev[1]) + " a month (" + money(p.val.rev[0]) + " to " + money(p.val.rev[2]) + "), from about " + short(p.pace * 30) + " visits a month."));
-      mm.appendChild(el("p", null, monthsText(p)));
-      var cp = el("p"); cp.appendChild(el("strong", null, "Public contact: ")); cp.appendChild(contactNodes(p)); mm.appendChild(cp);
-      var gp = el("p"); gp.appendChild(el("strong", null, "Game passes: ")); gp.appendChild(document.createTextNode(passesText(p.x) + (p.E ? ". #" + p.E + " on Top Earning." : "."))); mm.appendChild(gp);
-      mm.appendChild(el("p", null, "Owner's age is unknown. Ask before any offer, since a minor can generally cancel a contract in California."));
-      if (!p.fresh) mm.appendChild(el("p", "muted", "Visits use the lifetime average because we don't have a recent reading for this game yet."));
-      det.appendChild(mm);
-      row.appendChild(det);
-      function setOpen(open) { det.hidden = !open; btn.setAttribute("aria-expanded", open ? "true" : "false"); detailOpen[p.pid] = open; }
-      setOpen(!!detailOpen[p.pid]);
-      btn.addEventListener("click", function () { setOpen(det.hidden); });
-      row._open = function () { setOpen(true); };
-
-      box.appendChild(row);
-    });
-    $("board-count").textContent = "Showing " + list.length + " of " + P.length + " games";
-  }
-  function segGroup(map, key) {
-    Object.keys(map).forEach(function (k) {
-      $(map[k]).addEventListener("click", function () {
-        bstate[key] = k;
-        Object.keys(map).forEach(function (j) { $(map[j]).setAttribute("aria-pressed", j === k ? "true" : "false"); });
-        renderBoard();
-      });
-    });
-  }
-  segGroup({ all: "t-all", seed: "t-seed", "break": "t-break", chart: "t-chart" }, "tier");
-  segGroup({ any: "s-any", staircase: "s-stair", rocket: "s-rocket" }, "shape");
-  $("hide-wave").addEventListener("change", function (e) { bstate.hideWave = e.target.checked; renderBoard(); });
-  $("sort").addEventListener("change", function (e) { bstate.sort = e.target.value; renderBoard(); });
-  renderBoard();
-
-  // A pick in the top five opens its row on the board.
-  document.querySelectorAll("[data-open]").forEach(function (a) {
-    a.addEventListener("click", function () {
-      var pid = a.getAttribute("data-open");
-      var row = $("pr-" + pid);
-      if (!row) {
-        bstate = { tier: "all", shape: "any", hideWave: false, sort: bstate.sort };
-        ["t-all", "s-any"].forEach(function (id) { $(id).click(); });
-        $("hide-wave").checked = false;
-        renderBoard();
-        row = $("pr-" + pid);
-      }
-      if (row && row._open) row._open();
-    });
-  });
-
-  // ---------- track record ----------
-  (function renderRecord() {
-    var logged = META.picksLogged || 0, first = META.firstPicks;
-    $("rec-picks").textContent = String(logged);
-    if (first) {
-      var d0 = new Date(first + "T12:00:00");
-      var d1 = new Date(d0.getTime() + 56 * 864e5);
-      var fmt = function (d, y) { return d.toLocaleDateString("en-US", y ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" }); };
-      $("rec-picks-note").textContent = "pick" + (logged === 1 ? "" : "s") + " logged so far, starting " + fmt(d0, true) + (META.issues > 1 ? ", across " + META.issues + " issues" : "");
-      $("rec-first").textContent = fmt(d1, false);
-      $("rec-first-note").textContent = (new Date() >= d1 ? "first results are due now" : "first results, 8 weeks after the first issue") + ". A game counts as a hit if its players grow at least 5× and hold.";
+  // A peek at today's top pick, without its name.
+  fetch("/api/teaser").then(function (r) { return r.ok ? r.json() : null; }).then(function (t) {
+    if (!t || !t.top) return;
+    $("t-score").textContent = t.top.score;
+    $("t-age").textContent = t.top.age;
+    $("t-players").textContent = commas(t.top.players);
+    $("t-visits").textContent = short(t.top.visitsPerDay);
+    $("t-more").textContent = "Sign up to see which game it is, plus the other " + (t.count - 1) + " games on today's board with prices and red flags.";
+    if (t.date) {
+      $("hero-data").textContent = "Data as of " + t.date + ". A new board every afternoon, Pacific time.";
+      $("foot-data").textContent = "Data as of " + t.date + ".";
     }
-  })();
-
-  // ---------- already charting ----------
-  var WAVE = /steal|grow a|\+1|egg|brainrot|hatcher|rng|anomaly|lucky block|evolution|roll a/i;
-  var STAIR = { "RPG": 1, "Shooter": 1, "Action": 1, "Sports & Racing": 1, "Strategy": 1, "Roleplay & Avatar Sim": 1, "Adventure": 1, "Puzzle": 1, "Party & Casual": 1, "Survival": 1, "Obby & Platformer": 1 };
-  var G = BIG.map(function (r) {
-    var o = { pid: r[0], name: clean(r[1]), creator: r[2], own: r[3], genre: r[4] || "No genre listed", g2: r[5], age: r[6], playing: r[7], visits: r[8], pace: r[9], like: r[11], ranks: r[12] };
-    o.wave = WAVE.test(o.name);
-    o.shape = (/fish/i.test(o.name) || (STAIR[r[4]] && !o.wave)) ? "staircase" : "rocket";
-    var extra = BIG_NOTES[String(o.pid)] || {};
-    o.ip = extra.ip; o.note = extra.note;
-    var v = valueOf(o.pace, extra.mult || MULT[o.shape]);
-    o.rev = v.rev[1]; o.revLo = v.rev[0]; o.revHi = v.rev[2]; o.fairLo = v.fair[0]; o.fairHi = v.fair[2]; o.fair = v.fair[1]; o.lasts = v.lasts;
-    o.multTxt = extra.mult ? "1–1.5 months, measured fade" : (o.shape === "rocket" ? "1–2 months" : "3–6 months");
-    return o;
-  });
-  G.slice().sort(function (a, b) { return b.playing - a.playing; }).forEach(function (g, i) { g.r = i + 1; });
-  var gstate = { key: "playing", dir: "desc", all: false };
-  function renderBig() {
-    var list = G.slice().sort(function (x, y) { var d = x[gstate.key] - y[gstate.key]; return gstate.dir === "desc" ? -d : d; });
-    var tb = $("big-rows"); tb.textContent = "";
-    var more = $("big-all");
-    more.hidden = G.length <= 10;
-    more.textContent = gstate.all ? "Show the first 10" : "Show all " + G.length + " games";
-    more.setAttribute("aria-expanded", gstate.all ? "true" : "false");
-    (gstate.all ? list : list.slice(0, 10)).forEach(function (g) {
-      var tr = el("tr");
-      tr.appendChild(el("td", "r", String(g.r)));
-      var td = el("td", "g");
-      td.appendChild(extLink(g.name, "https://www.roblox.com/games/" + g.pid, "link"));
-      td.appendChild(el("span", "sub", "by " + g.creator + ". " + (g.g2 || g.genre) + "."));
-      var chips = el("div", "chips");
-      g.ranks.split(" ").forEach(function (t) {
-        if (!t) return;
-        var k = t.charAt(0), n = t.slice(1);
-        var lbl = k === "E" ? "Top Earning #" : k === "U" ? "Up-and-Coming #" : k === "T" ? "Trending #" : "Top Revisited #";
-        chips.appendChild(el("span", "chip" + (k === "E" ? " good" : ""), lbl + n));
-      });
-      if (g.wave) chips.appendChild(el("span", "chip risk", "Follows a trend"));
-      if (g.own === "U") chips.appendChild(el("span", "chip risk", "Solo account"));
-      if (g.note) chips.appendChild(el("span", "chip", g.note));
-      if (g.ip) chips.appendChild(el("span", "chip risk", g.ip));
-      td.appendChild(chips);
-      tr.appendChild(td);
-      tr.appendChild(el("td", "r", g.age + " days"));
-      tr.appendChild(el("td", "r", commas(g.playing)));
-      tr.appendChild(el("td", "r", short(g.pace)));
-      tr.appendChild(el("td", "r", g.like + "%"));
-      var tdr = el("td", "r", money(g.rev)); tdr.appendChild(el("span", "sub", money(g.revLo) + "–" + money(g.revHi))); tr.appendChild(tdr);
-      var tdf = el("td", "r val", money(g.fairLo) + "–" + money(g.fairHi)); tdf.appendChild(el("span", "sub", g.multTxt)); tr.appendChild(tdf);
-      tr.appendChild(el("td", "r", money(g.lasts)));
-      tb.appendChild(tr);
-    });
-    document.querySelectorAll(".big th[data-key]").forEach(function (th) {
-      if (th.getAttribute("data-key") === gstate.key) th.setAttribute("aria-sort", gstate.dir === "desc" ? "descending" : "ascending");
-      else th.removeAttribute("aria-sort");
-    });
-  }
-  document.querySelectorAll(".big th[data-key] button").forEach(function (b) {
-    b.addEventListener("click", function () {
-      var key = b.parentElement.getAttribute("data-key");
-      if (gstate.key === key) gstate.dir = gstate.dir === "desc" ? "asc" : "desc";
-      else { gstate.key = key; gstate.dir = key === "age" ? "asc" : "desc"; }
-      renderBig();
-    });
-  });
-  $("big-all").addEventListener("click", function () { gstate.all = !gstate.all; renderBig(); });
-  renderBig();
-
-  // ---------- check first ----------
-  function fillList(id, rows) {
-    var ul = $(id);
-    rows.forEach(function (r) {
-      var li = el("li");
-      li.appendChild(extLink(clean(r[1]), "https://www.roblox.com/games/" + r[0], "link"));
-      li.appendChild(el("span", "p", commas(r[2]) + " players, " + r[3] + " days old"));
-      li.appendChild(el("span", "why-off", r[4]));
-      ul.appendChild(li);
-    });
-    if (!rows.length) ul.appendChild(el("li", "small", "Nothing today."));
-  }
-  fillList("ip-list", IP_OFF);
-  fillList("flag-list", FLAG_OFF);
-
-  // ---------- chart ----------
-  var COMPS = [
-    { name: "Grow a Garden", color: "var(--ink)", shape: "circle", pts: [
-      [18, 750, "About 500–1,000 when Splitting Point bought in (2–3 weeks old)"],
-      [32, 100000, "About 100,000, two weeks after the deal"],
-      [48, 1000000, "About 1 million, a month after the deal"],
-      [53, 5000000, "5 million at the Blood Moon update"],
-      [61, 8900000, "8.9 million"],
-      [66, 11700000, "11.7 million"],
-      [80, 16400000, "16.4 million"],
-      [87, 21300000, "21.3 million at the Summer Update"],
-      [150, 22300000, "22.3 million peak, Admin War event"] ] },
-    { name: "Steal a Brainrot", color: "var(--green)", shape: "circle", pts: [
-      [61, 5000000, "About 5 million by July 2025 (day 46–76)"],
-      [99, 20000000, "20 million, Admin War event"],
-      [120, 24000000, "24 million"],
-      [148, 25870000, "25.87 million, Guinness record"] ] },
-    { name: "Steal An Egg", color: "var(--ochre)", shape: "square", pts: [
-      [27, 371000, "371,000, #1 on Roblox"],
-      [46, 1300000, "About 1.3 million live"],
-      [56, 14300000, "14.3 million peak"],
-      [90, 1200000, "About 1.2 million in October 2026"] ] },
-    { name: "Grow a Garden 2", color: "var(--muted)", dash: true, shape: "circle", pts: [
-      [0, 400000, "400,000 in its first 20 minutes"],
-      [5, 976000, "976,000 peak in June 2026 (exact day not reported)"],
-      [133, 2000, "About 2,000 in October 2026"] ] }
-  ];
-  var chartBox = $("chart");
-  var tip = el("div", "tip"); tip.hidden = true;
-  var SVGNS = "http://www.w3.org/2000/svg";
-  function s(tag, attrs, parent) { var e = document.createElementNS(SVGNS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
-  var marks = [];
-  var lastW = 0;
-  function drawChart() {
-    var w = Math.round(chartBox.clientWidth);
-    if (!w || w === lastW) return;
-    lastW = w;
-    var wide = w >= 560;
-    var h = Math.round(Math.max(300, Math.min(460, w * 0.62)));
-    var m = { t: 14, r: wide ? 124 : 14, b: 42, l: 48 };
-    var iw = w - m.l - m.r, ih = h - m.t - m.b;
-    var X0 = 0, X1 = 160, Y0 = Math.log10(200), Y1 = Math.log10(4e7);
-    function x(d) { return m.l + (d - X0) / (X1 - X0) * iw; }
-    function y(v) { return m.t + (1 - (Math.log10(v) - Y0) / (Y1 - Y0)) * ih; }
-    chartBox.textContent = "";
-    marks = [];
-    var svg = s("svg", { viewBox: "0 0 " + w + " " + h, width: w, height: h, "aria-hidden": "true", focusable: "false" });
-    s("rect", { x: m.l, y: y(3000), width: iw, height: y(300) - y(3000), "class": "seed-band" }, svg);
-    var grid = s("g", { "class": "grid" }, svg), ax = s("g", { "class": "ax" }, svg);
-    [1e3, 1e4, 1e5, 1e6, 1e7].forEach(function (v) {
-      s("line", { x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v) }, grid);
-      var t = s("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end" }, ax); t.textContent = short(v);
-    });
-    var xt = wide ? [0, 20, 40, 60, 80, 100, 120, 140, 160] : [0, 40, 80, 120, 160];
-    xt.forEach(function (d) { var t = s("text", { x: x(d), y: m.t + ih + 18, "text-anchor": "middle" }, ax); t.textContent = String(d); });
-    s("line", { x1: m.l, x2: m.l + iw, y1: m.t + ih, y2: m.t + ih, stroke: "var(--muted)", "stroke-width": 1 }, svg);
-    var xl = s("text", { x: m.l + iw / 2, y: h - 4, "text-anchor": "middle" }, ax); xl.textContent = "Days since launch";
-    COMPS.forEach(function (c) {
-      var d = c.pts.map(function (p, i) { return (i ? "L" : "M") + x(p[0]).toFixed(1) + " " + y(p[1]).toFixed(1); }).join(" ");
-      var path = s("path", { d: d, "class": "ln", stroke: c.color }, svg);
-      if (c.dash) path.setAttribute("stroke-dasharray", "5 5");
-      c.pts.forEach(function (p) {
-        if (c.shape === "square") s("rect", { x: x(p[0]) - 3.5, y: y(p[1]) - 3.5, width: 7, height: 7, fill: c.color, stroke: "var(--surface)", "stroke-width": 1.5 }, svg);
-        else s("circle", { cx: x(p[0]), cy: y(p[1]), r: 3.5, fill: c.color, stroke: "var(--surface)", "stroke-width": 1.5 }, svg);
-        marks.push({ x: x(p[0]), y: y(p[1]), title: c.name, body: "Day " + p[0] + ". " + p[2] + "." });
-      });
-      if (wide) {
-        var last = c.pts[c.pts.length - 1];
-        var lx = x(last[0]) + 8, ly = y(last[1]) + 4;
-        if (c.name === "Steal a Brainrot") ly -= 6;
-        if (c.name === "Grow a Garden") ly += 10;
-        var t = s("text", { x: lx, y: ly, "class": "end-lbl" }, svg); t.textContent = c.name;
-      }
-    });
-    if (wide) {
-      var a1 = s("text", { x: x(18) - 4, y: y(750) + 22, "class": "ann" }, svg); a1.textContent = "Splitting Point buys in";
-      var a2 = s("text", { x: x(32) + 10, y: y(100000) + 22, "class": "ann" }, svg); a2.textContent = "Breakout pace:";
-      var a3 = s("text", { x: x(32) + 10, y: y(100000) + 40, "class": "ann" }, svg); a3.textContent = "100K by day 32";
-    }
-    P.forEach(function (p) {
-      var isHot = p.score >= 75;
-      var cx = x(Math.min(p.age, 160)), cy = y(Math.max(p.playing, 250));
-      s("circle", { cx: cx, cy: cy, r: 5, fill: isHot ? "var(--accent)" : "var(--ink)", stroke: isHot ? "var(--ink)" : "var(--surface)", "stroke-width": isHot ? 1.5 : 2 }, svg);
-      marks.push({ x: cx, y: cy, title: p.name, body: "Day " + p.age + ". " + commas(p.playing) + " players. Score " + p.score + "." });
-    });
-    var ring = s("circle", { r: 9, fill: "none", stroke: "var(--ink)", "stroke-width": 2, visibility: "hidden" }, svg);
-    chartBox.appendChild(svg);
-    chartBox.appendChild(tip);
-    function pick(ev) {
-      var rect = svg.getBoundingClientRect();
-      var px = (ev.clientX - rect.left) * (w / rect.width), py = (ev.clientY - rect.top) * (h / rect.height);
-      var best = null, bd = 26 * 26;
-      marks.forEach(function (mk) { var dx = mk.x - px, dy = mk.y - py, dd = dx * dx + dy * dy; if (dd < bd) { bd = dd; best = mk; } });
-      if (!best) { tip.hidden = true; ring.setAttribute("visibility", "hidden"); return; }
-      ring.setAttribute("cx", best.x); ring.setAttribute("cy", best.y); ring.setAttribute("visibility", "visible");
-      tip.textContent = ""; tip.appendChild(el("strong", null, best.title)); tip.appendChild(document.createTextNode(best.body));
-      tip.hidden = false;
-      var tw = tip.offsetWidth, th = tip.offsetHeight;
-      var left = best.x * rect.width / w + 12, top = best.y * rect.height / h - th - 10;
-      if (left + tw > rect.width) left = best.x * rect.width / w - tw - 12;
-      if (left < 0) left = 0;
-      if (top < 0) top = best.y * rect.height / h + 12;
-      tip.style.left = left + "px"; tip.style.top = top + "px";
-    }
-    svg.addEventListener("pointermove", pick);
-    svg.addEventListener("pointerdown", pick);
-    svg.addEventListener("pointerleave", function () { tip.hidden = true; ring.setAttribute("visibility", "hidden"); });
-  }
-  drawChart();
-  if (window.ResizeObserver) new ResizeObserver(function () { drawChart(); }).observe(chartBox);
-  else window.addEventListener("resize", drawChart);
-
-  var ct = document.querySelector("#chart-table tbody");
-  COMPS.forEach(function (c) { c.pts.forEach(function (p) { var tr = el("tr"); tr.appendChild(el("td", null, c.name)); tr.appendChild(el("td", "r", String(p[0]))); tr.appendChild(el("td", "r", commas(p[1]))); tr.appendChild(el("td", null, p[2])); ct.appendChild(tr); }); });
-  byScore.forEach(function (p) { var tr = el("tr"); tr.appendChild(el("td", null, p.name)); tr.appendChild(el("td", "r", String(p.age))); tr.appendChild(el("td", "r", commas(p.playing))); tr.appendChild(el("td", null, "Today, score " + p.score)); ct.appendChild(tr); });
-
-  // ---------- value: the headline you can type ----------
-  var fade = "stair";
-  var FADES = { rocket: "f-rocket", stair: "f-stair", measured: "f-measured" };
-  function parseQuery(str) {
-    var t = String(str || "").toLowerCase();
-    var mm = t.match(/([\d][\d,]*(?:\.\d+)?|\.\d+)\s*(k|thousand|m|mil|million|b|billion)?\b/);
-    if (!mm) return null;
-    var n = parseFloat(mm[1].replace(/,/g, ""));
-    var mul = { k: 1e3, thousand: 1e3, m: 1e6, mil: 1e6, million: 1e6, b: 1e9, billion: 1e9 }[mm[2]] || 1;
-    n = n * mul;
-    if (!(n > 0)) return null;
-    var kind = /visit|play/.test(t) ? "visits" : (/\$|usd|dollar/.test(t) ? "usd" : "robux");
-    return { n: n, kind: kind };
-  }
-  function calc() {
-    var q = parseQuery($("vq").value);
-    $("wrap-decline").hidden = fade !== "measured";
-    if (!q) { $("v-range").textContent = "Type a number"; $("v-line").textContent = "Try 2,500,000 Robux, 40 million visits or $9,500."; $("v-lasts").textContent = ""; return; }
-    var rev;
-    if (q.kind === "robux") { var r = q.n * DEVEX; rev = [r, r, r]; }
-    else if (q.kind === "usd") rev = [q.n, q.n, q.n];
-    else rev = PER_VISIT.map(function (k) { return q.n * k; });
-    var mult, multTxt;
-    if (fade === "rocket") { mult = MULT.rocket; multTxt = "1–2 months"; }
-    else if (fade === "stair") { mult = MULT.staircase; multTxt = "3–6 months"; }
-    else {
-      var d = parseNum($("decline").value) / 100;
-      if (!(d > 0)) { $("v-range").textContent = "Enter a decline"; $("v-line").textContent = "Type the share of players it loses in a month, like 15%."; $("v-lasts").textContent = ""; return; }
-      var cl = function (x) { return Math.max(1, Math.min(12, x)); };
-      mult = [cl(1 / (d * 4 / 3)), cl(1 / d), cl(1 / (d * 2 / 3))];
-      multTxt = trim(mult[0]) + "–" + trim(mult[2]) + " months";
-    }
-    var fair = [rev[0] * mult[0], rev[1] * mult[1], rev[2] * mult[2]];
-    $("v-range").textContent = money(fair[0]) + "–" + money(fair[2]);
-    var basis = q.kind === "robux" ? commas(q.n) + " Robux is about " + money(rev[1]) + " at the DevEx rate. " : q.kind === "visits" ? short(q.n) + " visits is about " + money(rev[0]) + "–" + money(rev[2]) + " of revenue. " : "";
-    var revTxt = rev[0] === rev[2] ? money(rev[1]) + " a month" : money(rev[0]) + "–" + money(rev[2]) + " a month";
-    $("v-line").textContent = basis + "Middle about " + money(fair[1]) + ": " + revTxt + " × " + multTxt + ".";
-    $("v-lasts").textContent = "If it holds its players for a year: " + money(rev[1] * 12);
-  }
-  function placeCaret() {
-    var inp = $("vq"), meas = document.querySelector(".vq-measure"), caret = document.querySelector(".vq-line .caret");
-    meas.textContent = inp.value || " ";
-    caret.style.left = Math.min(meas.offsetWidth + 6, inp.clientWidth - 8) + "px";
-  }
-  Object.keys(FADES).forEach(function (k) {
-    $(FADES[k]).addEventListener("click", function () {
-      fade = k;
-      Object.keys(FADES).forEach(function (j) { $(FADES[j]).setAttribute("aria-pressed", j === k ? "true" : "false"); });
-      calc();
-    });
-  });
-  $("vq").addEventListener("input", function () { calc(); placeCaret(); });
-  $("decline").addEventListener("input", calc);
-  document.querySelectorAll(".examples [data-q]").forEach(function (b) {
-    b.addEventListener("click", function () { $("vq").value = b.getAttribute("data-q"); calc(); placeCaret(); });
-  });
-  calc();
-  placeCaret();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeCaret);
-  window.addEventListener("resize", placeCaret);
-
-  // ---------- requests ----------
-  function copier(btnId, areaId, statusId) {
-    $(btnId).addEventListener("click", function () { copyText($(areaId).value, $(statusId), $(areaId)); });
-  }
-  copier("s-copy", "s-msg", "s-status");
-  copier("b-copy", "b-msg", "b-status");
-  function fail(errId, outId, fieldId, msg) {
-    $(errId).textContent = msg;
-    $(outId).hidden = true;
-    var f = $(fieldId);
-    if (f) { f.setAttribute("aria-invalid", "true"); f.focus(); }
-  }
-  function clearInvalid(form) { form.querySelectorAll("[aria-invalid]").forEach(function (x) { x.removeAttribute("aria-invalid"); }); }
-
-  $("sell").addEventListener("submit", function (e) {
-    e.preventDefault();
-    clearInvalid(this);
-    var link = $("s-link").value.trim(), contact = $("s-contact").value.trim(), age = $("s-age").value;
-    if (!/^https?:\/\/(www\.)?roblox\.com\/games\/\d+/i.test(link)) return fail("s-err", "s-out", "s-link", "Paste the game's roblox.com/games/ link.");
-    if (age === "child") return fail("s-err", "s-out", "s-age", "We can't take requests from anyone under 13. A parent or guardian can contact us instead.");
-    if (!contact) return fail("s-err", "s-out", "s-contact", "Add a Discord name or email so we can reply.");
-    if (!$("s-agree").checked) return fail("s-err", "s-out", "s-agree", "Check the box to agree before writing your message.");
-    $("s-err").textContent = "";
-    var robux = parseNum($("s-robux").value);
-    var lines = [
-      "Valuation request (Spawnbook)",
-      "Game: " + link,
-      "My role: " + $("s-role").value,
-      "Age: " + (age === "adult" ? "18 or older" : "13 to 17. My parent or guardian is sending this with me"),
-      "Robux earned, last 30 days: " + (robux ? commas(robux) : "not shared"),
-      "Contact: " + contact
-    ];
-    var notes = $("s-notes").value.trim();
-    if (notes) lines.push("Notes: " + notes);
-    lines.push("I agree to the Spawnbook Terms and Privacy Policy.");
-    $("s-msg").value = lines.join("\n");
-    $("s-status").textContent = "";
-    $("s-out").hidden = false;
-    $("s-msg").focus();
-  });
-
-  $("weekly").addEventListener("submit", function (e) {
-    e.preventDefault();
-    clearInvalid(this);
-    var name = $("b-name").value.trim(), co = $("b-co").value.trim(), contact = $("b-contact").value.trim();
-    if (!name) return fail("b-err", "b-out", "b-name", "Add your name.");
-    if (!co) return fail("b-err", "b-out", "b-co", "Add your studio or fund.");
-    if (!contact) return fail("b-err", "b-out", "b-contact", "Add an email or Discord name so we can send the issue.");
-    if (!$("b-agree").checked) return fail("b-err", "b-out", "b-agree", "Check the box to agree before writing your message.");
-    $("b-err").textContent = "";
-    var lines = [
-      "Weekly report request (Spawnbook)",
-      "Name: " + name,
-      "Studio or fund: " + co,
-      "Genres: " + ($("b-genres").value.trim() || "open"),
-      "Typical deal size: " + ($("b-size").value || "not shared"),
-      "Contact: " + contact,
-      "I'd like the free first issue. I'm 18 or older and agree to the Spawnbook Terms and Privacy Policy."
-    ];
-    $("b-msg").value = lines.join("\n");
-    $("b-status").textContent = "";
-    $("b-out").hidden = false;
-    $("b-msg").focus();
-  });
+  }).catch(function () {});
 })();
 </script>
-
 </body>
 </html>

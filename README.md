@@ -8,15 +8,25 @@ Everything the site serves is in `public/`:
 
 | File | What it is |
 | --- | --- |
-| `index.html` | The report page. It reads today's numbers from `data.js`. |
-| `data.js` | Today's board, picks and tables. Replaced automatically every day. |
+| `index.html` | The landing page: what Spawnbook is, a peek at today's top pick, and the sign-up form. |
+| `board.html` | The full daily board. Only signed-in visitors whose access hasn't run out can open it. |
+| `data.js` | Today's board, picks and tables, replaced automatically every day. Gated like the board. |
+| `value.html` | The free valuation tool and request form for developers. Public. |
+| `subscribe.html` | Pricing, shown when someone's free day is over. |
+| `site.css`, `site.js` | Shared styles and page behaviour. |
 | `privacy.html`, `terms.html`, `cookies.html`, `refunds.html`, `legal.css` | The policy pages. |
 | `fonts/` | Big Shoulders and Public Sans, served from the site itself. Both are under the SIL Open Font License (see the `OFL-*.txt` files). |
 | `favicon.svg` | The browser-tab icon. |
 | `og.png` | The 1200×630 preview image that LinkedIn, Discord, Slack and others show when someone shares the link. |
 | `_headers` | Security headers. |
 
-`wrangler.jsonc` at the top level tells Cloudflare to serve the `public` folder.
+`wrangler.jsonc` at the top level tells Cloudflare to run `worker/index.js` in front of the `public` folder.
+
+## Sign-ups and access
+
+`worker/index.js` is the sign-up gate. Signing up on the landing page gives 24 hours of free access to the board, then sends people to the pricing page. Sign-ups are stored in a Cloudflare Durable Object (SQLite), which Cloudflare creates on deploy.
+
+To see sign-ups and give paying subscribers access, add a secret named `ADMIN_KEY` to the Worker in Cloudflare (Settings → Variables and Secrets) and open `/admin` with that password. From there you can set anyone's days of access, end it, delete someone, or download everyone as a CSV.
 
 ## Hosting
 
