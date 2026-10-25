@@ -860,7 +860,7 @@
         ["Verified badge", c.verified == null ? null : c.verified ? "Yes" : "No"],
         ["Roblox community tier", c.tier != null ? "Tier " + c.tier : null],
         ["Account created", c.joined ? new Date(c.joined).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null],
-        ["Public games by this creator", c.games != null ? c.games + (c.moreGames ? "+" : "") + (c.totalVisits ? ", " + short(c.totalVisits) + " visits in total" : "") : null],
+        ["Public games by this creator", c.games != null ? c.games + (c.moreGames ? "+" : "") + (c.games === 1 && !c.moreGames ? " game" : " games") + (c.totalVisits ? ", " + short(c.totalVisits) + " visits in total" : "") : null],
         ["Their biggest other game", c.topOther ? (function () { var f = document.createDocumentFragment(); if (c.topOther[2]) f.appendChild(extLink(clean(c.topOther[0]), "https://www.roblox.com/games/" + c.topOther[2], "link")); else f.appendChild(document.createTextNode(clean(c.topOther[0]))); f.appendChild(document.createTextNode(", " + short(c.topOther[1]) + " visits")); return f; })() : c.games === 1 ? "This is their only public game" : null]
       ]),
       mdGroup("Players and audience", [
