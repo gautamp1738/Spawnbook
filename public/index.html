@@ -92,7 +92,7 @@ a { color: inherit; text-decoration-thickness: 0.07em; text-underline-offset: 0.
 ::selection { background: var(--accent); color: var(--accent-ink); }
 :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.skip { position: absolute; left: max(var(--margin), env(safe-area-inset-left, 0px)); top: 0.75rem; z-index: 20; padding: 0.7rem 1rem; background: var(--accent); color: var(--accent-ink); font-weight: 600; clip-path: inset(50%); }
+.skip { position: absolute; left: max(var(--margin), env(safe-area-inset-left, 0px)); top: 0.75rem; z-index: 40; padding: 0.7rem 1rem; background: var(--accent); color: var(--accent-ink); font-weight: 600; clip-path: inset(50%); }
 .skip:focus { clip-path: none; }
 
 /* type */
@@ -133,8 +133,17 @@ p { max-width: 64ch; text-wrap: pretty; }
 }
 .plainlink { text-decoration: underline; text-decoration-color: transparent; transition: text-decoration-color var(--t-hover) ease; }
 
+/* ---------- top bar: stays at the top, slides away while you read down, comes back on any scroll up ---------- */
+.bar { position: sticky; top: 0; z-index: 30; background: var(--bg); padding-block: 1.1rem; border-bottom: 2px solid transparent; transition: transform var(--t-ui) var(--ease-out), border-color var(--t-hover) ease, visibility 0s; }
+.bar.is-away { border-bottom-color: var(--surface-2); }
+/* Hidden means out of the tab order too, so keyboard focus never lands on a link nobody can see. */
+.bar.is-hidden { transform: translateY(-100%); visibility: hidden; transition: transform var(--t-ui) var(--ease-out), border-color var(--t-hover) ease, visibility 0s linear var(--t-ui); }
+@media (prefers-reduced-motion: reduce) { .bar, .bar.is-hidden { transition: none; } }
+/* "Back to top" lands at the very top of the page, above the bar. */
+#top { scroll-margin-top: 100vh; }
+
 /* ---------- hero ---------- */
-.hero { min-height: max(40rem, 86svh); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; padding-block: 1.5rem clamp(2rem, 5vw, 4rem); }
+.hero { min-height: max(36rem, calc(86svh - 4.5rem)); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr auto; padding-block: 0 clamp(2rem, 5vw, 4rem); }
 .topbar { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem 2rem; flex-wrap: wrap; }
 .wordmark { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; font-size: var(--step-lead); line-height: 1; text-decoration: none; letter-spacing: 0.01em; }
 .navlinks { display: flex; gap: 0.4rem clamp(1rem, 3vw, 3rem); flex-wrap: wrap; font-size: var(--step-small); font-weight: 600; }
@@ -156,7 +165,8 @@ p { max-width: 64ch; text-wrap: pretty; }
   .hero-foot .hero-data { grid-column: 7 / span 3; }
   .hero-foot .hero-act { grid-column: 10 / span 3; justify-content: flex-end; }
 }
-@media (max-width: 59.99em) { .navlinks li:not(:last-child) { display: none; } }
+@media (max-width: 47.99em) { .navlinks li:nth-child(3), .navlinks li:nth-child(4) { display: none; } }
+@media (max-width: 22.49em) { .navlinks li:nth-child(2) { display: none; } }
 @media (max-width: 47.99em) {
   .hero { min-height: auto; }
   .hero-name { flex-direction: column; align-items: center; font-size: 25vw; line-height: 0.84; gap: 0; margin-block: 2.5rem 2rem; }
@@ -490,7 +500,7 @@ th.r, td.r, .mini .r { text-align: right; }
 
 <a class="skip" href="#main">Skip to the report</a>
 
-<header class="hero wrap" id="top">
+<div class="bar wrap">
   <nav class="topbar" aria-label="Main">
     <a class="wordmark" href="#top">Spawnbook</a>
     <ul class="navlinks">
@@ -501,6 +511,9 @@ th.r, td.r, .mini .r { text-align: right; }
       <li><a class="keep" href="#requests">Free issue</a></li>
     </ul>
   </nav>
+</div>
+
+<header class="hero wrap" id="top">
 
   <h1 class="hero-name">
     <span class="mask"><span class="w" style="--i:0">Spawn</span></span>
@@ -1026,6 +1039,29 @@ th.r, td.r, .mini .r { text-align: right; }
   document.querySelectorAll("[data-tab]").forEach(function (a) {
     a.addEventListener("click", function () { selectTab($(a.getAttribute("data-tab"))); });
   });
+
+  // ---------- top bar: hides while you read down, comes back on any scroll up ----------
+  var bar = document.querySelector(".bar");
+  var barY = window.scrollY, barHold = 0, barQueued = false;
+  function setBar(hidden) { bar.classList.toggle("is-hidden", hidden); }
+  function onBarScroll() {
+    barQueued = false;
+    var y = Math.max(0, window.scrollY), dy = y - barY;
+    bar.classList.toggle("is-away", y > 4);
+    if (y <= bar.offsetHeight) { setBar(false); barY = y; return; }
+    if (performance.now() < barHold) { setBar(true); barY = y; return; }
+    if (dy > 8) { setBar(true); barY = y; }
+    else if (dy < -4) { setBar(false); barY = y; }
+  }
+  window.addEventListener("scroll", function () { if (!barQueued) { barQueued = true; requestAnimationFrame(onBarScroll); } }, { passive: true });
+  bar.addEventListener("focusin", function () { barHold = 0; setBar(false); });
+  // After a link jumps to a section, keep the bar tucked away so it doesn't cover the heading.
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+    var href = a && a.getAttribute("href");
+    if (href && href.length > 1 && href !== "#top") barHold = performance.now() + 600;
+  });
+  onBarScroll();
 
   // ---------- fit the name to the measure on wide screens ----------
   var nameEl = document.querySelector(".hero-name");
