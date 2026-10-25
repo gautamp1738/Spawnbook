@@ -32,6 +32,7 @@
       <li class="m-hide"><a href="#what">What you get</a></li>
       <li class="m-hide"><a href="subscribe">Pricing</a></li>
       <li class="s-hide"><a href="value">Value your game</a></li>
+      <li id="nav-signin"><a href="signin">Sign in</a></li>
       <li><a class="keep" href="#signup">Free board</a></li>
     </ul>
   </nav>
@@ -94,14 +95,22 @@
             <input id="f-name" name="name" autocomplete="name" maxlength="120" aria-required="true">
           </div>
           <div class="field">
-            <label for="f-email">Work email <span class="opt">(required)</span></label>
-            <input id="f-email" name="email" type="email" autocomplete="email" maxlength="200" aria-required="true">
-          </div>
-          <div class="field">
             <label for="f-co">Studio or fund <span class="opt">(required)</span></label>
             <input id="f-co" name="company" autocomplete="organization" maxlength="160" aria-required="true">
           </div>
           <div class="field">
+            <label for="f-email">Work email <span class="opt">(required)</span></label>
+            <input id="f-email" name="email" type="email" autocomplete="email" maxlength="200" aria-required="true">
+          </div>
+          <div class="field">
+            <label for="f-pw">Password <span class="opt">(required)</span></label>
+            <div class="pw">
+              <input id="f-pw" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="200" aria-required="true" aria-describedby="f-pw-help">
+              <button type="button" class="button quiet" data-show-pw="f-pw" aria-pressed="false">Show</button>
+            </div>
+            <span class="help small muted" id="f-pw-help">At least 8 characters. You'll use it to sign in.</span>
+          </div>
+          <div class="field full">
             <label for="f-role">What do you do?</label>
             <select id="f-role" name="role">
               <option>I buy games for a studio</option>
@@ -123,12 +132,18 @@
           <button class="button" type="submit">See today's board</button>
           <span class="err" id="f-err" role="alert"></span>
         </div>
-        <p class="note">Signed up before? Enter the same email to get back in. After your free day, the pilot price is $500 a month. <a class="link" href="subscribe">See pricing</a>.</p>
+        <p class="note">Already have an account? <a class="link" href="signin">Sign in</a>. After your free day, the pilot price is $500 a month. <a class="link" href="subscribe">See pricing</a>.</p>
       </form>
 
       <div class="signed-in" id="signed-in" hidden>
         <p class="lead" id="signed-in-text">You're signed in.</p>
         <p><a class="button" id="signed-in-link" href="board">Open today's board</a></p>
+        <p class="note" id="signed-in-pw" hidden>Your account doesn't have a password yet. <a class="link" href="account">Set one</a> so you can sign in on other devices.</p>
+        <div class="acct-line small">
+          <span id="signed-in-who"></span>
+          <a class="link" href="account">Your account</a>
+          <form method="post" action="/api/signout"><button class="linkbutton" type="submit">Sign out</button></form>
+        </div>
       </div>
     </div>
   </section>
@@ -188,6 +203,8 @@
   var ERRORS = {
     missing: "Fill in your name, work email and studio or fund.",
     email: "That email doesn't look right. Check it and try again.",
+    "password-short": "Choose a password with at least 8 characters.",
+    "password-long": "Choose a password with 200 characters or fewer.",
     agree: "Check the box to agree before signing up.",
     server: "Something went wrong on our side. Try again in a minute."
   };
@@ -202,8 +219,10 @@
     var name = $("f-name").value.trim(), email = $("f-email").value.trim(), co = $("f-co").value.trim();
     var msg = "", field = null;
     if (!name) { msg = ERRORS.missing; field = "f-name"; }
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg = ERRORS.email; field = "f-email"; }
     else if (!co) { msg = ERRORS.missing; field = "f-co"; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg = ERRORS.email; field = "f-email"; }
+    else if ($("f-pw").value.length < 8) { msg = ERRORS["password-short"]; field = "f-pw"; }
+    else if ($("f-pw").value.length > 200) { msg = ERRORS["password-long"]; field = "f-pw"; }
     else if (!$("f-agree").checked) { msg = ERRORS.agree; field = "f-agree"; }
     this.querySelectorAll("[aria-invalid]").forEach(function (x) { x.removeAttribute("aria-invalid"); });
     if (msg) {
@@ -219,6 +238,9 @@
     if (!m || m.access === "none") return;
     $("signup-form").hidden = true;
     $("signed-in").hidden = false;
+    $("nav-signin").hidden = true;
+    $("signed-in-who").textContent = "Signed in as " + m.email + ".";
+    if (!m.hasPassword) $("signed-in-pw").hidden = false;
     if (m.access === "active") {
       var when = new Date(m.until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
       $("signed-in-text").textContent = "You're signed in. Your access runs until " + when + ".";

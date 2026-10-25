@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Your account | Spawnbook</title>
+<meta name="robots" content="noindex">
+<script>
+  document.documentElement.classList.add('js');
+  // A password link carries its one-time code after the #, which never reaches any server.
+  // Take it out of the address bar straight away so it isn't left in history or shared by accident.
+  (function () {
+    var m = /(?:^#|&)t=([0-9a-fA-F]{64})/.exec(location.hash);
+    window.SB_LINK = m ? m[1].toLowerCase() : "";
+    if (m && history.replaceState) history.replaceState(null, "", location.pathname + location.search);
+  })();
+</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to your account</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks">
+      <li class="s-hide"><a href="value">Value your game</a></li>
+      <li><a class="keep" href="board">Today's board</a></li>
+    </ul>
+  </nav>
+</div>
+
+<main id="main" tabindex="-1">
+  <section class="sec wrap grid page-top auth" aria-labelledby="acct-h">
+    <div class="c-l stack">
+      <h1 id="acct-h" class="head">Your account</h1>
+      <p class="lead" id="acct-lead">Checking whether you're signed in.</p>
+    </div>
+    <div class="c-r stack">
+      <p class="done" id="acct-done" role="status" hidden>Your password is saved.</p>
+
+      <!-- Shown for a password link, and for a signed-in visitor setting or changing a password. -->
+      <form class="form" id="pw-form" method="post" action="/api/password" novalidate hidden>
+        <h2 class="form-h" id="pw-h">Choose a password</h2>
+        <div class="fields one">
+          <div class="field" id="cur-field" hidden>
+            <label for="p-cur">Current password</label>
+            <div class="pw">
+              <input id="p-cur" name="current" type="password" autocomplete="current-password" maxlength="200">
+              <button type="button" class="button quiet" data-show-pw="p-cur" aria-pressed="false">Show</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="p-new">New password</label>
+            <div class="pw">
+              <input id="p-new" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="200" aria-required="true" aria-describedby="p-new-help">
+              <button type="button" class="button quiet" data-show-pw="p-new" aria-pressed="false">Show</button>
+            </div>
+            <span class="help small muted" id="p-new-help">At least 8 characters.</span>
+          </div>
+        </div>
+        <input type="hidden" name="t" id="p-t" value="">
+        <div class="form-row">
+          <button class="button" type="submit" id="pw-submit">Save password</button>
+          <span class="err" id="p-err" role="alert"></span>
+        </div>
+      </form>
+
+      <div class="signed-in" id="acct-out" hidden>
+        <p id="acct-out-text">You're not signed in.</p>
+        <p><a class="button" href="signin?next=/account">Sign in</a></p>
+        <p class="note">Forgot your password? Email <a class="link" href="mailto:gautamuprasanna@gmail.com?subject=Spawnbook%20password">gautamuprasanna@gmail.com</a> from the address you signed up with, and we'll send you a link to choose a new one.</p>
+      </div>
+
+      <form method="post" action="/api/signout" id="signout" hidden><button class="button quiet" type="submit">Sign out</button></form>
+    </div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <p><a class="link" href="subscribe">Pricing</a></p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <h2 class="foot-mail"><span class="sr-only">Email us at </span><a href="mailto:gautamuprasanna@gmail.com">gautamuprasanna<span class="at">@gmail.com</span></a></h2>
+  <div class="foot-copy"><button type="button" class="button" id="foot-copy">Copy email address</button><span class="status" id="foot-status" aria-live="polite"></span></div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent report. Not affiliated with, endorsed by or sponsored by Roblox Corporation.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var q = new URLSearchParams(location.search);
+  var ERRORS = {
+    "password-short": "Use at least 8 characters.",
+    "password-long": "Use 200 characters or fewer.",
+    current: "Your current password didn't match. Try again.",
+    link: "That link has expired or was already used. Email gautamuprasanna@gmail.com and we'll send you a new one.",
+    signin: "Sign in first, then change your password."
+  };
+  var code = q.get("e");
+  var link = window.SB_LINK;
+  var needCurrent = false;
+
+  function show(id) { $(id).hidden = false; }
+  function when(t) { return new Date(t).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }); }
+
+  if (link) {
+    // A one-time password link: choose a password, then you're signed in.
+    $("acct-lead").textContent = "Choose a password for your Spawnbook account. You'll use it with your email to sign in.";
+    $("pw-h").textContent = "Choose a password";
+    $("pw-submit").textContent = "Save password and sign in";
+    $("p-t").value = link;
+    show("pw-form");
+    if (code && ERRORS[code]) $("p-err").textContent = ERRORS[code];
+    $("p-new").focus();
+  } else {
+    fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+      if (!m || m.access === "none") {
+        $("acct-lead").textContent = code === "link" ? "That password link didn't work." : "Sign in to see your account.";
+        if (code === "link") $("acct-out-text").textContent = ERRORS.link;
+        show("acct-out");
+        return;
+      }
+      var access = m.access === "active" ? "Your access runs until " + when(m.until) + "." : "Your access has ended. ";
+      $("acct-lead").textContent = "Signed in as " + m.email + ". " + access;
+      if (m.access !== "active") {
+        var a = document.createElement("a"); a.className = "link"; a.href = "subscribe"; a.textContent = "See pricing";
+        $("acct-lead").appendChild(a);
+        $("acct-lead").appendChild(document.createTextNode("."));
+      }
+      needCurrent = !!m.hasPassword;
+      $("pw-h").textContent = needCurrent ? "Change your password" : "Set a password";
+      if (!needCurrent) $("p-new-help").textContent = "At least 8 characters. With a password, you can sign in on any device.";
+      $("cur-field").hidden = !needCurrent;
+      show("pw-form");
+      show("signout");
+      if (q.get("done")) show("acct-done");
+      if (code && ERRORS[code]) $("p-err").textContent = ERRORS[code];
+    }).catch(function () {
+      $("acct-lead").textContent = "Couldn't check your account just now. Reload the page to try again.";
+    });
+  }
+
+  $("pw-form").addEventListener("submit", function (e) {
+    var field = null, msg = "";
+    this.querySelectorAll("[aria-invalid]").forEach(function (x) { x.removeAttribute("aria-invalid"); });
+    if (needCurrent && !$("p-cur").value) { field = "p-cur"; msg = "Enter your current password."; }
+    else if ($("p-new").value.length < 8) { field = "p-new"; msg = ERRORS["password-short"]; }
+    if (field) {
+      e.preventDefault();
+      $("p-err").textContent = msg;
+      $(field).setAttribute("aria-invalid", "true");
+      $(field).focus();
+    }
+  });
+})();
+</script>
+</body>
+</html>

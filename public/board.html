@@ -21,6 +21,7 @@
       <li class="s-hide"><a href="#board">Board</a></li>
       <li class="m-hide"><a href="#pricing">Prices</a></li>
       <li class="m-hide"><a href="#value">Value a game</a></li>
+      <li class="s-hide"><a href="account">Account</a></li>
       <li><a class="keep" href="#requests">Free issue</a></li>
     </ul>
   </nav>
@@ -488,6 +489,11 @@
   <div class="foot-top">
     <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
     <p id="foot-data">Data as of Oct 23, 2026.</p>
+    <div class="acct-line" id="foot-account" hidden>
+      <span id="foot-who"></span>
+      <a class="link" href="account">Your account</a>
+      <form method="post" action="/api/signout"><button class="linkbutton" type="submit">Sign out</button></form>
+    </div>
     <a class="link" href="#top">Back to top</a>
   </div>
   <h2 class="foot-mail"><span class="sr-only">Email us at </span><a href="mailto:gautamuprasanna@gmail.com">gautamuprasanna<span class="at">@gmail.com</span></a></h2>
@@ -581,18 +587,30 @@
   });
   onBarScroll();
 
-  // ---------- free access: say when it ends ----------
+  // ---------- account: who's signed in, when access ends, missing password ----------
   fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
     if (!m || m.access !== "active" || !m.until) return;
-    var left = m.until - Date.now();
-    if (left > 3 * 864e5) return;
-    var when = new Date(m.until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
-    var note = $("access-note");
-    note.textContent = "Your free access ends " + when + ". ";
-    var a = el("a", "link", "Subscribe to keep the daily board");
-    a.href = "subscribe";
-    note.appendChild(a);
-    note.hidden = false;
+    $("foot-who").textContent = "Signed in as " + m.email + ".";
+    $("foot-account").hidden = false;
+    var note = $("access-note"), parts = [];
+    if (m.until - Date.now() <= 3 * 864e5) {
+      var when = new Date(m.until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+      note.appendChild(document.createTextNode("Your access ends " + when + ". "));
+      var a = el("a", "link", "Subscribe to keep the daily board");
+      a.href = "subscribe";
+      note.appendChild(a);
+      note.appendChild(document.createTextNode(". "));
+      parts.push(1);
+    }
+    if (!m.hasPassword) {
+      note.appendChild(document.createTextNode("Your account has no password yet. "));
+      var b = el("a", "link", "Set one");
+      b.href = "account";
+      note.appendChild(b);
+      note.appendChild(document.createTextNode(" so you can sign in on other devices."));
+      parts.push(1);
+    }
+    if (parts.length) note.hidden = false;
   }).catch(function () {});
 
   // ---------- fit the name to the measure on wide screens ----------

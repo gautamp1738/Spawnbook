@@ -13,6 +13,8 @@ Everything the site serves is in `public/`:
 | `data.js` | Today's board, picks and tables, replaced automatically every day. Gated like the board. |
 | `value.html` | The free valuation tool and request form for developers. Public. |
 | `subscribe.html` | Pricing, shown when someone's free day is over. |
+| `signin.html` | Sign in with email and password. Visitors who open the board signed out land here. |
+| `account.html` | Who's signed in, when their access ends, change or set a password, and sign out. Also where one-time password links open (`/account#t=...`). |
 | `site.css`, `site.js` | Shared styles and page behaviour. |
 | `privacy.html`, `terms.html`, `cookies.html`, `refunds.html`, `legal.css` | The policy pages. |
 | `fonts/` | Big Shoulders and Public Sans, served from the site itself. Both are under the SIL Open Font License (see the `OFL-*.txt` files). |
@@ -22,11 +24,17 @@ Everything the site serves is in `public/`:
 
 `wrangler.jsonc` at the top level tells Cloudflare to run `worker/index.js` in front of the `public` folder.
 
-## Sign-ups and access
+## Accounts and access
 
-`worker/index.js` is the sign-up gate. Signing up on the landing page gives 24 hours of free access to the board, then sends people to the pricing page. Sign-ups are stored in a Cloudflare Durable Object (SQLite), which Cloudflare creates on deploy.
+`worker/index.js` runs the accounts. Signing up on the landing page makes an account with an email and password and gives 24 hours of free access to the board, then sends people to the pricing page. After that, people sign in at `/signin`. Signing up again with an email that already has an account never signs anyone in; it sends them to the sign-in page instead.
 
-To see sign-ups and give paying subscribers access, add a secret named `ADMIN_KEY` to the Worker in Cloudflare (Settings → Variables and Secrets) and open `/admin` with that password. From there you can set anyone's days of access, end it, delete someone, or download everyone as a CSV.
+Accounts are stored in a Cloudflare Durable Object (SQLite), which Cloudflare creates on deploy. Passwords are kept only as salted PBKDF2-SHA256 hashes (100,000 rounds), worked out inside the Durable Object. After 8 wrong passwords for one email, that email is locked for 15 minutes.
+
+There's no automatic email yet, so forgotten passwords go through you: on the admin page, **Make a link** creates a one-time link (good for 7 days) that lets the person choose a new password. Send it to them yourself. Accounts made before passwords existed can keep using the board on the device they signed up on, and are asked to set a password there.
+
+To see accounts and give paying subscribers access, add a secret named `ADMIN_KEY` to the Worker in Cloudflare (Settings → Variables and Secrets) and open `/admin` with that password. From there you can add an account for someone who paid first, set anyone's days of access, end it, make a password link, delete someone, or download everyone as a CSV.
+
+The owner's account (gautamuprasanna@gmail.com) is created automatically on first start with access until 2100, along with a one-time setup link that was handed over privately. Only a hash of that link is in the code.
 
 ## Hosting
 

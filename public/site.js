@@ -25,6 +25,20 @@
   if ($("foot-copy")) $("foot-copy").addEventListener("click", function () { copyText(MAIL, $("foot-status")); });
   if ($("mail-copy")) $("mail-copy").addEventListener("click", function () { copyText(MAIL, $("mail-status")); });
 
+  // Show or hide a password field.
+  document.querySelectorAll("[data-show-pw]").forEach(function (btn) {
+    var input = $(btn.getAttribute("data-show-pw"));
+    if (!input) return;
+    btn.setAttribute("aria-label", "Show password");
+    btn.addEventListener("click", function () {
+      var showing = input.type === "text";
+      input.type = showing ? "password" : "text";
+      btn.textContent = showing ? "Show" : "Hide";
+      btn.setAttribute("aria-pressed", showing ? "false" : "true");
+      btn.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+    });
+  });
+
   // Top bar: hides while you read down, comes back on any scroll up.
   var bar = document.querySelector(".bar");
   if (bar) {
