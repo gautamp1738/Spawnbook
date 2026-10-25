@@ -1,25 +1,25 @@
 {
  "ok": true,
- "at": "2026-10-25T06:48:11.414Z",
+ "at": "2026-10-25T22:11:54.142Z",
  "lists": 26,
- "gamesSeen": 951,
+ "gamesSeen": 949,
  "youngTracked": 344,
  "pool": 145,
  "board": 25,
  "top5": [
-  "[🎃] Roll A Stickman! (79)",
-  "[🎃UPD] Harpoon a Fish (78)",
-  "[🎃] CloverFall  (78)",
-  "[🎃 NEW!] Collect Cat Cards! (75)",
-  "[⏳] Deep Fishing🎣 (74)"
+  "[🎃ANTI + BONE🎃] CloverFall  (82)",
+  "[UPD 1⚡] Pixel Basketball (80)",
+  "[🎃] Roll A Stickman! (77)",
+  "[UPD] Deep Fishing🎣 (76)",
+  "[UPD] Feed the Fire 🔥 (76)"
  ],
- "historyDays": 2,
+ "historyDays": 3,
  "firstDay": "2026-10-23",
  "visitsBasis": "1-day",
  "picksLogged": 24,
- "dataJsLength": 53962,
+ "dataJsLength": 57565,
  "deepSkipped": [],
- "snapshotDoc": "2026-10-25T06:48:11Z",
- "databaseWrites": 2,
- "staleSnapshots": 1
+ "snapshotDoc": "2026-10-25T22:11:54Z",
+ "databaseWrites": 1,
+ "staleSnapshots": 0
 }
