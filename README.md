@@ -4,6 +4,8 @@ A weekly scouting report on small, fast-growing Roblox games for the studios and
 
 ## What's in here
 
+Everything the site serves is in `public/`:
+
 | File | What it is |
 | --- | --- |
 | `index.html` | The report page. It reads this week's numbers from `data.js`. |
@@ -11,12 +13,14 @@ A weekly scouting report on small, fast-growing Roblox games for the studios and
 | `privacy.html`, `terms.html`, `cookies.html`, `refunds.html`, `legal.css` | The policy pages. |
 | `fonts/` | Big Shoulders and Public Sans, served from the site itself. Both are under the SIL Open Font License (see the `OFL-*.txt` files). |
 | `favicon.svg` | The browser-tab icon. |
-| `_headers` | Security headers for Cloudflare Pages. |
+| `_headers` | Security headers. |
+
+`wrangler.jsonc` at the top level tells Cloudflare to serve the `public` folder.
 
 ## Hosting
 
-The site is plain HTML with no build step. On Cloudflare Pages, connect this repository, leave the build command empty and set the output directory to `/`.
+The site is plain HTML with no build step. It runs on Cloudflare Workers: connect this repository, leave the build command empty and keep the deploy command `npx wrangler deploy`.
 
 ## How the data updates
 
-A scheduled task reads Roblox's public charts once a day and keeps a daily record. On Mondays it writes a new `data.js` and commits it here, which redeploys the site.
+A scheduled task reads Roblox's public charts once a day and keeps a daily record. On Mondays it writes a new `public/data.js` and commits it here, which redeploys the site.

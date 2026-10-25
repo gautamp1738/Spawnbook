@@ -1,0 +1,8 @@
+// Tells Cloudflare to serve the site in the public folder as static files. No build step.
+{
+  "name": "spawnbook",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./public"
+  }
+}
