@@ -1,24 +1,25 @@
 {
  "ok": true,
- "at": "2026-10-25T03:22:10.056Z",
+ "at": "2026-10-25T06:34:01.569Z",
  "lists": 26,
- "gamesSeen": 945,
- "youngTracked": 343,
- "pool": 142,
+ "gamesSeen": 952,
+ "youngTracked": 345,
+ "pool": 147,
  "board": 25,
  "top5": [
-  "[UPD 1⚡] Pixel Basketball (81)",
-  "[🎃] CloverFall  (81)",
-  "[🎃UPD] Harpoon a Fish (79)",
-  "[🎃] Roll A Stickman! (78)",
-  "PINKIE PROMISE [HORROR] (76)"
+  "[🎃] CloverFall  (80)",
+  "[🎃] Roll A Stickman! (79)",
+  "[🎃UPD] Harpoon a Fish (78)",
+  "[UPD 1⚡] Pixel Basketball (75)",
+  "[🎃 NEW!] Collect Cat Cards! (75)"
  ],
  "historyDays": 2,
  "firstDay": "2026-10-23",
  "visitsBasis": "1-day",
  "picksLogged": 24,
- "dataJsLength": 20399,
- "snapshotDoc": "2026-10-25T03:22:10Z",
+ "dataJsLength": 53012,
+ "deepSkipped": [],
+ "snapshotDoc": "2026-10-25T06:34:01Z",
  "databaseWrites": 2,
  "staleSnapshots": 1
 }
