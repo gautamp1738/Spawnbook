@@ -137,6 +137,8 @@ window.BRC = (function () {
       }
       return null;
     }
+    var srvState = {};
+    var serversUrl = function (r, cur) { return "https://games.roblox.com/v1/games/" + r.pid + "/servers/Public?limit=100&sortOrder=Desc" + (cur ? "&cursor=" + encodeURIComponent(cur) : ""); };
     var rng = function (nums) { return nums.length ? [Math.min.apply(null, nums), Math.max.apply(null, nums)] : null; };
     for (var r of list) {
       var d = {}, g = r.g || {};
@@ -161,22 +163,10 @@ window.BRC = (function () {
       } while (cur && pages < 5);
       if (gotAny) d.products = { n: prods.length, more: more, range: rng(prods.map(function (x) { return x.PriceInRobux; })) };
 
-      // Public servers, fullest first: up to 3 pages of 100. If there are more, the fullest
-      // servers' average overstates the real one, so playing / average is a floor on the count.
-      var srv = [], scur = "", spages = 0, smore = false;
-      do {
-        var sv = await serverPage("https://games.roblox.com/v1/games/" + r.pid + "/servers/Public?limit=100&sortOrder=Desc" + (scur ? "&cursor=" + encodeURIComponent(scur) : ""));
-        if (!sv) break;
-        spages++;
-        srv = srv.concat(sv.data || []);
-        scur = sv.nextPageCursor || ""; smore = !!scur;
-      } while (scur && spages < 3);
-      if (srv.length) {
-        var avg = srv.reduce(function (a, x) { return a + (x.playing || 0); }, 0) / srv.length;
-        var cap = srv[0].maxPlayers || g.maxPlayers || null;
-        d.servers = { counted: srv.length, complete: !smore, avgPlayers: Math.round(avg * 10) / 10, fill: cap ? Math.round(avg / cap * 100) : null,
-          atLeast: smore && avg > 0 ? Math.max(srv.length, Math.round(r.playing / avg)) : srv.length };
-      }
+      // Public servers, fullest first. The first page (100) is read here, between the other
+      // calls, so every game gets one; more pages are read after the loop if Roblox allows.
+      var sv = await serverPage(serversUrl(r, ""));
+      if (sv) srvState[r.uid] = { r: r, g: g, list: sv.data || [], cur: sv.nextPageCursor || "", pages: 1 };
 
       var c = { type: r.ctype, id: r.cid };
       if (r.ctype === "Group") {
@@ -218,6 +208,27 @@ window.BRC = (function () {
       }
       out[r.uid] = d;
     }
+    // Up to two more server pages per game, stopping at the first refusal so the limit isn't pushed.
+    var srvOk = true;
+    for (var uid in srvState) {
+      var st = srvState[uid];
+      while (srvOk && st.cur && st.pages < 3) {
+        await sleep(1500);
+        var nxt = await tryGet("servers", serversUrl(st.r, st.cur));
+        if (!nxt) { srvOk = false; break; }
+        st.list = st.list.concat(nxt.data || []); st.cur = nxt.nextPageCursor || ""; st.pages++;
+      }
+    }
+    // If there are more servers than we read, the fullest servers' average overstates the real
+    // one, so players / that average is a floor on the server count.
+    Object.keys(srvState).forEach(function (uid) {
+      var st = srvState[uid], srv = st.list;
+      if (!srv.length || !out[uid]) return;
+      var avg = srv.reduce(function (a, x) { return a + (x.playing || 0); }, 0) / srv.length;
+      var cap = srv[0].maxPlayers || st.g.maxPlayers || null;
+      out[uid].servers = { counted: srv.length, complete: !st.cur, avgPlayers: Math.round(avg * 10) / 10, fill: cap ? Math.round(avg / cap * 100) : null,
+        atLeast: st.cur && avg > 0 ? Math.max(srv.length, Math.round(st.r.playing / avg)) : srv.length };
+    });
     return { byUid: out, skipped: Object.keys(off) };
   }
 
