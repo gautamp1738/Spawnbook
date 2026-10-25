@@ -1,0 +1,68 @@
+# Reads Roblox's public charts once a day, rebuilds the board and publishes it to spawnbook.com.
+# Each run commits the new public/data.js (which makes Cloudflare redeploy the site) and the
+# day's reading to pipeline/state/, which is the history the growth scores are worked out from.
+# On Mondays it also logs that week's picks for the weekly report and its track record.
+name: Daily data pull
+
+on:
+  schedule:
+    # GitHub schedules run in UTC: 21:33 UTC is 2:33 PM Pacific in summer and 1:33 PM in winter.
+    # GitHub can start scheduled runs a little late when it's busy.
+    - cron: "33 21 * * *"
+  # Lets you start a run by hand from the Actions tab.
+  workflow_dispatch:
+  # Runs once whenever this file changes, to check a new version works.
+  push:
+    branches: [main]
+    paths: [".github/workflows/daily.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-data
+  cancel-in-progress: false
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Work out today's Pacific date
+        id: day
+        run: |
+          echo "date=$(TZ=America/Los_Angeles date +%F)" >> "$GITHUB_OUTPUT"
+          echo "weekday=$(TZ=America/Los_Angeles date +%u)" >> "$GITHUB_OUTPUT"
+
+      - name: Read Roblox and build the board
+        working-directory: pipeline
+        run: |
+          mkdir -p state/code
+          node -e 'const fs=require("fs");fs.writeFileSync("state/code/collector.json",JSON.stringify({src:fs.readFileSync("collector.js","utf8")}))'
+          WEEKLY=""
+          if [ "${{ steps.day.outputs.weekday }}" = "1" ]; then WEEKLY="--weekly"; fi
+          timeout 1800 node --no-warnings runner.mjs --state state --out out $WEEKLY
+          node -e 'const s=require("./out/summary.json"); if (!s.ok) { console.error(s.error); process.exit(1); } console.log(s.board + " games on the board. Top 5: " + s.top5.join(", "))'
+
+      - name: Save the history and publish the board
+        run: |
+          node pipeline/apply-batch.mjs pipeline/out/batch.json pipeline/state
+          cp pipeline/out/data.js public/data.js
+          cp pipeline/out/summary.json pipeline/last-run.json
+          if [ -f pipeline/out/picks.csv ]; then
+            if [ ! -f pipeline/picks-log.csv ]; then head -n 1 pipeline/out/picks.csv > pipeline/picks-log.csv; fi
+            tail -n +2 pipeline/out/picks.csv | sed '/^$/d' >> pipeline/picks-log.csv
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A public/data.js pipeline/state pipeline/last-run.json
+          if [ -f pipeline/picks-log.csv ]; then git add pipeline/picks-log.csv; fi
+          git commit -m "Data for ${{ steps.day.outputs.date }}"
+          git pull --rebase origin main
+          git push origin HEAD:main

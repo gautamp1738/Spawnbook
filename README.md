@@ -26,4 +26,19 @@ Visits are counted with Cloudflare Web Analytics, which Cloudflare adds to each 
 
 ## How the data updates
 
-A scheduled task reads Roblox's public charts once a day and keeps a daily record. Each run writes a new `public/data.js` and commits it here, which redeploys the site. On Mondays it also logs that week's picks for the weekly report and its track record.
+GitHub Actions runs `.github/workflows/daily.yml` once a day, at 21:33 UTC (2:33 PM Pacific in summer, 1:33 PM in winter). Each run reads Roblox's public chart lists and game stats, scores the young games against their history, and commits:
+
+- `public/data.js`, the new board, which makes Cloudflare redeploy the site
+- the day's reading in `pipeline/state/hist/`, the daily record the growth scores are worked out from
+- `pipeline/last-run.json`, a summary of the run
+- on Mondays, that week's picks in `pipeline/state/picks/` and `pipeline/picks-log.csv`, for the weekly report and its track record
+
+To start a run by hand, open the **Actions** tab, pick **Daily data pull** and click **Run workflow**. If a run fails, GitHub emails you and the site keeps showing the last good data.
+
+| File in `pipeline/` | What it is |
+| --- | --- |
+| `collector.js` | Reads Roblox's public APIs, keeps the daily record and scores the games. |
+| `runner.mjs` | Runs the collector in Node, reading and writing the record in `state/`. |
+| `apply-batch.mjs` | Saves each run's changes to the record in `state/`. |
+
+A Claude scheduled task copies the day's `public/data.js` to the Claude-hosted version of the site after the run.
