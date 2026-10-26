@@ -1,2 +1,2 @@
-/* Spawnbook track record, built 2026-10-26T21:25:51.420Z. Public. The page reads window.TR. */
-window.TR = {"updated":"Oct 26, 2026","checkpoints":[7,14,28,56],"overall":{},"batches":[{"d":"2026-10-26","label":"Oct 26, 2026","days":0,"shown":false,"n":25,"others":128,"showOn":"Nov 2, 2026","checkpoints":{}},{"d":"2026-10-23","label":"Oct 23, 2026","days":2,"shown":false,"n":24,"others":0,"showOn":"Oct 30, 2026","checkpoints":{}}]};
+/* Spawnbook track record, built 2026-10-26T21:37:55.040Z. Public. The page reads window.TR. */
+window.TR = {"updated":"Oct 26, 2026","checkpoints":[7,14,28,56],"overall":{},"batches":[{"d":"2026-10-26","label":"Oct 26, 2026","days":0,"shown":false,"n":25,"others":129,"showOn":"Nov 2, 2026","checkpoints":{}},{"d":"2026-10-23","label":"Oct 23, 2026","days":3,"shown":false,"n":24,"others":0,"showOn":"Oct 30, 2026","checkpoints":{}}]};
