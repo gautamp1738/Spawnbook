@@ -11,6 +11,8 @@ Everything the site serves is in `public/`:
 | `index.html` | The landing page: what Spawnbook is, a peek at today's top pick, and the sign-up form. |
 | `board.html` | The full daily board. Only signed-in visitors whose access hasn't run out can open it. |
 | `data.js` | Today's board, picks and tables, replaced automatically every day. Gated like the board. |
+| `report.html`, `report.js` | The weekly report: each Monday's top 10, biggest movers, what's new and what fell off the board (with the reason), and how last week's picks did. Has an archive and a "Copy as an email" button. Signed-in visitors with access only. `report.js` is rebuilt every day. |
+| `track.html`, `track.js` | The public track record: every Monday's picks at 1, 2, 4 and 8 weeks, next to the games that made the cut but weren't picked. `track.js` only names a week's picks once they're a week old. |
 | `value.html` | The free valuation tool and request form for developers. Public. |
 | `subscribe.html` | Pricing, shown when someone's free day is over. |
 | `signin.html` | Sign in with email and password. Visitors who open the board signed out land here. |
@@ -48,8 +50,10 @@ GitHub Actions runs `.github/workflows/daily.yml` once a day, at 21:33 UTC (2:33
 
 - `public/data.js`, the new board, which makes Cloudflare redeploy the site
 - the day's reading in `pipeline/state/hist/`, the daily record the growth scores are worked out from
+- `public/track.js` and `public/report.js`, the track record and the weekly reports
+- `pipeline/state/track/track.json`, every logged pick with its numbers when picked and at 1, 2, 4 and 8 weeks
 - `pipeline/last-run.json`, a summary of the run
-- on Mondays, that week's picks in `pipeline/state/picks/` and `pipeline/picks-log.csv`, for the weekly report and its track record
+- on Mondays, that week's picks in `pipeline/state/picks/` and `pipeline/picks-log.csv`, and a new issue in `pipeline/state/report/report.json`
 
 For each game that makes the board, the run also reads its developer products, live servers, maturity rating and badges, and the creator's group or profile and other games. The board compares each day with the one before to show rank changes, days on the board, a 14-day player line, and how players, favorites and rating moved over a day and a week. If one of those extra sources fails, the board still updates and that part shows as missing.
 

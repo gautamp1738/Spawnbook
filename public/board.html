@@ -19,9 +19,10 @@
     <ul class="navlinks">
       <li><a href="#picks">Picks</a></li>
       <li class="s-hide"><a href="#board">Board</a></li>
+      <li><a href="report">Weekly report</a></li>
       <li class="m-hide"><a href="#pricing">Prices</a></li>
       <li class="m-hide"><a href="#value">Value a game</a></li>
-      <li class="s-hide"><a href="account">Account</a></li>
+      <li class="m-hide"><a href="account">Account</a></li>
       <li><a class="keep" href="#requests">Free issue</a></li>
     </ul>
   </nav>
@@ -223,11 +224,12 @@
     <div class="wrap grid">
       <div class="c-l stack">
         <h2 id="record-h" class="head" data-reveal>Track record</h2>
-        <p data-reveal style="--i:1" class="soft">We log every pick with its score and the date. Eight weeks after each issue, we check how every logged game did and publish the results here, good or bad.</p>
+        <p data-reveal style="--i:1" class="soft">We log every Monday's picks, then read them again at 1, 2, 4 and 8 weeks, next to the games that made the cut but weren't picked. The results are public, good or bad.</p>
+        <p data-reveal style="--i:2"><a class="button" href="track">See the track record</a></p>
       </div>
       <div class="figs c-r">
         <div data-reveal style="--i:1"><span class="fig" id="rec-picks">24</span><p id="rec-picks-note">picks logged so far, starting Oct 23, 2026</p></div>
-        <div data-reveal style="--i:2"><span class="fig" id="rec-first">Dec 18</span><p id="rec-first-note">first results, 8 weeks after the first issue. A game counts as a hit if its players grow at least 5× and hold.</p></div>
+        <div data-reveal style="--i:2"><span class="fig" id="rec-first">Oct 30</span><p id="rec-first-note">first results, a week after the first picks</p></div>
       </div>
     </div>
   </section>
@@ -662,8 +664,8 @@
     return "$" + Math.round(x);
   }
   function short(n) {
-    if (n >= 1e9) return trim(n / 1e9) + "B";
-    if (n >= 1e6) return trim(n / 1e6) + "M";
+    if (n >= 999.5e6) return trim(n / 1e9) + "B";
+    if (n >= 999.5e3) return trim(n / 1e6) + "M";
     if (n >= 1e4) return Math.round(n / 1e3) + "K";
     if (n >= 1e3) return trim(n / 1e3) + "K";
     return String(Math.round(n));
@@ -1071,11 +1073,11 @@
     $("rec-picks").textContent = String(logged);
     if (first) {
       var d0 = new Date(first + "T12:00:00");
-      var d1 = new Date(d0.getTime() + 56 * 864e5);
+      var d1 = new Date(d0.getTime() + 7 * 864e5);
       var fmt = function (d, y) { return d.toLocaleDateString("en-US", y ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" }); };
       $("rec-picks-note").textContent = "pick" + (logged === 1 ? "" : "s") + " logged so far, starting " + fmt(d0, true) + (META.issues > 1 ? ", across " + META.issues + " issues" : "");
       $("rec-first").textContent = fmt(d1, false);
-      $("rec-first-note").textContent = (new Date() >= d1 ? "first results are due now" : "first results, 8 weeks after the first issue") + ". A game counts as a hit if its players grow at least 5× and hold.";
+      $("rec-first-note").textContent = new Date() >= d1 ? "first results came in, a week after the first picks. Eight-week results follow" : "first results, a week after the first picks";
     }
   })();
 

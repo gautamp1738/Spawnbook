@@ -2,7 +2,8 @@
 # Each run commits the new public/data.js (which makes Cloudflare redeploy the site) and the
 # day's reading to pipeline/state/, which is the history the growth scores are worked out from.
 # For the games on the board it also reads products, servers, maturity, badges and creator details.
-# On Mondays it also logs that week's picks for the weekly report and its track record.
+# On Mondays it also logs that week's picks and builds the weekly report (public/report.js).
+# Every run reads past picks again for the track record (public/track.js).
 name: Daily data pull
 
 on:
@@ -75,14 +76,19 @@ jobs:
         run: |
           node pipeline/apply-batch.mjs pipeline/out/batch.json pipeline/state
           cp pipeline/out/data.js public/data.js
+          cp pipeline/out/track.js public/track.js
+          cp pipeline/out/report.js public/report.js
           cp pipeline/out/summary.json pipeline/last-run.json
           if [ -f pipeline/out/picks.csv ]; then
             if [ ! -f pipeline/picks-log.csv ]; then head -n 1 pipeline/out/picks.csv > pipeline/picks-log.csv; fi
+            # A second run on the same Monday replaces that day's rows instead of adding them twice.
+            grep -v "^${{ steps.day.outputs.date }}," pipeline/picks-log.csv > pipeline/picks-log.tmp || true
+            mv pipeline/picks-log.tmp pipeline/picks-log.csv
             tail -n +2 pipeline/out/picks.csv | sed '/^$/d' >> pipeline/picks-log.csv
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A public/data.js pipeline/state pipeline/last-run.json
+          git add -A public/data.js public/track.js public/report.js pipeline/state pipeline/last-run.json
           if [ -f pipeline/picks-log.csv ]; then git add pipeline/picks-log.csv; fi
           git commit -m "Data for ${{ steps.day.outputs.date }}"
           git pull --rebase origin main

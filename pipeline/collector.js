@@ -4,7 +4,9 @@
    stats, keeps a daily history (key "br.hist.v1"), scores young games and builds the board's data file.
    v2 adds, for the 25 board games: rank change and days on the board, a 14-day player series, peak
    players, 1- and 7-day changes, developer products, servers, creator portfolio, content maturity
-   and badges.
+   and badges. v3 adds the track record (key "br.track.v1": each Monday's picks and the games that
+   made the cut but weren't picked, read again at 1, 2, 4 and 8 weeks) and the weekly report
+   (key "br.report.v1": one issue per Monday).
 
    Daily:   await BRC.run()                     -> saves today's snapshot, returns a summary
    Weekly:  await BRC.run({ weekly: true })     -> also logs this week's picks and returns dataJs
@@ -232,6 +234,248 @@ window.BRC = (function () {
     return { byUid: out, skipped: Object.keys(off) };
   }
 
+  // ---------- Track record ----------
+  // Each Monday's picks are kept with their numbers at the time ("at0"), next to every other game
+  // that made the cut that day but wasn't picked (the "pool"), so picks can be compared with a fair
+  // baseline. Every daily run reads all of them again straight from Roblox, whether or not they're
+  // still on the chart lists, and keeps a reading at 1, 2, 4 and 8 weeks. Readings are
+  // [visits, players, favorites, up votes, down votes]; at0 adds visits a day at pick time.
+  var TRACK = "br.track.v1", REPORT = "br.report.v1";
+  var CPS = [7, 14, 28, 56];
+  var median = function (xs) {
+    if (!xs.length) return null;
+    var s = xs.slice().sort(function (a, b) { return a - b; }), m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  };
+
+  async function readNow(uids, G, V) {
+    var need = uids.filter(function (u) { return !G[u]; }), g2 = {}, v2 = {};
+    for (var i = 0; i < need.length; i += 50) {
+      var gj = await getJSON("https://games.roblox.com/v1/games?universeIds=" + need.slice(i, i + 50).join(","));
+      (gj.data || []).forEach(function (g) { g2[g.id] = g; });
+    }
+    for (var j = 0; j < need.length; j += 50) {
+      try {
+        var vj = await getJSON("https://games.roblox.com/v1/games/votes?universeIds=" + need.slice(j, j + 50).join(","));
+        (vj.data || []).forEach(function (v) { v2[v.id] = v; });
+      } catch (e) {}
+    }
+    var out = {};
+    uids.forEach(function (u) {
+      var g = G[u] || g2[u], v = V[u] || v2[u] || {};
+      out[u] = g ? [g.visits, g.playing, g.favoritedCount, v.upVotes || 0, v.downVotes || 0] : null;
+    });
+    return out;
+  }
+
+  async function updateTrack(now, opts, board, pool, G, V, histSnaps) {
+    var tr = loadJSON(TRACK, { v: 1, batches: [] });
+    var picks = loadJSON(PICKS, []);
+    var today = pDate(now);
+    var have = {};
+    tr.batches.forEach(function (b) { have[b.d] = 1; });
+
+    // Picks logged before tracking existed: rebuild their starting numbers from that day's snapshot.
+    Array.from(new Set(picks.map(function (x) { return x.d; }))).forEach(function (d) {
+      if (have[d] || (opts.weekly && d === today)) return;
+      var rowsD = picks.filter(function (x) { return x.d === d; });
+      var s = histSnaps.filter(function (h) { return h.d === d; }).pop();
+      var at0 = {}, peak = {};
+      rowsD.forEach(function (x) {
+        var a = s && s.g[x.uid];
+        at0[x.uid] = a ? [a[0], a[1], a[2], a[3], a[4], x.pace] : [null, x.playing, null, null, null, x.pace];
+        peak[x.uid] = [at0[x.uid][1], d];
+      });
+      tr.batches.push({ d: d, t: s ? s.t : d + "T21:33:00.000Z", picks: rowsD.map(function (x) { return { uid: x.uid, pid: x.pid, name: x.name, rank: x.rank, score: x.score }; }), pool: [], at0: at0, cp: {}, peak: peak });
+    });
+
+    // Today's picks, on Mondays.
+    if (opts.weekly) {
+      tr.batches = tr.batches.filter(function (b) { return b.d !== today; });
+      var onBoard = {};
+      board.forEach(function (r) { onBoard[r.uid] = 1; });
+      var rest = pool.filter(function (r) { return !onBoard[r.uid]; });
+      var at0 = {}, peak = {};
+      board.concat(rest).forEach(function (r) {
+        var v = V[r.uid] || {};
+        at0[r.uid] = [r.visits, r.playing, r.g.favoritedCount, v.upVotes || 0, v.downVotes || 0, Math.round(r.pace)];
+      });
+      board.forEach(function (r) { peak[r.uid] = [r.playing, today]; });
+      tr.batches.push({
+        d: today, t: now.toISOString(),
+        picks: board.map(function (r, i) { return { uid: r.uid, pid: r.pid, name: r.name, rank: i + 1, score: r.score }; }),
+        pool: rest.map(function (r) { return r.uid; }), at0: at0, cp: {}, peak: peak
+      });
+    }
+    tr.batches.sort(function (a, b) { return a.d < b.d ? -1 : 1; });
+
+    // Read every game in every batch that still has checkpoints to fill.
+    var ageOf = function (b) { return (now - new Date(b.t)) / 864e5; };
+    var active = tr.batches.filter(function (b) { return ageOf(b) > 0.25 && !b.cp[CPS[CPS.length - 1]]; });
+    var want = {};
+    active.forEach(function (b) { b.picks.forEach(function (p) { want[p.uid] = 1; }); b.pool.forEach(function (u) { want[u] = 1; }); });
+    var R = await readNow(Object.keys(want).map(Number), G, V);
+    var stamp = now.toISOString();
+    active.forEach(function (b) {
+      var r = {};
+      b.picks.forEach(function (p) { r[p.uid] = R[p.uid] || null; });
+      b.pool.forEach(function (u) { r[u] = R[u] || null; });
+      b.last = { t: stamp, r: r };
+      b.picks.forEach(function (p) { var x = R[p.uid]; if (x && (!b.peak[p.uid] || x[1] > b.peak[p.uid][0])) b.peak[p.uid] = [x[1], today]; });
+      // A checkpoint is taken on the first run at least that many days after the pick (half a day
+      // of slack, since run times drift). If runs were missed, it's taken late and says so in "t".
+      CPS.forEach(function (k) { if (!b.cp[k] && ageOf(b) >= k - 0.5) b.cp[k] = { t: stamp, r: r }; });
+      if (b.cp[CPS[CPS.length - 1]]) delete b.last;
+    });
+    saveJSON(TRACK, tr);
+    return tr;
+  }
+
+  // One game's numbers in a reading, measured against when it was picked.
+  function cell(b, u, snap) {
+    var a = b.at0[u], n = snap.r[u];
+    if (!a) return null;
+    if (!n) return { gone: 1 };
+    var days = (new Date(snap.t) - new Date(b.t)) / 864e5;
+    return {
+      players: n[1],
+      ch: a[1] > 0 ? Math.round((n[1] / a[1] - 1) * 100) : null,
+      vpd: a[0] != null && days > 0.5 ? Math.round((n[0] - a[0]) / days) : null
+    };
+  }
+  function groupStats(b, ids, snap) {
+    var ch = [], vch = [], up = 0, gone = 0, hits = 0;
+    var days = (new Date(snap.t) - new Date(b.t)) / 864e5;
+    ids.forEach(function (u) {
+      var a = b.at0[u], n = snap.r[u];
+      if (!a) return;
+      if (!n) { gone++; return; }
+      if (a[1] > 0) { var c = n[1] / a[1] - 1; ch.push(c); if (c > 0) up++; if (c >= 4) hits++; }
+      if (a[0] != null && a[5] > 0 && days > 0.5) vch.push(((n[0] - a[0]) / days) / a[5] - 1);
+    });
+    return { n: ids.length, measured: ch.length, gone: gone, players: ch, visits: vch, up: up, hits: hits, days: Math.round(days * 10) / 10 };
+  }
+  function summarize(groups) {
+    var ch = [], vch = [], up = 0, n = 0, gone = 0, measured = 0, hits = 0;
+    groups.forEach(function (g) { ch = ch.concat(g.players); vch = vch.concat(g.visits); up += g.up; n += g.n; gone += g.gone; measured += g.measured; hits += g.hits; });
+    if (!n) return null;
+    var pc = function (x) { return x == null ? null : Math.round(x * 1000) / 10; };
+    return { n: n, measured: measured, gone: gone, hits: hits, playersMedian: pc(median(ch)), visitsMedian: pc(median(vch)), upShare: measured ? Math.round(up / measured * 100) : null };
+  }
+
+  // The public track record. Names appear once a batch is a week old, so it never gives away the
+  // current week's board.
+  function trackPublic(now, tr) {
+    var SHOW_AFTER = 6.5;
+    var ageOf = function (b) { return (now - new Date(b.t)) / 864e5; };
+    var overall = {};
+    CPS.forEach(function (k) {
+      var withK = tr.batches.filter(function (b) { return b.cp[k] && ageOf(b) >= SHOW_AFTER; });
+      if (!withK.length) return;
+      overall[k] = {
+        batches: withK.length,
+        picks: summarize(withK.map(function (b) { return groupStats(b, b.picks.map(function (p) { return p.uid; }), b.cp[k]); })),
+        others: summarize(withK.filter(function (b) { return b.pool.length; }).map(function (b) { return groupStats(b, b.pool, b.cp[k]); }))
+      };
+    });
+    var batches = tr.batches.slice().reverse().map(function (b) {
+      var age = ageOf(b), shown = age >= SHOW_AFTER;
+      var o = { d: b.d, label: pLabel(new Date(b.d + "T12:00:00Z")), days: Math.floor(age), shown: shown, n: b.picks.length, others: b.pool.length,
+        showOn: pLabel(new Date(new Date(b.d + "T12:00:00Z").getTime() + 7 * 864e5)), checkpoints: {} };
+      if (!shown) return o;
+      CPS.forEach(function (k) {
+        if (!b.cp[k]) return;
+        o.checkpoints[k] = {
+          days: groupStats(b, [], b.cp[k]).days,
+          picks: summarize([groupStats(b, b.picks.map(function (p) { return p.uid; }), b.cp[k])]),
+          others: b.pool.length ? summarize([groupStats(b, b.pool, b.cp[k])]) : null
+        };
+      });
+      var latest = b.last || b.cp[CPS[CPS.length - 1]];
+      if (latest) {
+        o.latest = { days: groupStats(b, [], latest).days, picks: summarize([groupStats(b, b.picks.map(function (p) { return p.uid; }), latest)]),
+          others: b.pool.length ? summarize([groupStats(b, b.pool, latest)]) : null };
+      }
+      o.picks = b.picks.map(function (p) {
+        var a = b.at0[p.uid] || [];
+        var row = { name: p.name, pid: p.pid, rank: p.rank, score: p.score, players: a[1], pace: a[5] || null, peak: b.peak[p.uid] || null, at: {} };
+        CPS.forEach(function (k) { if (b.cp[k]) row.at[k] = cell(b, p.uid, b.cp[k]); });
+        if (latest) row.now = cell(b, p.uid, latest);
+        return row;
+      });
+      return o;
+    });
+    return { updated: pLabel(now), checkpoints: CPS, overall: overall, batches: batches };
+  }
+
+  // ---------- Weekly report ----------
+  // Built on Mondays from that day's board. Issues are kept, so the report page has an archive.
+  function buildIssue(now, board, pool, rows, extra, tr, histSnaps) {
+    var d = pDate(now);
+    var reports = loadJSON(REPORT, []);
+    reports = reports.filter(function (x) { return x.d !== d; });
+    var prev = tr.batches.filter(function (b) { return b.d < d; }).pop() || null;
+    var prevRank = {};
+    if (prev) prev.picks.forEach(function (p) { prevRank[p.uid] = p.rank; });
+    var inPool = {}, onBoard = {}, byUid = {};
+    pool.forEach(function (r) { inPool[r.uid] = r; });
+    board.forEach(function (r) { onBoard[r.uid] = 1; });
+    rows.forEach(function (r) { byUid[r.uid] = r; });
+
+    // "This week" means against the reading closest to 7 days ago, or at least 2 days ago while
+    // the daily record is still young. The issue says how many days it covers.
+    var base = null, baseDays = null;
+    histSnaps.forEach(function (h) {
+      var dd = (now - new Date(h.t)) / 864e5;
+      if (dd >= 1.5 && dd <= 8.5 && (baseDays == null || Math.abs(dd - 7) < Math.abs(baseDays - 7))) { base = h; baseDays = dd; }
+    });
+    var growthOf = function (r) { var a = base && base.g[r.uid]; return a && a[1] >= 100 ? Math.round((r.playing / a[1] - 1) * 100) : null; };
+    var top = board.slice(0, 10).map(function (r, i) {
+      var e = extra[r.uid] || {};
+      return { name: r.name, pid: r.pid, rank: i + 1, was: prev ? (prevRank[r.uid] || 0) : null, score: r.score, players: r.playing, pace: Math.round(r.pace),
+        age: Math.round(r.age), genre: r.genre2 || r.genre, shape: r.shape, mult: r.mult, own: r.own, creator: r.creator, ctype: r.ctype, cid: r.cid,
+        members: e.members || null, discord: /discord/i.test(r.g.description || "") ? 1 : 0, growth: growthOf(r) };
+    });
+    var movers = rows.filter(function (r) { return growthOf(r) != null && r.playing >= 500 && r.age <= 120; })
+      .sort(function (a, b) { return growthOf(b) - growthOf(a); }).slice(0, 8)
+      .map(function (r) { return { name: r.name, pid: r.pid, players: r.playing, growth: growthOf(r), age: Math.round(r.age), onBoard: onBoard[r.uid] ? 1 : 0 }; });
+    var newOn = prev ? board.map(function (r, i) { return { name: r.name, pid: r.pid, rank: i + 1, uid: r.uid }; }).filter(function (x) { return !prevRank[x.uid]; })
+      .map(function (x) { return { name: x.name, pid: x.pid, rank: x.rank }; }) : [];
+    var off = prev ? prev.picks.filter(function (p) { return !onBoard[p.uid]; }).map(function (p) {
+      var r = byUid[p.uid], why;
+      var seen = prev.last && prev.last.r[p.uid];
+      if (!r && prev.last && !seen) why = "Was deleted or made private";
+      else if (!r && seen && seen[1] > 15000) why = "Grew past 15,000 players";
+      else if (!r && seen && seen[1] < 500) why = "Fell under 500 players";
+      else if (!r) why = "Dropped off Roblox's chart lists";
+      else if (r.playing > 15000) why = "Grew past 15,000 players";
+      else if (r.playing < 500) why = "Fell under 500 players";
+      else if (r.age > 120) why = "Turned four months old";
+      else if (r.like < 0.85) why = "Rating fell under 85%";
+      else if (inPool[p.uid] && (inPool[p.uid].ip || (inPool[p.uid].flags || []).length)) why = "Picked up a red flag: " + (inPool[p.uid].ip ? "name may reference " + inPool[p.uid].ip : inPool[p.uid].flags[0]);
+      else why = "Scored below this week's cut";
+      return { name: p.name, pid: p.pid, wasRank: p.rank, players: r ? r.playing : seen ? seen[1] : null, why: why };
+    }) : [];
+    var since = null;
+    if (prev && prev.last) {
+      var g = groupStats(prev, prev.picks.map(function (p) { return p.uid; }), prev.last);
+      since = { d: prev.d, label: pLabel(new Date(prev.d + "T12:00:00Z")), days: g.days, stats: summarize([g]),
+        best: prev.picks.map(function (p) { var c = cell(prev, p.uid, prev.last); return { name: p.name, pid: p.pid, rank: p.rank, c: c }; })
+          .filter(function (x) { return x.c && !x.c.gone && x.c.ch != null; }).sort(function (a, b) { return b.c.ch - a.c.ch; }).slice(0, 5)
+          .map(function (x) { return { name: x.name, pid: x.pid, rank: x.rank, ch: x.c.ch, players: x.c.players }; }) };
+    }
+    // Issue numbers stay fixed: a re-run on the same Monday keeps that issue's number.
+    var old = loadJSON(REPORT, []).filter(function (x) { return x.d === d; })[0];
+    var no = old ? old.no : reports.reduce(function (m, x) { return Math.max(m, x.no || 0); }, 0) + 1;
+    var issue = { d: d, label: pLabel(now), t: now.toISOString(), no: no, boardSize: board.length, poolSize: pool.length,
+      growthDays: baseDays != null ? Math.round(baseDays) : null, top: top, movers: movers, newOn: newOn, off: off, since: since };
+    reports.push(issue);
+    reports.sort(function (a, b) { return a.d < b.d ? -1 : 1; });
+    if (reports.length > 52) reports = reports.slice(-52);
+    saveJSON(REPORT, reports);
+    return issue;
+  }
+
   function pct(vals) {
     var n = vals.length;
     return vals.map(function (v) { var b = 0, e = 0; vals.forEach(function (w) { if (w < v) b++; else if (w === v) e++; }); return n > 1 ? (b + 0.5 * (e - 1)) / (n - 1) : 0.5; });
@@ -410,6 +654,19 @@ window.BRC = (function () {
       saveJSON(PICKS, picks);
     }
     var pickDates = Array.from(new Set(picks.map(function (x) { return x.d; }))).sort();
+
+    // Track record and weekly report. If Roblox refuses these extra reads, the board still goes out
+    // and the record carries on from its last saved state the next day.
+    var trackError = null, tr = null;
+    try { tr = await updateTrack(now, opts, board, pool, G, V, hist.snaps); }
+    catch (e) { trackError = String(e && e.message || e); tr = loadJSON(TRACK, { v: 1, batches: [] }); }
+    var issue = null;
+    if (opts.weekly) { try { issue = buildIssue(now, board, pool, rows, extra, tr, hist.snaps); } catch (e) { trackError = (trackError ? trackError + "; " : "") + "report: " + String(e && e.message || e); } }
+    var TR = trackPublic(now, tr);
+    var reportsAll = loadJSON(REPORT, []);
+    var trackJs = "/* Spawnbook track record, built " + now.toISOString() + ". Public. The page reads window.TR. */\nwindow.TR = " + JSON.stringify(TR) + ";\n";
+    var reportJs = "/* Spawnbook weekly reports, built " + now.toISOString() + ". The page reads window.RP. */\nwindow.RP = " + JSON.stringify({ issues: reportsAll.slice().reverse().slice(0, 26) }) + ";\n";
+
     var META = {
       snapshot: pLabel(now),
       issueNote: "Players counted at " + pTime(now) + " Pacific. " + visitsNote,
@@ -428,12 +685,14 @@ window.BRC = (function () {
     var BR = { META: META, BOARD: BOARD, BIG: BIG, BIG_NOTES: BIG_NOTES, IP_OFF: IP_OFF, FLAG_OFF: FLAG_OFF };
     var dataJs = "/* Spawnbook data, built " + now.toISOString() + ". The page reads window.BR. */\nwindow.BR = " + JSON.stringify(BR, null, 1) + ";\n";
     var picksCsv = opts.weekly ? board.map(function (r, i) { return [pDate(now), i + 1, '"' + r.name.replace(/"/g, '""') + '"', r.pid, r.score, r.playing, Math.round(r.pace)].join(","); }).join("\n") : "";
-    window.__BR_LAST = { dataJs: dataJs, picksCsv: picksCsv, board: board.map(function (r) { return [r.name, r.score]; }), ids: rows.map(function (r) { return [r.pid, r.uid, r.cid, r.ctype, r.playing]; }), descs: rows.reduce(function (o, r) { o[r.pid] = r.g.description || ""; return o; }, {}) };
+    window.__BR_LAST = { dataJs: dataJs, trackJs: trackJs, reportJs: reportJs, picksCsv: picksCsv, board: board.map(function (r) { return [r.name, r.score]; }), ids: rows.map(function (r) { return [r.pid, r.uid, r.cid, r.ctype, r.playing]; }), descs: rows.reduce(function (o, r) { o[r.pid] = r.g.description || ""; return o; }, {}) };
     return {
       ok: true, at: now.toISOString(), lists: data.lists, gamesSeen: data.uids.length, youngTracked: young.length, pool: pool.length,
       board: board.length, top5: board.slice(0, 5).map(function (r) { return r.name + " (" + r.score + ")"; }),
       historyDays: hist.snaps.length, firstDay: first.d, visitsBasis: p7 ? "7-day" : p1 ? "1-day" : "lifetime",
-      picksLogged: picks.length, dataJsLength: dataJs.length, deepSkipped: DEEP.skipped
+      picksLogged: picks.length, dataJsLength: dataJs.length, deepSkipped: DEEP.skipped,
+      trackBatches: tr.batches.length, trackShown: TR.batches.filter(function (b) { return b.shown; }).length,
+      reportIssues: reportsAll.length, newIssue: issue ? issue.no : null, trackError: trackError
     };
   }
 
@@ -451,6 +710,7 @@ window.BRC = (function () {
     var hist = loadJSON(KEY, { v: 1, snaps: [] }); var s = hist.snaps[hist.snaps.length - 1];
     return s ? JSON.stringify({ v: 1, snaps: [s] }) : "";
   }
-  return { run: run, enrich: enrich, exportHistory: exportHistory, importHistory: importHistory, compactToday: compactToday };
+  return { run: run, enrich: enrich, exportHistory: exportHistory, importHistory: importHistory, compactToday: compactToday,
+    _test: { trackPublic: trackPublic } };
 })();
 "BRC ready";

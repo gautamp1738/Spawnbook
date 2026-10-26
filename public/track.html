@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Track record | Spawnbook</title>
+<meta name="description" content="How every game Spawnbook picked did afterwards, at one, two, four and eight weeks, next to the games that made the cut but weren't picked.">
+<link rel="canonical" href="https://spawnbook.com/track">
+<meta property="og:title" content="Spawnbook track record">
+<meta property="og:description" content="How every game Spawnbook picked did afterwards, next to the games that made the cut but weren't picked.">
+<meta property="og:image" content="https://spawnbook.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to the track record</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks">
+      <li class="m-hide"><a href="subscribe">Pricing</a></li>
+      <li class="s-hide"><a href="value">Value your game</a></li>
+      <li id="nav-signin"><a href="signin">Sign in</a></li>
+      <li><a class="keep" href="/#signup" id="nav-board">Free board</a></li>
+    </ul>
+  </nav>
+</div>
+
+<main id="main" tabindex="-1">
+  <section class="sec wrap grid page-top" aria-labelledby="tr-h">
+    <div class="c-l stack">
+      <h1 id="tr-h" class="head">Track record</h1>
+      <p class="lead">Every Monday we log the games on the board, then read them again straight from Roblox for eight weeks. Here's how they did, next to every other game that made our cut that day but wasn't picked.</p>
+    </div>
+    <div class="c-r stack tr-how">
+      <p>"Players" is the live player count at our daily reading, about 2:30 PM Pacific. One reading can swing with the time of day or a weekend, so we compare medians: half the games did better than the number shown, half did worse.</p>
+      <p>"Others that made the cut" are the games that passed the same filters that day (under four months old, 500 to 15,000 players, rated 85% or better) but didn't score high enough for the board. If our picks beat them, the scoring is finding something the filters alone don't.</p>
+      <p class="small muted" id="tr-updated"></p>
+    </div>
+  </section>
+
+  <section class="sec wrap" aria-labelledby="cp-h">
+    <h2 id="cp-h" class="sr-only">Results at each checkpoint</h2>
+    <div class="cps" id="cps"></div>
+  </section>
+
+  <section class="sec wrap" aria-labelledby="b-h">
+    <h2 id="b-h" class="tr-sub">Every Monday's picks</h2>
+    <div id="batches" class="stack"></div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <p><a class="link" href="subscribe">Pricing</a></p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <h2 class="foot-mail"><span class="sr-only">Email us at </span><a href="mailto:gautamuprasanna@gmail.com">gautamuprasanna<span class="at">@gmail.com</span></a></h2>
+  <div class="foot-copy"><button type="button" class="button" id="foot-copy">Copy email address</button><span class="status" id="foot-status" aria-live="polite"></span></div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent report. Not affiliated with, endorsed by or sponsored by Roblox Corporation. Past picks don't promise future results.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script src="track.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function commas(n) { return Math.round(n).toLocaleString("en-US"); }
+  function short(n) { return n >= 999.5e3 ? (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : commas(n); }
+  function signed(v) { return v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(Math.round(v)) + "%"; }
+  function clean(name) {
+    var s = String(name || "");
+    try { s = s.replace(/\p{Extended_Pictographic}|️|‍|⃣/gu, ""); } catch (e) {}
+    s = s.replace(/\[\s*\]|\(\s*\)/g, "").replace(/\[\s+/g, "[").replace(/\s+\]/g, "]").replace(/\s{2,}/g, " ").trim();
+    return s || String(name || "");
+  }
+  function addDays(d, n) {
+    var q = d.split("-"), t = Date.UTC(+q[0], +q[1] - 1, +q[2], 12) + n * 864e5;
+    return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  }
+  var NAMES = { 7: "1 week on", 14: "2 weeks on", 28: "4 weeks on", 56: "8 weeks on" };
+  var COLS = { 7: "1 week", 14: "2 weeks", 28: "4 weeks", 56: "8 weeks" };
+
+  var TR = window.TR;
+  if (!TR || !TR.batches) {
+    $("batches").appendChild(el("p", null, "The track record didn't load. Refresh the page to try again."));
+    return;
+  }
+  $("tr-updated").textContent = "Updated " + TR.updated + ".";
+
+  // Checkpoint summary strip.
+  var oldest = TR.batches.length ? TR.batches[TR.batches.length - 1].d : null;
+  TR.checkpoints.forEach(function (k) {
+    var o = TR.overall[k], box = el("div", "cp");
+    box.appendChild(el("h3", "cp-h", NAMES[k]));
+    if (!o || !o.picks || o.picks.playersMedian == null) {
+      box.appendChild(el("p", "cp-big muted", "–"));
+      box.appendChild(el("p", "small muted", oldest ? "First reading " + addDays(oldest, k) + "." : "Starts after the first Monday."));
+    } else {
+      var big = el("p", "cp-big", signed(o.picks.playersMedian));
+      big.setAttribute("aria-label", "Picks' median change in players: " + signed(o.picks.playersMedian));
+      box.appendChild(big);
+      box.appendChild(el("p", "small", "Median change in players for our picks."));
+      var dl = el("dl", "cp-dl small");
+      function row(t, v) { var d = el("div"); d.appendChild(el("dt", null, t)); d.appendChild(el("dd", null, v)); dl.appendChild(d); }
+      row("Others that made the cut", o.others && o.others.playersMedian != null ? signed(o.others.playersMedian) : "Not logged yet");
+      row("Picks that grew", o.picks.upShare != null ? o.picks.upShare + "% of " + o.picks.measured : "–");
+      row("Grew 5× or more", String(o.picks.hits || 0) + (o.others && o.others.measured ? " (others: " + (o.others.hits || 0) + " of " + o.others.measured + ")" : ""));
+      if (o.picks.visitsMedian != null) row("Visits a day vs. at pick", signed(o.picks.visitsMedian));
+      row("Based on", o.picks.n + " picks from " + o.batches + (o.batches === 1 ? " Monday" : " Mondays"));
+      box.appendChild(dl);
+    }
+    $("cps").appendChild(box);
+  });
+
+  // One block per Monday.
+  TR.batches.forEach(function (b) {
+    var sec = el("section", "batch");
+    var h = el("h3", "batch-h", "Picked " + b.label);
+    sec.appendChild(h);
+    if (!b.shown) {
+      sec.appendChild(el("p", null, b.n + " games. While a week's picks are on the board, they're for subscribers. Names and results appear here on " + b.showOn + "."));
+      $("batches").appendChild(sec);
+      return;
+    }
+    var bits = [b.n + " games, picked " + b.days + " days ago."];
+    if (b.latest && b.latest.picks && b.latest.picks.playersMedian != null) {
+      bits.push("Median change in players so far: " + signed(b.latest.picks.playersMedian) + (b.latest.others && b.latest.others.playersMedian != null ? ", against " + signed(b.latest.others.playersMedian) + " for the " + b.others + " others that made the cut." : "."));
+    }
+    if (!b.others) bits.push("We started logging the others that made the cut after this week, so there's no comparison for it.");
+    sec.appendChild(el("p", null, bits.join(" ")));
+
+    var ks = TR.checkpoints.filter(function (k) { return b.checkpoints[k]; });
+    var box = el("div", "table-box tr-box");
+    var t = el("table", "tr-table");
+    var cap = el("caption", "sr-only", "Games picked " + b.label + " and how their players changed");
+    t.appendChild(cap);
+    var thead = el("thead"), hr = el("tr");
+    ["Rank", "Game", "Players when picked"].concat(ks.map(function (k) { return COLS[k]; })).concat(b.picks[0] && b.picks[0].now && ks.length < 4 ? ["Latest (" + b.latest.days.toFixed(0) + " days)"] : []).concat(["Most players since"]).forEach(function (x) {
+      var th = el("th", null, x); th.scope = "col"; hr.appendChild(th);
+    });
+    thead.appendChild(hr); t.appendChild(thead);
+    var tb = el("tbody");
+    b.picks.forEach(function (p) {
+      var tr = el("tr");
+      tr.appendChild(el("td", "num", "#" + p.rank));
+      var name = el("td"), a = el("a", "link", clean(p.name));
+      a.href = "https://www.roblox.com/games/" + p.pid; a.target = "_blank"; a.rel = "noopener";
+      a.appendChild(el("span", "sr-only", " (opens in a new tab)"));
+      name.appendChild(a); name.appendChild(el("span", "tr-score", "Score " + p.score)); tr.appendChild(name);
+      tr.appendChild(el("td", "num", p.players != null ? commas(p.players) : "–"));
+      function cellTd(c) {
+        var td = el("td", "num");
+        if (!c) { td.textContent = "–"; return td; }
+        if (c.gone) { td.textContent = "Gone"; td.title = "Deleted or made private"; return td; }
+        var ch = el("span", "ch " + (c.ch > 0 ? "up" : c.ch < 0 ? "down" : ""), signed(c.ch));
+        td.appendChild(ch);
+        td.appendChild(el("span", "sub", commas(c.players) + " players"));
+        return td;
+      }
+      ks.forEach(function (k) { tr.appendChild(cellTd(p.at[k])); });
+      if (p.now && ks.length < 4) tr.appendChild(cellTd(p.now));
+      tr.appendChild(el("td", "num", p.peak ? commas(p.peak[0]) : "–"));
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb); box.appendChild(t); sec.appendChild(box);
+    $("batches").appendChild(sec);
+  });
+  if (!TR.batches.length) $("batches").appendChild(el("p", null, "The first Monday's picks will show up here a week after they're made."));
+
+  // Signed in? Point the main button at the board.
+  fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+    if (!m || m.access === "none") return;
+    $("nav-signin").hidden = true;
+    if (m.access === "active") { $("nav-board").textContent = "Today's board"; $("nav-board").href = "board"; }
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

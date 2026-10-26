@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Weekly report | Spawnbook</title>
+<meta name="robots" content="noindex">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to the report</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks">
+      <li class="m-hide"><a href="track">Track record</a></li>
+      <li class="s-hide"><a href="account">Account</a></li>
+      <li><a class="keep" href="board">Today's board</a></li>
+    </ul>
+  </nav>
+</div>
+
+<main id="main" tabindex="-1">
+  <section class="sec wrap grid page-top" aria-labelledby="rp-h">
+    <div class="c-l stack">
+      <h1 id="rp-h" class="head">Weekly report</h1>
+      <p class="lead" id="rp-lead">Every Monday: the week's top games, what moved, what fell off the board and why, and how last week's picks did.</p>
+    </div>
+    <div class="c-r stack rp-tools">
+      <div class="field">
+        <label for="rp-pick">Issue</label>
+        <select id="rp-pick"></select>
+      </div>
+      <div class="form-row">
+        <button type="button" class="button quiet" id="rp-copy">Copy as an email</button>
+        <span class="status small" id="rp-status" aria-live="polite"></span>
+      </div>
+      <p class="small muted">Copies this issue as plain text you can paste into an email.</p>
+    </div>
+  </section>
+
+  <div id="rp-body"></div>
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <p><a class="link" href="board">Today's board</a></p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <h2 class="foot-mail"><span class="sr-only">Email us at </span><a href="mailto:gautamuprasanna@gmail.com">gautamuprasanna<span class="at">@gmail.com</span></a></h2>
+  <div class="foot-copy"><button type="button" class="button" id="foot-copy">Copy email address</button><span class="status" id="foot-status" aria-live="polite"></span></div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent report. Not affiliated with, endorsed by or sponsored by Roblox Corporation. Prices are estimates from public numbers, not offers or appraisals.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script src="report.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function commas(n) { return Math.round(n).toLocaleString("en-US"); }
+  function short(n) { return n >= 999.5e3 ? (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : commas(n); }
+  function trim(v) { var s = v >= 100 ? v.toFixed(0) : v.toFixed(1); return s.indexOf(".") >= 0 ? s.replace(/0+$/, "").replace(/\.$/, "") : s; }
+  function money(x) {
+    if (!isFinite(x) || x <= 0) return "$0";
+    if (x >= 999.5e6) return "$" + trim(x / 1e9) + "B";
+    if (x >= 999.5e3) return "$" + trim(x / 1e6) + "M";
+    if (x >= 1e3) return "$" + Math.round(x / 1e3) + "K";
+    return "$" + Math.round(x);
+  }
+  function signed(v) { return v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(Math.round(v)) + "%"; }
+  function plainSigned(v) { return v == null ? "n/a" : (v > 0 ? "+" : v < 0 ? "-" : "") + Math.abs(Math.round(v)) + "%"; }
+  function clean(name) {
+    var s = String(name || "");
+    try { s = s.replace(/\p{Extended_Pictographic}|️|‍|⃣/gu, ""); } catch (e) {}
+    s = s.replace(/\[\s*\]|\(\s*\)/g, "").replace(/\[\s+/g, "[").replace(/\s+\]/g, "]").replace(/\s{2,}/g, " ").trim();
+    return s || String(name || "");
+  }
+  // Same price model as the board: revenue from visits, times months of revenue for the genre.
+  var MULT = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6] };
+  var PER_VISIT = [0.004, 0.008, 0.012];
+  function price(g) {
+    var m = g.mult || MULT[g.shape] || MULT.rocket, monthly = g.pace * 30;
+    return { low: monthly * PER_VISIT[0] * m[0], mid: monthly * PER_VISIT[1] * m[1], high: monthly * PER_VISIT[2] * m[2] };
+  }
+  var GAME = function (pid) { return "https://www.roblox.com/games/" + pid; };
+  function gameLink(name, pid) {
+    var a = el("a", "link", clean(name)); a.href = GAME(pid); a.target = "_blank"; a.rel = "noopener";
+    a.appendChild(el("span", "sr-only", " (opens in a new tab)"));
+    return a;
+  }
+  function contactText(g) {
+    if (g.ctype === "Group") return "Group" + (g.members ? " with " + commas(g.members) + " members" : "") + (g.discord ? ", Discord linked in the game description" : "");
+    return "Solo account" + (g.discord ? ", Discord linked in the game description" : ", no public business contact");
+  }
+  function contactUrl(g) { return g.ctype === "Group" ? "https://www.roblox.com/communities/" + g.cid : "https://www.roblox.com/users/" + g.cid + "/profile"; }
+  function moveText(g) { return g.was == null ? "" : g.was === 0 ? "New this week" : g.was === g.rank ? "Same place as last week" : (g.was > g.rank ? "Up from #" : "Down from #") + g.was; }
+
+  var RP = window.RP;
+  var body = $("rp-body");
+  if (!RP || !RP.issues || !RP.issues.length) {
+    var s0 = el("section", "sec wrap");
+    s0.appendChild(el("p", "lead", RP ? "The first issue comes out on Monday afternoon, Pacific time." : "The report didn't load. Refresh the page to try again."));
+    body.appendChild(s0);
+    $("rp-copy").disabled = true;
+    return;
+  }
+
+  RP.issues.forEach(function (x, i) {
+    var o = el("option", null, "Issue " + x.no + ": " + x.label); o.value = String(i); $("rp-pick").appendChild(o);
+  });
+  var want = new URLSearchParams(location.search).get("issue");
+  var start = 0;
+  RP.issues.forEach(function (x, i) { if (String(x.no) === want) start = i; });
+  $("rp-pick").value = String(start);
+
+  function section(title, id) {
+    var s = el("section", "sec wrap rp-sec"); s.setAttribute("aria-labelledby", id);
+    var h = el("h2", "rp-h", title); h.id = id; s.appendChild(h);
+    body.appendChild(s);
+    return s;
+  }
+
+  function render(x) {
+    body.textContent = "";
+    $("rp-lead").textContent = "Issue " + x.no + ", " + x.label + ". " + x.boardSize + " games made the board out of " + x.poolSize + " that passed our filters.";
+    var gd = x.growthDays;
+
+    // Top 10
+    var s1 = section("This week's top " + x.top.length, "rp-top");
+    var ol = el("ol", "rp-top");
+    x.top.forEach(function (g) {
+      var li = el("li", "rp-item");
+      var head = el("div", "rp-item-h");
+      head.appendChild(el("span", "rp-rank", "#" + g.rank));
+      var nm = el("div", "rp-name"); nm.appendChild(gameLink(g.name, g.pid));
+      nm.appendChild(el("span", "rp-meta", "by " + String(g.creator).replace(/\.+$/, "") + ". " + g.age + " days old. " + (g.genre || "No genre listed") + "." + (moveText(g) ? " " + moveText(g) + "." : "")));
+      head.appendChild(nm);
+      head.appendChild(el("span", "rp-score", String(g.score)));
+      li.appendChild(head);
+      var dl = el("dl", "rp-stats");
+      var pr = price(g);
+      [["Players", commas(g.players)], ["Visits a day", short(g.pace)], [gd ? "Players vs " + gd + " days ago" : "Players vs last week", signed(g.growth)], ["Estimated price", "About " + money(pr.mid)]].forEach(function (r) {
+        var d = el("div"); d.appendChild(el("dt", null, r[0])); d.appendChild(el("dd", null, r[1])); dl.appendChild(d);
+      });
+      li.appendChild(dl);
+      var c = el("p", "small rp-contact"); c.appendChild(el("strong", null, "Owner: ")); c.appendChild(document.createTextNode(contactText(g) + ". "));
+      var ca = el("a", "link", g.ctype === "Group" ? "Group page" : "Profile"); ca.href = contactUrl(g); ca.target = "_blank"; ca.rel = "noopener"; ca.appendChild(el("span", "sr-only", " (opens in a new tab)"));
+      c.appendChild(ca);
+      li.appendChild(c);
+      ol.appendChild(li);
+    });
+    s1.appendChild(ol);
+    var more = el("p", "small muted"); more.appendChild(document.createTextNode("Scores, red flags and the full price range for every game are on "));
+    var bl = el("a", "link", "today's board"); bl.href = "board"; more.appendChild(bl); more.appendChild(document.createTextNode(".")); s1.appendChild(more);
+
+    // Last week's picks
+    var s2 = section("Last week's picks", "rp-since");
+    if (!x.since || !x.since.stats) {
+      s2.appendChild(el("p", null, "This is the first issue, so there's nothing to look back on yet."));
+    } else {
+      var st = x.since.stats;
+      s2.appendChild(el("p", "lead", "Picked " + x.since.label + ", " + Math.round(x.since.days) + " days on: median change in players " + signed(st.playersMedian) + ". " + (st.upShare != null ? st.upShare + "% of " + st.measured + " grew." : "") + (st.gone ? " " + st.gone + " went private or were deleted." : "")));
+      if (x.since.best && x.since.best.length) {
+        var ul = el("ul", "rp-list");
+        x.since.best.forEach(function (b) {
+          var li = el("li"); li.appendChild(gameLink(b.name, b.pid));
+          li.appendChild(document.createTextNode(", picked #" + b.rank + ": " + signed(b.ch) + ", now " + commas(b.players) + " players"));
+          ul.appendChild(li);
+        });
+        s2.appendChild(el("p", "small muted", "Biggest gains:"));
+        s2.appendChild(ul);
+      }
+      var tl = el("p", "small"); tl.appendChild(document.createTextNode("Every past pick, up to 8 weeks on, is on the "));
+      var ta = el("a", "link", "track record"); ta.href = "track"; tl.appendChild(ta); tl.appendChild(document.createTextNode(".")); s2.appendChild(tl);
+    }
+
+    // Movers
+    var s3 = section("Biggest movers" + (gd ? " over " + gd + " days" : ""), "rp-movers");
+    if (!x.movers || !x.movers.length) {
+      s3.appendChild(el("p", null, "Player changes need a few days of readings. They start with next week's issue."));
+    } else {
+      s3.appendChild(el("p", "small muted", "Young games on Roblox's chart lists with at least 500 players, by change in players. Not all of them made the board."));
+      var ul3 = el("ul", "rp-list");
+      x.movers.forEach(function (m) {
+        var li = el("li"); li.appendChild(gameLink(m.name, m.pid));
+        li.appendChild(document.createTextNode(": " + signed(m.growth) + ", now " + commas(m.players) + " players, " + m.age + " days old" + (m.onBoard ? ". On the board" : "")));
+        ul3.appendChild(li);
+      });
+      s3.appendChild(ul3);
+    }
+
+    // New and off
+    var s4 = section("New on the board and off it", "rp-changes");
+    var grid = el("div", "rp-two");
+    var a = el("div"); a.appendChild(el("h3", "rp-h3", "New this week"));
+    if (!x.newOn || !x.newOn.length) a.appendChild(el("p", null, x.since ? "No new games this week." : "Starts with the next issue."));
+    else { var ua = el("ul", "rp-list"); x.newOn.forEach(function (n) { var li = el("li"); li.appendChild(gameLink(n.name, n.pid)); li.appendChild(document.createTextNode(", #" + n.rank)); ua.appendChild(li); }); a.appendChild(ua); }
+    var b = el("div"); b.appendChild(el("h3", "rp-h3", "Off the board"));
+    if (!x.off || !x.off.length) b.appendChild(el("p", null, x.since ? "Every game from last week stayed on." : "Starts with the next issue."));
+    else { var ub = el("ul", "rp-list"); x.off.forEach(function (n) { var li = el("li"); li.appendChild(gameLink(n.name, n.pid)); li.appendChild(document.createTextNode(", was #" + n.wasRank + ". " + n.why + (n.players != null ? " (" + commas(n.players) + " players)" : "") + ".")); ub.appendChild(li); }); b.appendChild(ub); }
+    grid.appendChild(a); grid.appendChild(b); s4.appendChild(grid);
+  }
+
+  // Plain-text version for pasting into an email.
+  function asText(x) {
+    var L = [], gd = x.growthDays;
+    L.push("Spawnbook weekly report, issue " + x.no + " (" + x.label + ")", "");
+    L.push("This week's top " + x.top.length);
+    x.top.forEach(function (g) {
+      var pr = price(g);
+      L.push(g.rank + ". " + clean(g.name) + " (score " + g.score + ")" + (moveText(g) ? ", " + moveText(g).toLowerCase() : ""));
+      L.push("   " + commas(g.players) + " players, " + short(g.pace) + " visits a day" + (g.growth != null ? ", players " + plainSigned(g.growth) + (gd ? " over " + gd + " days" : "") : "") + ", estimated price about " + money(pr.mid));
+      L.push("   Owner: " + contactText(g) + ". " + contactUrl(g));
+      L.push("   " + GAME(g.pid));
+    });
+    L.push("");
+    if (x.since && x.since.stats) {
+      L.push("Last week's picks, " + Math.round(x.since.days) + " days on");
+      L.push("Median change in players: " + plainSigned(x.since.stats.playersMedian) + ". " + x.since.stats.upShare + "% of " + x.since.stats.measured + " grew.");
+      (x.since.best || []).forEach(function (b) { L.push("- " + clean(b.name) + " (picked #" + b.rank + "): " + plainSigned(b.ch) + ", now " + commas(b.players) + " players"); });
+      L.push("");
+    }
+    if (x.movers && x.movers.length) {
+      L.push("Biggest movers" + (gd ? " over " + gd + " days" : ""));
+      x.movers.forEach(function (m) { L.push("- " + clean(m.name) + ": " + plainSigned(m.growth) + ", now " + commas(m.players) + " players" + (m.onBoard ? " (on the board)" : "")); });
+      L.push("");
+    }
+    if (x.off && x.off.length) {
+      L.push("Off the board");
+      x.off.forEach(function (n) { L.push("- " + clean(n.name) + " (was #" + n.wasRank + "): " + n.why); });
+      L.push("");
+    }
+    L.push("Full board, with scores, red flags and price ranges: https://spawnbook.com/board");
+    L.push("Track record: https://spawnbook.com/track");
+    return L.join("\n");
+  }
+
+  var current = RP.issues[start];
+  render(current);
+  $("rp-pick").addEventListener("change", function () {
+    current = RP.issues[Number(this.value)];
+    render(current);
+    $("rp-status").textContent = "";
+    if (history.replaceState) history.replaceState(null, "", "?issue=" + current.no);
+  });
+  $("rp-copy").addEventListener("click", function () { window.SB.copyText(asText(current), $("rp-status")); });
+})();
+</script>
+</body>
+</html>

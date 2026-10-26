@@ -13,6 +13,9 @@
 //   GET  /api/teaser        today's top pick without its name, for the landing page
 //   GET  /board             the full board, for signed-in visitors with access
 //   GET  /data.js           the board's numbers, same rule
+//   GET  /report            the weekly report and its archive, same rule
+//   GET  /report.js         the report's numbers, same rule
+//   GET  /track             the track record, public (its track.js names picks only after a week)
 //   /admin                  accounts and access, behind the ADMIN_KEY secret (off until it's set)
 //
 // Accounts are kept in a Durable Object with SQLite storage (Store, below), which Cloudflare
@@ -51,8 +54,9 @@ export default {
       else if (path === "/api/password") res = await password(request, env);
       else if (path === "/api/me") res = await me(request, env);
       else if (path === "/api/teaser") res = await teaser(env, url);
-      else if (path === "/data.js") res = await gated(request, env, url, "/data.js");
+      else if (path === "/data.js" || path === "/report.js") res = await gated(request, env, url, path);
       else if (path === "/board" || path.startsWith("/board.") || path.startsWith("/board/")) res = await gated(request, env, url, "/board");
+      else if (path === "/report" || path.startsWith("/report.") || path.startsWith("/report/")) res = await gated(request, env, url, "/report");
       else if (path === "/admin" || path.startsWith("/admin/")) res = await admin(request, env, url, path);
       else res = await env.ASSETS.fetch(request);
     } catch (err) {
@@ -122,8 +126,8 @@ const passwordProblem = (p) => (p.length < MIN_PASSWORD ? "short" : p.length > M
 
 // Where to send someone after they sign in: only our own pages, never another site.
 function nextPath(value, until) {
-  const ok = ["/board", "/subscribe", "/account"];
-  if (ok.includes(value)) return value === "/board" && until <= Date.now() ? "/subscribe" : value;
+  const ok = ["/board", "/report", "/subscribe", "/account"];
+  if (ok.includes(value)) return (value === "/board" || value === "/report") && until <= Date.now() ? "/subscribe" : value;
   return until > Date.now() ? "/board" : "/subscribe";
 }
 
@@ -234,14 +238,14 @@ async function me(request, env) {
 
 async function gated(request, env, url, assetPath) {
   const s = await session(request, env);
-  const isData = assetPath === "/data.js";
+  const isData = assetPath.endsWith(".js");
   if (!s || s.until <= Date.now()) {
     if (isData) {
       return new Response("/* Sign in at spawnbook.com to see today's board. */\n", {
         status: 401, headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-store" },
       });
     }
-    return redirect(s ? "/subscribe" : "/signin?next=/board");
+    return redirect(s ? "/subscribe" : "/signin?next=" + assetPath);
   }
   const asset = await env.ASSETS.fetch(new Request(new URL(assetPath, url), { headers: request.headers }));
   const res = new Response(asset.body, asset);

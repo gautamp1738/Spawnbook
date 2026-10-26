@@ -214,8 +214,8 @@
     return "$" + Math.round(x);
   }
   function short(n) {
-    if (n >= 1e9) return trim(n / 1e9) + "B";
-    if (n >= 1e6) return trim(n / 1e6) + "M";
+    if (n >= 999.5e6) return trim(n / 1e9) + "B";
+    if (n >= 999.5e3) return trim(n / 1e6) + "M";
     if (n >= 1e4) return Math.round(n / 1e3) + "K";
     if (n >= 1e3) return trim(n / 1e3) + "K";
     return String(Math.round(n));
