@@ -429,7 +429,7 @@
         <table class="weights" data-reveal>
           <caption class="sr-only">Score weights</caption>
           <tbody>
-            <tr><th scope="row">Momentum</th><td class="w">25</td><td>Latest visits against the lifetime average, Up-and-Coming and Top Trending ranks</td></tr>
+            <tr><th scope="row">Momentum</th><td class="w">25</td><td>Latest visits against the lifetime average, players over the past week, and Up-and-Coming rank. Being on Top Trending earns nothing, because our track record showed it usually means a game is near its peak</td></tr>
             <tr><th scope="row">Stickiness</th><td class="w">25</td><td>Minutes per visit against GameAnalytics benchmarks (median 6.6, top quarter 14.5, top tenth 26.4), rating, favorites and votes per 1,000 visits, Top Revisited</td></tr>
             <tr><th scope="row">Updates</th><td class="w">15</td><td>How recently it updated, and whether it's still shipping after a month</td></tr>
             <tr><th scope="row">Originality</th><td class="w">15</td><td>Slow-build genres score higher. Games built on a current trend lose points, because Roblox says it no longer prioritizes close look-alikes in recommendations</td></tr>
@@ -744,7 +744,7 @@
     var m = p.fresh ? "Recent visits ran " + p.accel + "× its lifetime daily average." : "No recent visit reading yet, so this uses its lifetime average.";
     if (p.x.pgrowth7) m += " Players " + (p.x.pgrowth7 >= 1 ? "up " + Math.round((p.x.pgrowth7 - 1) * 100) : "down " + Math.round((1 - p.x.pgrowth7) * 100)) + "% over the past week.";
     if (p.U) m += " #" + p.U + " on Up-and-Coming.";
-    if (p.T) m += " #" + p.T + " on Top Trending.";
+    if (p.T) m += " #" + p.T + " on Top Trending, which doesn't add points, since it usually means a game is near its peak.";
     if (p.G) m += " #" + p.G + " in its genre's trending list.";
     var s = "About " + p.sess + " minutes per visit, " + sessBand(p.sess) + ". Rated " + p.like + "%. " + p.favk + " favorites and " + p.vk + " votes per 1,000 visits.";
     if (p.R) s += " #" + p.R + " on Top Revisited.";

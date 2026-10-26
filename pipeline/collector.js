@@ -540,7 +540,10 @@ window.BRC = (function () {
 
     var pool = rows.filter(function (r) { return r.playing >= 500 && r.playing <= 15000 && r.age <= 120 && r.like >= 0.85 && r.pace > 0; });
     function rawParts(r, members) {
-      var mom = (r.accel != null ? C((Math.min(r.accel, 6) - 1) / 5, 0, 1) * 12 : 4) + (r.U ? (1 - (r.U - 1) / 100) * 8 : 0) + (r.T ? (1 - (r.T - 1) / 100) * 5 : 0) + (r.Gk && r.Gk <= 20 ? 2 : 0) + (r.pgrowth7 != null ? C(r.pgrowth7 - 1, 0, 1) * 6 : 0);
+      // Top Trending earns nothing: in the first track-record check (Oct 23 picks, 3 days on),
+      // picks on Top Trending fell 30% against 4% for the rest. It marks a game near its peak,
+      // and the board is for getting in before that.
+      var mom = (r.accel != null ? C((Math.min(r.accel, 6) - 1) / 5, 0, 1) * 12 : 4) + (r.U ? (1 - (r.U - 1) / 100) * 8 : 0) + (r.Gk && r.Gk <= 20 ? 2 : 0) + (r.pgrowth7 != null ? C(r.pgrowth7 - 1, 0, 1) * 6 : 0);
       var st = C(Math.log(Math.max(r.sess, 1) / 3) / Math.log(26 / 3), 0, 1) * 13 + C((r.like - 0.85) / 0.13, 0, 1) * 6 + C(r.favk / 30, 0, 1) * 3 + C(r.vk / 5, 0, 1) * 3 + (r.R ? 3 : 0);
       var lo = Math.min(15, (r.hrs < 24 ? 9 : r.hrs < 72 ? 6 : r.hrs < 168 ? 3 : 0) + (CUE.test(r.name) ? 3 : 0) + (r.age > 30 && r.hrs < 72 ? 3 : 0));
       var og = C((r.shape === "staircase" ? 13 : 9) - (r.wave ? 6 : 0), 0, 15);
