@@ -11,13 +11,13 @@
   document.querySelectorAll("[data-reveal]").forEach(function (n) { if (io) io.observe(n); else n.classList.add("is-in"); });
 
   // Copy to clipboard, with a fallback that selects the text.
-  function copyText(text, statusEl, area) {
+  function copyText(text, statusEl, area, okMsg) {
     function fallback() {
       if (area) { area.focus(); area.select(); statusEl.textContent = "Selected. Press Ctrl+C or Cmd+C to copy."; }
       else statusEl.textContent = "Copy didn't work here. Select the address and copy it.";
     }
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { statusEl.textContent = area ? "Copied. Now paste it into your message to us." : "Copied."; }, fallback);
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { statusEl.textContent = okMsg || (area ? "Copied. Now paste it into your message to us." : "Copied."); }, fallback);
       else fallback();
     } catch (e) { fallback(); }
   }

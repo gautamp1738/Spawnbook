@@ -90,6 +90,8 @@
     <div class="c-r" data-reveal style="--i:1">
       <form class="form" id="signup-form" method="post" action="/api/signup" novalidate>
         <p class="hint">For studios and investors who buy Roblox games. Sign up to see today's full board free for 24 hours. No card needed.</p>
+        <p class="note" id="f-refnote" hidden>You were invited by a Spawnbook member.</p>
+        <input type="hidden" name="ref" id="f-ref" value="">
         <div class="fields">
           <div class="field">
             <label for="f-name">Your name <span class="opt">(required)</span></label>
@@ -209,6 +211,9 @@
     agree: "Check the box to agree before signing up.",
     server: "Something went wrong on our side. Try again in a minute."
   };
+  // Came in through a member's referral link? Carry the code with the sign-up. No cookie is set.
+  var refCode = (new URLSearchParams(location.search).get("ref") || "").toLowerCase();
+  if (/^[a-z0-9]{6,16}$/.test(refCode)) { $("f-ref").value = refCode; $("f-refnote").hidden = false; }
   var code = new URLSearchParams(location.search).get("e");
   if (code && ERRORS[code]) {
     $("f-err").textContent = ERRORS[code];

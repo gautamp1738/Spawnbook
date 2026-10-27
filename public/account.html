@@ -74,6 +74,25 @@
         <p class="note">Forgot your password? Email <a class="link" href="mailto:gautamuprasanna@gmail.com?subject=Spawnbook%20password">gautamuprasanna@gmail.com</a> from the address you signed up with, and we'll send you a link to choose a new one.</p>
       </div>
 
+      <section class="form refer" id="refer" aria-labelledby="ref-h" hidden>
+        <h2 class="form-h" id="ref-h">Refer a buyer, get a month free</h2>
+        <p>Share your link with another studio or fund. When someone signs up through it and becomes a paying subscriber, you get a free month. The numbers below count the people who signed up through your link.</p>
+        <div class="field">
+          <label for="ref-link">Your referral link</label>
+          <div class="pw">
+            <input id="ref-link" type="text" readonly>
+            <button type="button" class="button quiet" id="ref-copy">Copy</button>
+          </div>
+          <span class="status small" id="ref-status" aria-live="polite"></span>
+        </div>
+        <dl class="ref-stats">
+          <div><dt>Signed up</dt><dd id="ref-n">0</dd></div>
+          <div><dt>Subscribed</dt><dd id="ref-p">0</dd></div>
+          <div><dt>Free months</dt><dd id="ref-m">0</dd></div>
+        </dl>
+        <p class="small muted">We add the free month to your access when the person you referred makes their first payment. See the <a class="link" href="terms.html#referrals">Terms</a>.</p>
+      </section>
+
       <form method="post" action="/api/signout" id="signout" hidden><button class="button quiet" type="submit">Sign out</button></form>
     </div>
   </section>
@@ -150,12 +169,22 @@
       $("cur-field").hidden = !needCurrent;
       show("pw-form");
       show("signout");
+      fetch("/api/referrals", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (rf) {
+        if (!rf || !rf.link) return;
+        $("ref-link").value = rf.link;
+        $("ref-n").textContent = String(rf.signedUp);
+        $("ref-p").textContent = String(rf.paying);
+        $("ref-m").textContent = String(rf.monthsEarned);
+        show("refer");
+      }).catch(function () {});
       if (q.get("done")) show("acct-done");
       if (code && ERRORS[code]) $("p-err").textContent = ERRORS[code];
     }).catch(function () {
       $("acct-lead").textContent = "Couldn't check your account just now. Reload the page to try again.";
     });
   }
+
+  $("ref-copy").addEventListener("click", function () { window.SB.copyText($("ref-link").value, $("ref-status"), $("ref-link"), "Copied. Paste it into an email or message."); });
 
   $("pw-form").addEventListener("submit", function (e) {
     var field = null, msg = "";

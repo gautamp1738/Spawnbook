@@ -10,6 +10,7 @@
 //   POST /api/password      sets a password, either from a one-time link (/account#t=...) or,
 //                           for a signed-in visitor, from the change-password form on /account
 //   GET  /api/me            { access: "none" | "active" | "expired", until, email, hasPassword }
+//   GET  /api/referrals     the signed-in visitor's referral link and how many people it brought in
 //   GET  /api/teaser        today's top pick without its name, for the landing page
 //   GET  /board             the full board, for signed-in visitors with access
 //   GET  /data.js           the board's numbers, same rule
@@ -29,6 +30,8 @@ const LINK_MS = 7 * DAY_MS; // how long a password link from the admin page work
 const SESSION_COOKIE = "sb_session";
 const SESSION_MAX_AGE = 60 * 24 * 60 * 60; // 60 days
 const ADMIN_COOKIE = "sb_admin";
+const REFERRAL_DAYS = 31; // the free month a member gets when someone they referred first pays
+const PAID_DAYS = 31; // what "Record a payment" adds on the admin page
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 200;
 
@@ -53,6 +56,7 @@ export default {
       else if (path === "/api/signout") res = await signout(request, env);
       else if (path === "/api/password") res = await password(request, env);
       else if (path === "/api/me") res = await me(request, env);
+      else if (path === "/api/referrals") res = await referrals(request, env, url);
       else if (path === "/api/teaser") res = await teaser(env, url);
       else if (path === "/data.js" || path === "/report.js") res = await gated(request, env, url, path);
       else if (path === "/board" || path.startsWith("/board.") || path.startsWith("/board/")) res = await gated(request, env, url, "/board");
@@ -167,6 +171,7 @@ async function signup(request, env) {
   const company = get("company").slice(0, 160);
   const role = get("role").slice(0, 60);
   const pw = String(form.get("password") || "");
+  const ref = get("ref").toLowerCase();
   if (!name || !email || !company) return back("missing");
   if (!validEmail(email)) return back("email");
   const bad = passwordProblem(pw);
@@ -174,7 +179,7 @@ async function signup(request, env) {
   if (get("agree") !== "yes") return back("agree");
 
   const token = randomToken();
-  const r = await call(env, "signup", { email, name, company, role, password: pw, token, freeMs: FREE_MS });
+  const r = await call(env, "signup", { email, name, company, role, password: pw, token, freeMs: FREE_MS, ref: /^[a-z0-9]{6,16}$/.test(ref) ? ref : null });
   if (r.exists) return redirect("/signin?e=exists");
   return redirect(nextPath("", r.until), { "Set-Cookie": sessionCookie(token) });
 }
@@ -232,6 +237,15 @@ async function me(request, env) {
   const s = await session(request, env);
   if (!s) return json({ access: "none" });
   return json({ access: s.until > Date.now() ? "active" : "expired", until: s.until, email: s.email, hasPassword: !!s.hasPassword });
+}
+
+// The visitor's own referral link. Counts only: who signed up through it stays private.
+async function referrals(request, env, url) {
+  const s = await session(request, env);
+  if (!s) return json({ error: "signin" }, 401);
+  const r = await call(env, "referrals", { token: s.token });
+  if (!r.code) return json({ error: "signin" }, 401);
+  return json({ link: url.origin + "/?ref=" + r.code, code: r.code, signedUp: r.signedUp, paying: r.paying, monthsEarned: r.monthsEarned, days: REFERRAL_DAYS });
 }
 
 // ---------- the board ----------
@@ -332,6 +346,19 @@ async function admin(request, env, url, path) {
     return redirect("/admin");
   }
 
+  if (path === "/admin/paid" && request.method === "POST") {
+    const form = await request.formData();
+    const email = String(form.get("email") || "").toLowerCase();
+    const r = await call(env, "paid", { email, days: PAID_DAYS, referralDays: REFERRAL_DAYS });
+    if (!r.ok) return page("No such account", `<h1 class="head">No such account</h1><p>There's no account for ${esc(email)}.</p><p><a class="button quiet" href="/admin">Back to accounts</a></p>`);
+    const day = (t) => new Date(t).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric" });
+    let msg = `<p>Recorded a payment for <strong>${esc(email)}</strong>. Their access now runs until ${esc(day(r.until))}.</p>`;
+    if (r.credited) msg += `<p><strong>${esc(r.credited.email)}</strong> referred them, and this was their first payment, so ${esc(r.credited.email)} got a free month: their access now runs until ${esc(day(r.credited.until))}. If they pay monthly, skip their next charge.</p>`;
+    else if (r.referredBy && r.alreadyCredited) msg += `<p>They were referred by ${esc(r.referredBy)}, who already got their free month for this person.</p>`;
+    else if (r.referredBy) msg += `<p>They were referred by ${esc(r.referredBy)}, but that account no longer exists, so no free month was given.</p>`;
+    return page("Payment recorded", `<h1 class="head">Payment recorded</h1>${msg}<p><a class="button quiet" href="/admin">Back to accounts</a></p>`);
+  }
+
   if (path === "/admin/delete" && request.method === "POST") {
     const form = await request.formData();
     await call(env, "delete", { email: String(form.get("email") || "").toLowerCase() });
@@ -356,13 +383,13 @@ async function admin(request, env, url, path) {
     return linkPage(env, url, email, r.existed ? "That email already had an account, so its access is now " + days + " days from today." : "The account is made, with " + days + " days of access.");
   }
 
-  const { rows } = await call(env, "list", {});
+  const { rows, credits } = await call(env, "list", {});
 
   if (path === "/admin/signups.csv") {
     const cell = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
     const iso = (t) => (t ? new Date(t).toISOString() : "");
-    const lines = [["signed_up", "name", "email", "studio_or_fund", "role", "access_until", "last_seen", "has_password"].join(",")]
-      .concat(rows.map((r) => [iso(r.created_at), r.name, r.email, r.company, r.role, iso(r.access_until), iso(r.last_seen), r.has_pw ? "yes" : "no"].map(cell).join(",")));
+    const lines = [["signed_up", "name", "email", "studio_or_fund", "role", "access_until", "last_seen", "has_password", "referred_by", "first_paid"].join(",")]
+      .concat(rows.map((r) => [iso(r.created_at), r.name, r.email, r.company, r.role, iso(r.access_until), iso(r.last_seen), r.has_pw ? "yes" : "no", r.referred_by || "", iso(r.paid_at)].map(cell).join(",")));
     return new Response(lines.join("\n") + "\n", {
       headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="spawnbook-signups.csv"', "Cache-Control": "no-store" },
     });
@@ -373,13 +400,15 @@ async function admin(request, env, url, path) {
   const body = rows.map((r) => {
     const status = r.access_until > now ? "Until " + when(r.access_until) : "Ended " + when(r.access_until);
     const id = esc(r.email);
-    return `<tr><td>${esc(when(r.created_at))}</td><td>${esc(r.name)}</td><td><a class="link" href="mailto:${id}">${id}</a></td><td>${esc(r.company)}</td><td>${esc(r.role)}</td><td>${esc(status)}</td><td>${r.has_pw ? "Set" : "Not set"}</td>
+    const paid = r.paid_at ? "First paid " + new Date(r.paid_at).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" }) : "Not yet";
+    return `<tr><td>${esc(when(r.created_at))}</td><td>${esc(r.name)}</td><td><a class="link" href="mailto:${id}">${id}</a></td><td>${esc(r.company)}</td><td>${esc(r.role)}</td><td>${esc(status)}</td><td>${r.has_pw ? "Set" : "Not set"}</td><td>${r.referred_by ? esc(r.referred_by) + (r.ref_credited ? " (free month given)" : "") : ""}</td><td>${esc(paid)}</td>
+<td><form class="inline" method="post" action="/admin/paid"><input type="hidden" name="email" value="${id}"><button class="button" type="submit">Record a payment</button></form></td>
 <td><form class="inline" method="post" action="/admin/access"><input type="hidden" name="email" value="${id}"><label class="sr-only" for="d-${id}">Days of access for ${id}</label><input type="number" min="0" max="3660" id="d-${id}" name="days" value="31"><button class="button quiet" type="submit">Set days from now</button></form></td>
 <td><form class="inline" method="post" action="/admin/link"><input type="hidden" name="email" value="${id}"><button class="button quiet" type="submit">Make a link</button></form></td>
 <td><form class="inline" method="post" action="/admin/delete"><input type="hidden" name="email" value="${id}"><button class="button quiet" type="submit">Delete</button></form></td></tr>`;
   }).join("");
   const table = rows.length
-    ? `<div class="table-box"><table><thead><tr><th>Signed up (Pacific)</th><th>Name</th><th>Email</th><th>Studio or fund</th><th>Role</th><th>Access</th><th>Password</th><th>Give access</th><th>Password link</th><th>Remove</th></tr></thead><tbody>${body}</tbody></table></div>`
+    ? `<div class="table-box"><table><thead><tr><th>Signed up (Pacific)</th><th>Name</th><th>Email</th><th>Studio or fund</th><th>Role</th><th>Access</th><th>Password</th><th>Referred by</th><th>Paid</th><th>Payment</th><th>Set access</th><th>Password link</th><th>Remove</th></tr></thead><tbody>${body}</tbody></table></div>`
     : `<p>No accounts yet.</p>`;
   const addErr = url.searchParams.get("add") === "bad" ? `<p class="err" role="alert">Fill in a name, a valid email and a studio or fund.</p>` : "";
   const add = `<form class="form add" method="post" action="/admin/create"><h2>Add an account</h2><p class="small muted">For a subscriber who pays before signing up. You'll get a link to send them so they can choose a password.</p><div class="fields">
@@ -388,7 +417,10 @@ async function admin(request, env, url, path) {
 <div class="field"><label for="a-co">Studio or fund</label><input id="a-co" name="company" maxlength="160" required></div>
 <div class="field"><label for="a-days">Days of access</label><input id="a-days" name="days" type="number" min="0" max="3660" value="31"></div>
 </div><div class="form-row"><button class="button" type="submit">Add account</button></div>${addErr}</form>`;
-  return page("Accounts", `<h1 class="head">Accounts</h1><p>${rows.length} ${rows.length === 1 ? "account" : "accounts"}. When someone pays, set their days of access (31 for a month). Set 0 to end someone's access. If someone forgets their password, make a link and send it to them. Delete removes a person completely, for example when they ask you to delete their data.</p><p><a class="button quiet" href="/admin/signups.csv">Download as a spreadsheet (CSV)</a></p>${table}${add}`);
+  const creditList = credits && credits.length
+    ? `<h2>Free months given for referrals</h2><ul>${credits.map((c) => `<li>${esc(when(c.at))}: ${esc(c.referrer)} referred ${esc(c.referred)}, ${c.days} days added</li>`).join("")}</ul>`
+    : "";
+  return page("Accounts", `<h1 class="head">Accounts</h1><p>${rows.length} ${rows.length === 1 ? "account" : "accounts"}. When someone pays, click <strong>Record a payment</strong>: it adds ${PAID_DAYS} days to their access, and on their first payment, whoever referred them gets a free month (${REFERRAL_DAYS} days) automatically. Use <strong>Set days from now</strong> to correct someone's access, or 0 to end it. If someone forgets their password, make a link and send it to them. Delete removes a person completely, for example when they ask you to delete their data.</p><p><a class="button quiet" href="/admin/signups.csv">Download as a spreadsheet (CSV)</a></p>${table}${creditList}${add}`);
 }
 
 // ---------- Durable Object: accounts, sessions and password links ----------
@@ -444,6 +476,13 @@ export class Store {
     this.sql.exec("CREATE TABLE IF NOT EXISTS links (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS fails (email TEXT PRIMARY KEY, count INTEGER NOT NULL, first_at INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS seeds (name TEXT PRIMARY KEY, at INTEGER NOT NULL)");
+    // Referrals: each account gets a code; a sign-up through it remembers who referred them, and
+    // that person's first payment gives the referrer a free month (one credit row per referral).
+    for (const col of ["ref_code TEXT", "referred_by TEXT", "paid_at INTEGER", "ref_credited INTEGER"]) {
+      try { this.sql.exec("ALTER TABLE signups ADD COLUMN " + col); } catch (e) { /* already there */ }
+    }
+    this.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS signups_ref_code ON signups (ref_code)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS credits (referrer TEXT NOT NULL, referred TEXT NOT NULL, at INTEGER NOT NULL, days INTEGER NOT NULL)");
     this.seedOwner();
   }
 
@@ -459,7 +498,23 @@ export class Store {
   }
 
   account(email) {
-    return this.sql.exec("SELECT email, access_until, pw FROM signups WHERE email = ?", email).toArray()[0];
+    return this.sql.exec("SELECT email, access_until, pw, ref_code, referred_by, paid_at, ref_credited FROM signups WHERE email = ?", email).toArray()[0];
+  }
+
+  // A short code that reads cleanly in a link: no 0/o, 1/l/i.
+  refCode(email) {
+    const acct = this.account(email);
+    if (!acct) return null;
+    if (acct.ref_code) return acct.ref_code;
+    const abc = "23456789abcdefghjkmnpqrstuvwxyz";
+    for (let tries = 0; tries < 20; tries++) {
+      const bytes = crypto.getRandomValues(new Uint8Array(8));
+      const code = Array.from(bytes, (b) => abc[b % abc.length]).join("");
+      if (this.sql.exec("SELECT email FROM signups WHERE ref_code = ?", code).toArray().length) continue;
+      this.sql.exec("UPDATE signups SET ref_code = ? WHERE email = ?", code, email);
+      return code;
+    }
+    throw new Error("Couldn't make a referral code");
   }
 
   newSession(token, email, now) {
@@ -479,7 +534,9 @@ export class Store {
       if (this.account(p.email)) return reply({ exists: true });
       const pw = await hashPassword(p.password);
       if (this.account(p.email)) return reply({ exists: true });
-      this.sql.exec("INSERT INTO signups (email, name, company, role, created_at, access_until, last_seen, pw) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", p.email, p.name, p.company, p.role || "", now, now + p.freeMs, now, pw);
+      const referrer = p.ref ? this.sql.exec("SELECT email FROM signups WHERE ref_code = ?", p.ref).toArray()[0] : null;
+      const referredBy = referrer && referrer.email !== p.email ? referrer.email : null;
+      this.sql.exec("INSERT INTO signups (email, name, company, role, created_at, access_until, last_seen, pw, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", p.email, p.name, p.company, p.role || "", now, now + p.freeMs, now, pw, referredBy);
       this.newSession(p.token, p.email, now);
       return reply({ until: now + p.freeMs });
     }
@@ -540,6 +597,36 @@ export class Store {
       return reply({ ok: true });
     }
 
+    if (op === "referrals") {
+      const s = this.sql.exec("SELECT email FROM sessions WHERE token = ?", p.token).toArray()[0];
+      if (!s) return reply({ code: null });
+      const code = this.refCode(s.email);
+      const signedUp = this.sql.exec("SELECT COUNT(*) AS n FROM signups WHERE referred_by = ?", s.email).toArray()[0].n;
+      const paying = this.sql.exec("SELECT COUNT(*) AS n FROM signups WHERE referred_by = ? AND paid_at IS NOT NULL", s.email).toArray()[0].n;
+      const monthsEarned = this.sql.exec("SELECT COUNT(*) AS n FROM credits WHERE referrer = ?", s.email).toArray()[0].n;
+      return reply({ code, signedUp, paying, monthsEarned });
+    }
+
+    if (op === "paid") {
+      const acct = this.account(p.email);
+      if (!acct) return reply({ ok: false });
+      const until = Math.max(now, acct.access_until) + p.days * DAY_MS;
+      const firstPayment = !acct.paid_at;
+      this.sql.exec("UPDATE signups SET access_until = ?, paid_at = COALESCE(paid_at, ?) WHERE email = ?", until, now, p.email);
+      let credited = null;
+      if (acct.referred_by && !acct.ref_credited) {
+        const ref = this.account(acct.referred_by);
+        if (ref) {
+          const refUntil = Math.max(now, ref.access_until) + p.referralDays * DAY_MS;
+          this.sql.exec("UPDATE signups SET access_until = ? WHERE email = ?", refUntil, ref.email);
+          this.sql.exec("INSERT INTO credits (referrer, referred, at, days) VALUES (?, ?, ?, ?)", ref.email, p.email, now, p.referralDays);
+          this.sql.exec("UPDATE signups SET ref_credited = 1 WHERE email = ?", p.email);
+          credited = { email: ref.email, until: refUntil };
+        }
+      }
+      return reply({ ok: true, until, firstPayment, referredBy: acct.referred_by || null, alreadyCredited: !!acct.ref_credited, credited });
+    }
+
     if (op === "make-link") {
       if (!this.account(p.email)) return reply({ ok: false });
       this.sql.exec("DELETE FROM links WHERE email = ?", p.email);
@@ -555,7 +642,10 @@ export class Store {
     }
 
     if (op === "list") {
-      return reply({ rows: this.sql.exec("SELECT email, name, company, role, created_at, access_until, last_seen, pw IS NOT NULL AS has_pw FROM signups ORDER BY created_at DESC").toArray() });
+      return reply({
+        rows: this.sql.exec("SELECT email, name, company, role, created_at, access_until, last_seen, pw IS NOT NULL AS has_pw, referred_by, paid_at, ref_credited FROM signups ORDER BY created_at DESC").toArray(),
+        credits: this.sql.exec("SELECT referrer, referred, at, days FROM credits ORDER BY at DESC").toArray(),
+      });
     }
 
     if (op === "access") {
@@ -567,6 +657,8 @@ export class Store {
       this.sql.exec("DELETE FROM sessions WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM links WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM fails WHERE email = ?", p.email);
+      this.sql.exec("DELETE FROM credits WHERE referrer = ? OR referred = ?", p.email, p.email);
+      this.sql.exec("UPDATE signups SET referred_by = NULL WHERE referred_by = ?", p.email);
       this.sql.exec("DELETE FROM signups WHERE email = ?", p.email);
       return reply({ ok: true });
     }

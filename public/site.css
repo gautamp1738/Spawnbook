@@ -571,3 +571,10 @@ th.r, td.r, .mini .r { text-align: right; }
 .rp-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; max-width: 70ch; }
 .rp-two { display: grid; gap: 2rem; grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 48em) { .rp-two { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- referrals ---------- */
+.refer p { margin: 0; max-width: 60ch; }
+.refer .pw input { font-size: var(--step-small); }
+.ref-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem 1.25rem; margin: 0; font-size: var(--step-small); }
+.ref-stats dt { color: var(--muted); }
+.ref-stats dd { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: var(--step-lead); }

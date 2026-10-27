@@ -36,6 +36,8 @@ There's no automatic email yet, so forgotten passwords go through you: on the ad
 
 To see accounts and give paying subscribers access, add a secret named `ADMIN_KEY` to the Worker in Cloudflare (Settings → Variables and Secrets) and open `/admin` with that password. From there you can add an account for someone who paid first, set anyone's days of access, end it, make a password link, delete someone, or download everyone as a CSV.
 
+**Referrals.** Every account gets a referral link on its account page (`/?ref=code`). A sign-up through it records who referred them (a hidden form field carries the code; no cookie). When someone pays, click **Record a payment** on the admin page: it adds 31 days to their access, and on their first payment it automatically adds a free month (31 days) to whoever referred them and lists it under "Free months given for referrals". If that person pays monthly, skip their next charge. Members only see counts, not who signed up through them.
+
 The owner's account (gautamuprasanna@gmail.com) is created automatically on first start with access until 2100, along with a one-time setup link that was handed over privately. Only a hash of that link is in the code.
 
 ## Hosting
