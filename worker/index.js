@@ -17,6 +17,12 @@
 //   GET  /report            the weekly report and its archive, same rule
 //   GET  /report.js         the report's numbers, same rule
 //   GET  /track             the track record, public (its track.js names picks only after a week)
+//   GET  /game, /market, /watchlist, /history.js
+//                           game pages, genre trends and the watchlist, with their daily history;
+//                           same rule as the board
+//   GET  /api/watch         the signed-in member's watched games, with status and notes
+//   POST /api/watch         { action: "add" | "update" | "remove" | "seen", ... } as JSON
+//   GET  /api/live?u=1,2    current Roblox numbers for up to 100 games, cached for 5 minutes
 //   /admin                  accounts and access, behind the ADMIN_KEY secret (off until it's set)
 //
 // Accounts are kept in a Durable Object with SQLite storage (Store, below), which Cloudflare
@@ -58,9 +64,10 @@ export default {
       else if (path === "/api/me") res = await me(request, env);
       else if (path === "/api/referrals") res = await referrals(request, env, url);
       else if (path === "/api/teaser") res = await teaser(env, url);
-      else if (path === "/data.js" || path === "/report.js") res = await gated(request, env, url, path);
-      else if (path === "/board" || path.startsWith("/board.") || path.startsWith("/board/")) res = await gated(request, env, url, "/board");
-      else if (path === "/report" || path.startsWith("/report.") || path.startsWith("/report/")) res = await gated(request, env, url, "/report");
+      else if (path === "/api/watch") res = await watch(request, env);
+      else if (path === "/api/live") res = await live(request, env, url);
+      else if (GATED_DATA.includes(path)) res = await gated(request, env, url, path);
+      else if (gatedPage(path)) res = await gated(request, env, url, gatedPage(path));
       else if (path === "/admin" || path.startsWith("/admin/")) res = await admin(request, env, url, path);
       else res = await env.ASSETS.fetch(request);
     } catch (err) {
@@ -130,9 +137,18 @@ const passwordProblem = (p) => (p.length < MIN_PASSWORD ? "short" : p.length > M
 
 // Where to send someone after they sign in: only our own pages, never another site.
 function nextPath(value, until) {
-  const ok = ["/board", "/report", "/subscribe", "/account"];
-  if (ok.includes(value)) return (value === "/board" || value === "/report") && until <= Date.now() ? "/subscribe" : value;
+  if (GATED_PAGES.includes(value)) return until <= Date.now() ? "/subscribe" : value;
+  if (value === "/subscribe" || value === "/account") return value;
   return until > Date.now() ? "/board" : "/subscribe";
+}
+
+// Pages and data files that need a signed-in visitor whose access hasn't run out.
+const GATED_PAGES = ["/board", "/report", "/game", "/market", "/watchlist"];
+const GATED_DATA = ["/data.js", "/report.js", "/history.js"];
+// "/board", "/board.html", "/board/anything" all mean the board page.
+function gatedPage(path) {
+  for (const p of GATED_PAGES) if (path === p || path.startsWith(p + ".") || path.startsWith(p + "/")) return p;
+  return null;
 }
 
 // ---------- the store ----------
@@ -246,6 +262,73 @@ async function referrals(request, env, url) {
   const r = await call(env, "referrals", { token: s.token });
   if (!r.code) return json({ error: "signin" }, 401);
   return json({ link: url.origin + "/?ref=" + r.code, code: r.code, signedUp: r.signedUp, paying: r.paying, monthsEarned: r.monthsEarned, days: REFERRAL_DAYS });
+}
+
+// ---------- watchlist ----------
+
+const STATUSES = ["watching", "contacted", "talking", "passed", "bought"];
+const MAX_WATCH = 300;
+
+async function member(request, env) {
+  const s = await session(request, env);
+  return s && s.until > Date.now() ? s : null;
+}
+
+async function watch(request, env) {
+  const s = await member(request, env);
+  if (!s) return json({ error: "signin" }, 401);
+  if (request.method === "GET") return json(await call(env, "watch-list", { email: s.email }));
+  if (request.method !== "POST") return json({ error: "method" }, 405);
+  let b;
+  try { b = await request.json(); } catch (e) { return json({ error: "bad" }, 400); }
+  const int = (v) => (Number.isSafeInteger(Number(v)) && Number(v) > 0 ? Number(v) : null);
+  if (b.action === "seen") {
+    const seen = {};
+    for (const [k, v] of Object.entries(b.seen || {}).slice(0, MAX_WATCH)) if (int(k) && Number.isFinite(Number(v))) seen[int(k)] = Math.max(0, Math.round(Number(v)));
+    return json(await call(env, "watch-seen", { email: s.email, seen }));
+  }
+  const uid = int(b.uid);
+  if (!uid) return json({ error: "bad" }, 400);
+  if (b.action === "remove") return json(await call(env, "watch-remove", { email: s.email, uid }));
+  if (b.action !== "add" && b.action !== "update") return json({ error: "bad" }, 400);
+  const row = { email: s.email, uid, pid: int(b.pid), name: String(b.name || "").slice(0, 120), max: MAX_WATCH };
+  if (b.status != null) { if (!STATUSES.includes(b.status)) return json({ error: "bad" }, 400); row.status = b.status; }
+  if (b.note != null) row.note = String(b.note).slice(0, 2000);
+  const r = await call(env, b.action === "add" ? "watch-add" : "watch-update", row);
+  return json(r, r.error ? 400 : 200);
+}
+
+// Current numbers straight from Roblox for the watchlist and game pages. The daily history only
+// updates once a day; this fills in "right now". Answers are cached for five minutes per set of games.
+async function live(request, env, url) {
+  const s = await member(request, env);
+  if (!s) return json({ error: "signin" }, 401);
+  const ids = Array.from(new Set(String(url.searchParams.get("u") || "").split(",").map(Number).filter((n) => Number.isSafeInteger(n) && n > 0))).sort((a, b) => a - b).slice(0, 100);
+  if (!ids.length) return json({ at: Date.now(), games: {} });
+  const key = new Request("https://live.spawnbook.internal/" + ids.join(","));
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  if (cache) { const hit = await cache.match(key); if (hit) return new Response(hit.body, hit); }
+  const games = {};
+  try {
+    const opts = { headers: { Accept: "application/json" } };
+    const [g, v] = await Promise.all([
+      fetch("https://games.roblox.com/v1/games?universeIds=" + ids.join(","), opts),
+      fetch("https://games.roblox.com/v1/games/votes?universeIds=" + ids.join(","), opts),
+    ]);
+    const gj = g.ok ? await g.json() : { data: [] };
+    const vj = v.ok ? await v.json() : { data: [] };
+    const votes = {};
+    for (const x of vj.data || []) votes[x.id] = x;
+    for (const x of gj.data || []) {
+      const vv = votes[x.id] || {};
+      games[x.id] = { players: x.playing, visits: x.visits, up: vv.upVotes || 0, down: vv.downVotes || 0, name: x.name, pid: x.rootPlaceId, updated: x.updated, created: x.created, maxPlayers: x.maxPlayers, favorites: x.favoritedCount };
+    }
+  } catch (e) {
+    return json({ at: Date.now(), games: {}, error: "roblox" });
+  }
+  const res = json({ at: Date.now(), games }, 200, "private, max-age=300");
+  if (cache && Object.keys(games).length) await cache.put(key, new Response(JSON.stringify({ at: Date.now(), games }), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "max-age=300" } }));
+  return res;
 }
 
 // ---------- the board ----------
@@ -483,6 +566,9 @@ export class Store {
     }
     this.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS signups_ref_code ON signups (ref_code)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS credits (referrer TEXT NOT NULL, referred TEXT NOT NULL, at INTEGER NOT NULL, days INTEGER NOT NULL)");
+    // Watchlist: each member's starred games, with a deal status and private notes. "seen" is the
+    // player count the member last saw, for "since you last looked".
+    this.sql.exec("CREATE TABLE IF NOT EXISTS watch (email TEXT NOT NULL, uid INTEGER NOT NULL, pid INTEGER, name TEXT, status TEXT NOT NULL DEFAULT 'watching', note TEXT NOT NULL DEFAULT '', added_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, seen_players INTEGER, seen_at INTEGER, PRIMARY KEY (email, uid))");
     this.seedOwner();
   }
 
@@ -627,6 +713,41 @@ export class Store {
       return reply({ ok: true, until, firstPayment, referredBy: acct.referred_by || null, alreadyCredited: !!acct.ref_credited, credited });
     }
 
+    if (op === "watch-list") {
+      return reply({ rows: this.sql.exec("SELECT uid, pid, name, status, note, added_at, updated_at, seen_players, seen_at FROM watch WHERE email = ? ORDER BY added_at DESC", p.email).toArray() });
+    }
+
+    if (op === "watch-add") {
+      const have = this.sql.exec("SELECT uid FROM watch WHERE email = ? AND uid = ?", p.email, p.uid).toArray()[0];
+      if (!have) {
+        const n = this.sql.exec("SELECT COUNT(*) AS n FROM watch WHERE email = ?", p.email).toArray()[0].n;
+        if (n >= p.max) return reply({ error: "full", max: p.max });
+        this.sql.exec("INSERT INTO watch (email, uid, pid, name, status, note, added_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", p.email, p.uid, p.pid, p.name, p.status || "watching", p.note || "", now, now);
+      } else {
+        if (p.status) this.sql.exec("UPDATE watch SET status = ?, updated_at = ? WHERE email = ? AND uid = ?", p.status, now, p.email, p.uid);
+        if (p.note != null) this.sql.exec("UPDATE watch SET note = ?, updated_at = ? WHERE email = ? AND uid = ?", p.note, now, p.email, p.uid);
+      }
+      return reply({ ok: true, row: this.sql.exec("SELECT uid, pid, name, status, note, added_at, updated_at, seen_players, seen_at FROM watch WHERE email = ? AND uid = ?", p.email, p.uid).toArray()[0] });
+    }
+
+    if (op === "watch-update") {
+      const have = this.sql.exec("SELECT uid FROM watch WHERE email = ? AND uid = ?", p.email, p.uid).toArray()[0];
+      if (!have) return reply({ error: "missing" });
+      if (p.status) this.sql.exec("UPDATE watch SET status = ?, updated_at = ? WHERE email = ? AND uid = ?", p.status, now, p.email, p.uid);
+      if (p.note != null) this.sql.exec("UPDATE watch SET note = ?, updated_at = ? WHERE email = ? AND uid = ?", p.note, now, p.email, p.uid);
+      return reply({ ok: true, row: this.sql.exec("SELECT uid, pid, name, status, note, added_at, updated_at, seen_players, seen_at FROM watch WHERE email = ? AND uid = ?", p.email, p.uid).toArray()[0] });
+    }
+
+    if (op === "watch-remove") {
+      this.sql.exec("DELETE FROM watch WHERE email = ? AND uid = ?", p.email, p.uid);
+      return reply({ ok: true });
+    }
+
+    if (op === "watch-seen") {
+      for (const [uid, players] of Object.entries(p.seen || {})) this.sql.exec("UPDATE watch SET seen_players = ?, seen_at = ? WHERE email = ? AND uid = ?", players, now, p.email, Number(uid));
+      return reply({ ok: true });
+    }
+
     if (op === "make-link") {
       if (!this.account(p.email)) return reply({ ok: false });
       this.sql.exec("DELETE FROM links WHERE email = ?", p.email);
@@ -658,6 +779,7 @@ export class Store {
       this.sql.exec("DELETE FROM links WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM fails WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM credits WHERE referrer = ? OR referred = ?", p.email, p.email);
+      this.sql.exec("DELETE FROM watch WHERE email = ?", p.email);
       this.sql.exec("UPDATE signups SET referred_by = NULL WHERE referred_by = ?", p.email);
       this.sql.exec("DELETE FROM signups WHERE email = ?", p.email);
       return reply({ ok: true });

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Watchlist | Spawnbook</title>
+<meta name="robots" content="noindex">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to your watchlist</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks">
+      <li class="m-hide"><a href="market">Market</a></li>
+      <li class="s-hide"><a href="report">Weekly report</a></li>
+      <li><a class="keep" href="board">Today's board</a></li>
+    </ul>
+  </nav>
+</div>
+
+<main id="main" tabindex="-1">
+  <section class="sec wrap grid page-top" aria-labelledby="w-h">
+    <div class="c-l stack">
+      <h1 id="w-h" class="head">Watchlist</h1>
+      <p class="lead">The games you're following, with live player counts, what changed since you last looked, and where each deal stands.</p>
+    </div>
+    <div class="c-r stack">
+      <p>Add games with the star on the board or the button on any game page. Your statuses and notes are private to your account.</p>
+      <div class="field w-filter">
+        <label for="f-status">Show</label>
+        <select id="f-status"><option value="">Every status</option></select>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec wrap" aria-label="Watched games">
+    <p class="small muted" id="w-asof" aria-live="polite">Loading your watchlist.</p>
+    <div class="table-box w-box" id="w-box" hidden>
+      <table class="tr-table w-table">
+        <caption class="sr-only">Your watched games</caption>
+        <thead><tr>
+          <th scope="col">Game</th>
+          <th scope="col">Status</th>
+          <th scope="col">Players now</th>
+          <th scope="col">Since you last looked</th>
+          <th scope="col">Change this week</th>
+          <th scope="col">On the board</th>
+          <th scope="col">Notes</th>
+          <th scope="col"><span class="sr-only">Remove</span></th>
+        </tr></thead>
+        <tbody id="w-rows"></tbody>
+      </table>
+    </div>
+    <div id="w-empty" hidden>
+      <p class="lead">Nothing on your watchlist yet.</p>
+      <p><a class="button" href="board">Go to today's board</a></p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <p><a class="link" href="account">Your account</a></p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent report. Not affiliated with, endorsed by or sponsored by Roblox Corporation.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script src="history.js"></script>
+<script src="data.js"></script>
+<script src="tools.js"></script>
+<script>
+(function () {
+  var T = window.SBT, $ = T.$, el = T.el, HX = T.HX;
+  var BR = window.BR, onBoard = {};
+  if (BR && BR.BOARD) BR.BOARD.forEach(function (r) { onBoard[r[0]] = { rank: (r[26] && r[26].rank) || null, score: r[24] }; });
+  T.STATUS_ORDER.forEach(function (k) { var o = el("option", null, T.STATUS[k]); o.value = k; $("f-status").appendChild(o); });
+  var rows = [], live = {}, filter = "";
+
+  function render() {
+    var list = rows.filter(function (r) { return !filter || r.status === filter; });
+    var tb = $("w-rows"); tb.textContent = "";
+    $("w-box").hidden = !rows.length; $("w-empty").hidden = !!rows.length;
+    var back7 = HX ? T.dayBack(7, 5) || T.dayBack(7, 1.5) : null;
+    list.forEach(function (r) {
+      var g = HX ? T.game(r.uid) : null, lv = live[r.uid];
+      var tr = el("tr");
+      var name = el("td"), a = el("a", "link", T.clean((lv && lv.name) || (g && g.name) || r.name || "Unknown game"));
+      a.href = T.gamePage(r.pid || (g && g.pid)); name.appendChild(a);
+      if (g) name.appendChild(el("span", "sub", (g.genre2 || g.genre || "") + (g.created ? ", " + T.ageOn(g, HX.dates[HX.dates.length - 1]) + " days old" : "")));
+      tr.appendChild(name);
+      var st = el("td"), sel = el("select", "w-sel");
+      sel.setAttribute("aria-label", "Status for " + a.textContent);
+      T.STATUS_ORDER.forEach(function (k) { var o = el("option", null, T.STATUS[k]); o.value = k; sel.appendChild(o); });
+      sel.value = r.status;
+      sel.addEventListener("change", function () { T.watchSave({ action: "update", uid: r.uid, status: sel.value }).then(function (j) { r.status = j.row.status; $("w-asof").textContent = "Status saved."; }).catch(function () { $("w-asof").textContent = "Couldn't save that status. Try again."; }); });
+      st.appendChild(sel); tr.appendChild(st);
+      var nowP = lv ? lv.players : g ? g.r[g.r.length - 1][1] : null;
+      var pc = el("td", "num", T.commas(nowP)); if (!lv && g) pc.appendChild(el("span", "sub", "last daily reading")); tr.appendChild(pc);
+      var since = el("td", "num");
+      if (r.seen_players != null && nowP != null) {
+        var ch = T.pctChange(nowP, r.seen_players);
+        since.appendChild(el("span", "ch " + (ch > 0 ? "up" : ""), T.signed(ch)));
+        since.appendChild(el("span", "sub", "since " + new Date(r.seen_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " (" + T.commas(r.seen_players) + ")"));
+      } else since.textContent = "First look";
+      tr.appendChild(since);
+      var wk = el("td", "num"), r7 = g && back7 ? T.readingAt(g, back7.i, 1) : null;
+      if (r7 && nowP != null) { var c7 = T.pctChange(nowP, r7[1]); wk.appendChild(el("span", "ch " + (c7 > 0 ? "up" : ""), T.signed(c7))); wk.appendChild(el("span", "sub", "vs " + T.dayLabel(HX.dates[r7[0]]))); }
+      else wk.textContent = "–";
+      tr.appendChild(wk);
+      var b = onBoard[r.pid];
+      tr.appendChild(el("td", null, b ? "#" + b.rank + ", score " + b.score : "No"));
+      var nt = el("td", "w-note"); nt.textContent = r.note ? (r.note.length > 90 ? r.note.slice(0, 90) + "…" : r.note) : ""; tr.appendChild(nt);
+      var rm = el("td"), btn = el("button", "linkbutton small", "Remove"); btn.type = "button";
+      btn.setAttribute("aria-label", "Remove " + a.textContent + " from your watchlist");
+      btn.addEventListener("click", function () {
+        T.watchSave({ action: "remove", uid: r.uid }).then(function () { rows = rows.filter(function (x) { return x.uid !== r.uid; }); render(); $("w-asof").textContent = "Removed."; });
+      });
+      rm.appendChild(btn); tr.appendChild(rm);
+      tb.appendChild(tr);
+    });
+    if (rows.length && !list.length) { var tr0 = el("tr"), td0 = el("td", null, "No games with that status."); td0.colSpan = 8; tr0.appendChild(td0); tb.appendChild(tr0); }
+  }
+
+  $("f-status").addEventListener("change", function () { filter = this.value; render(); });
+
+  T.watchList().then(function (r) {
+    rows = r;
+    render();
+    if (!rows.length) { $("w-asof").textContent = ""; return; }
+    $("w-asof").textContent = "Getting live numbers from Roblox.";
+    return T.live(rows.map(function (x) { return x.uid; })).then(function (j) {
+      live = j.games || {};
+      render();
+      var got = Object.keys(live).length;
+      $("w-asof").textContent = got ? "Players are live from Roblox as of " + new Date(j.at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) + ". Week-ago numbers come from our daily readings." : "Live numbers didn't load, so players show our last daily reading.";
+      // Remember what was seen now, for "since you last looked" next time. Reloading within six
+      // hours keeps comparing against the earlier visit.
+      var seen = {};
+      rows.forEach(function (x) { var p = live[x.uid] ? live[x.uid].players : null; if (p != null && (!x.seen_at || Date.now() - x.seen_at > 6 * 3600e3)) seen[x.uid] = p; });
+      if (Object.keys(seen).length) T.watchSave({ action: "seen", seen: seen }).catch(function () {});
+    });
+  }).catch(function () { $("w-asof").textContent = "Your watchlist didn't load. Refresh the page to try again."; });
+})();
+</script>
+</body>
+</html>

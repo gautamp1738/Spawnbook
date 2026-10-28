@@ -240,7 +240,8 @@ window.BRC = (function () {
   // baseline. Every daily run reads all of them again straight from Roblox, whether or not they're
   // still on the chart lists, and keeps a reading at 1, 2, 4 and 8 weeks. Readings are
   // [visits, players, favorites, up votes, down votes]; at0 adds visits a day at pick time.
-  var TRACK = "br.track.v1", REPORT = "br.report.v1";
+  var TRACK = "br.track.v1", REPORT = "br.report.v1", INDEX = "br.index.v1";
+  var trackReadings = {}, fetchedGames = {};
   var CPS = [7, 14, 28, 56];
   var median = function (xs) {
     if (!xs.length) return null;
@@ -252,7 +253,7 @@ window.BRC = (function () {
     var need = uids.filter(function (u) { return !G[u]; }), g2 = {}, v2 = {};
     for (var i = 0; i < need.length; i += 50) {
       var gj = await getJSON("https://games.roblox.com/v1/games?universeIds=" + need.slice(i, i + 50).join(","));
-      (gj.data || []).forEach(function (g) { g2[g.id] = g; });
+      (gj.data || []).forEach(function (g) { g2[g.id] = g; fetchedGames[g.id] = g; });
     }
     for (var j = 0; j < need.length; j += 50) {
       try {
@@ -315,6 +316,7 @@ window.BRC = (function () {
     var want = {};
     active.forEach(function (b) { b.picks.forEach(function (p) { want[p.uid] = 1; }); b.pool.forEach(function (u) { want[u] = 1; }); });
     var R = await readNow(Object.keys(want).map(Number), G, V);
+    trackReadings = R;
     var stamp = now.toISOString();
     active.forEach(function (b) {
       var r = {};
@@ -476,6 +478,42 @@ window.BRC = (function () {
     return issue;
   }
 
+  // ---------- Games index and daily history ----------
+  // The index keeps each young game's name, link, genre and creator, so the history can name games
+  // on days they weren't on the chart lists. The history file gives every game's daily readings
+  // for the game pages, comparisons, watchlists and the market view.
+  function updateIndex(now, games) {
+    var idx = loadJSON(INDEX, {}), today = pDate(now);
+    games.forEach(function (g) {
+      if (!g || !g.id) return;
+      idx[g.id] = { n: g.name, p: g.rootPlaceId, g: g.genre_l1 || (idx[g.id] && idx[g.id].g) || "", g2: g.genre_l2 || (idx[g.id] && idx[g.id].g2) || "",
+        c: (g.creator && g.creator.name) || "", ct: g.creator && g.creator.type, ci: g.creator && g.creator.id, cr: String(g.created || "").slice(0, 10), ls: today };
+    });
+    var cutoff = new Date(now.getTime() - 130 * 864e5).toISOString().slice(0, 10);
+    Object.keys(idx).forEach(function (u) { if (idx[u].ls < cutoff) delete idx[u]; });
+    saveJSON(INDEX, idx);
+    return idx;
+  }
+
+  function historyPublic(now, hist, idx) {
+    var snaps = hist.snaps.slice(-60);
+    var onBoard = {}, series = {};
+    snaps.forEach(function (s, di) {
+      (s.b || []).forEach(function (u) { onBoard[u] = 1; });
+      Object.keys(s.g).forEach(function (u) { var a = s.g[u]; (series[u] = series[u] || []).push([di, a[1], a[0], a[3], a[4]]); });
+    });
+    var games = {};
+    Object.keys(series).forEach(function (u) {
+      var m = idx[u], sr = series[u];
+      if (!m) return;
+      var peak = 0; sr.forEach(function (x) { if (x[1] > peak) peak = x[1]; });
+      if (peak < 300 && !onBoard[u]) return;
+      games[u] = [m.n, m.p, m.g, m.g2, m.c, m.ct, m.ci, m.cr, sr];
+    });
+    return { updated: pLabel(now), dates: snaps.map(function (s) { return s.d; }), times: snaps.map(function (s) { return s.t; }),
+      boards: snaps.map(function (s) { return s.b || null; }), games: games };
+  }
+
   function pct(vals) {
     var n = vals.length;
     return vals.map(function (v) { var b = 0, e = 0; vals.forEach(function (w) { if (w < v) b++; else if (w === v) e++; }); return n > 1 ? (b + 0.5 * (e - 1)) / (n - 1) : 0.5; });
@@ -627,7 +665,7 @@ window.BRC = (function () {
       var e = extra[r.uid] || {};
       return [r.pid, r.name, r.creator, r.own, r.genre, r.genre2, Math.round(r.age), r.playing, Math.round(r.pace), r.fresh, r.accel != null ? r1(r.accel) : null, r1(r.sess), r1(r.like * 100), r1(r.favk), r1(r.vk), Math.round(r.hrs), r.U, r.T, r.E, r.R, r.Gk, r.shape, r.wave ? 1 : 0, r.comp.join("/"), r.score, r.mult,
         { passes: e.passes, pmin: e.pmin, pmax: e.pmax, members: e.members, discord: /discord/i.test(r.g.description || "") ? 1 : 0, cid: r.cid, ctype: r.ctype, pgrowth7: r.pgrowth7 != null ? r1(r.pgrowth7) : null, decay: r.decay != null ? r1(r.decay * 100) : null,
-          rank: i + 1, trend: trendOf(r), deep: DEEP.byUid[r.uid] || null }];
+          rank: i + 1, uid: r.uid, trend: trendOf(r), deep: DEEP.byUid[r.uid] || null }];
     });
     var big = rows.slice().sort(function (a, b) { return b.playing - a.playing; }).slice(0, 25);
     var abbr = { "up-and-coming": "U", "top-trending": "T", "top-earning": "E", "top-revisited": "R" };
@@ -663,6 +701,14 @@ window.BRC = (function () {
     var trackError = null, tr = null;
     try { tr = await updateTrack(now, opts, board, pool, G, V, hist.snaps); }
     catch (e) { trackError = String(e && e.message || e); tr = loadJSON(TRACK, { v: 1, batches: [] }); }
+    // Tracked games that have left the chart lists keep a daily reading in the history.
+    var carried = 0;
+    Object.keys(trackReadings).forEach(function (u) { if (!snap.g[u] && trackReadings[u]) { snap.g[u] = trackReadings[u]; carried++; } });
+    if (carried) { try { saveJSON(KEY, hist); } catch (e) {} }
+    var idx = updateIndex(now, young.concat(Object.keys(fetchedGames).map(function (u) { return fetchedGames[u]; })));
+    var HX = historyPublic(now, hist, idx);
+    var historyJs = "/* Spawnbook daily history, built " + now.toISOString() + ". The game, watchlist and market pages read window.HX. */\nwindow.HX = " + JSON.stringify(HX) + ";\n";
+
     var issue = null;
     if (opts.weekly) { try { issue = buildIssue(now, board, pool, rows, extra, tr, hist.snaps); } catch (e) { trackError = (trackError ? trackError + "; " : "") + "report: " + String(e && e.message || e); } }
     var TR = trackPublic(now, tr);
@@ -688,14 +734,15 @@ window.BRC = (function () {
     var BR = { META: META, BOARD: BOARD, BIG: BIG, BIG_NOTES: BIG_NOTES, IP_OFF: IP_OFF, FLAG_OFF: FLAG_OFF };
     var dataJs = "/* Spawnbook data, built " + now.toISOString() + ". The page reads window.BR. */\nwindow.BR = " + JSON.stringify(BR, null, 1) + ";\n";
     var picksCsv = opts.weekly ? board.map(function (r, i) { return [pDate(now), i + 1, '"' + r.name.replace(/"/g, '""') + '"', r.pid, r.score, r.playing, Math.round(r.pace)].join(","); }).join("\n") : "";
-    window.__BR_LAST = { dataJs: dataJs, trackJs: trackJs, reportJs: reportJs, picksCsv: picksCsv, board: board.map(function (r) { return [r.name, r.score]; }), ids: rows.map(function (r) { return [r.pid, r.uid, r.cid, r.ctype, r.playing]; }), descs: rows.reduce(function (o, r) { o[r.pid] = r.g.description || ""; return o; }, {}) };
+    window.__BR_LAST = { dataJs: dataJs, trackJs: trackJs, reportJs: reportJs, historyJs: historyJs, picksCsv: picksCsv, board: board.map(function (r) { return [r.name, r.score]; }), ids: rows.map(function (r) { return [r.pid, r.uid, r.cid, r.ctype, r.playing]; }), descs: rows.reduce(function (o, r) { o[r.pid] = r.g.description || ""; return o; }, {}) };
     return {
       ok: true, at: now.toISOString(), lists: data.lists, gamesSeen: data.uids.length, youngTracked: young.length, pool: pool.length,
       board: board.length, top5: board.slice(0, 5).map(function (r) { return r.name + " (" + r.score + ")"; }),
       historyDays: hist.snaps.length, firstDay: first.d, visitsBasis: p7 ? "7-day" : p1 ? "1-day" : "lifetime",
       picksLogged: picks.length, dataJsLength: dataJs.length, deepSkipped: DEEP.skipped,
       trackBatches: tr.batches.length, trackShown: TR.batches.filter(function (b) { return b.shown; }).length,
-      reportIssues: reportsAll.length, newIssue: issue ? issue.no : null, trackError: trackError
+      reportIssues: reportsAll.length, newIssue: issue ? issue.no : null, trackError: trackError,
+      historyGames: Object.keys(HX.games).length, historyJsLength: historyJs.length, carriedReadings: carried
     };
   }
 

@@ -7,9 +7,10 @@
 // <state>/hist/*.json, <state>/picks/*.json  documents saved by ArtifactData list with out_dir
 // <state>/track/track.json                    the track record (rewritten every run)
 // <state>/report/report.json                  the weekly report issues (rewritten every run)
+// <state>/index/index.json                    name, link, genre and creator of every young game seen
 // <state>/code/collector.json                 {src} holding collector.js
 //
-// Writes to <out>: data.js, track.js, report.js, hist.json, track.json, report.json, batch.json,
+// Writes to <out>: data.js, track.js, report.js, history.js, hist.json, track.json, report.json, index.json, batch.json,
 // summary.json, and on weekly runs picks.json and picks.csv.
 // batch.json is the list of database writes for ArtifactData "batch": the new snapshot, this week's
 // picks, and deletes for snapshots the collector no longer keeps. Documents are written once and never
@@ -55,7 +56,9 @@ const store = new Map([
 ]);
 const trackIn = readOne(path.join(STATE, "track", "track.json"));
 const reportIn = readOne(path.join(STATE, "report", "report.json"));
+const indexIn = readOne(path.join(STATE, "index", "index.json"));
 if (trackIn) store.set("br.track.v1", trackIn);
+if (indexIn) store.set("br.index.v1", indexIn);
 if (reportIn) store.set("br.report.v1", reportIn);
 globalThis.window = globalThis;
 globalThis.localStorage = {
@@ -84,11 +87,16 @@ fs.writeFileSync(path.join(OUT, "hist.json"), JSON.stringify({ d: today.d, t: to
 fs.writeFileSync(path.join(OUT, "data.js"), window.__BR_LAST.dataJs);
 fs.writeFileSync(path.join(OUT, "track.js"), window.__BR_LAST.trackJs);
 fs.writeFileSync(path.join(OUT, "report.js"), window.__BR_LAST.reportJs);
+fs.writeFileSync(path.join(OUT, "history.js"), window.__BR_LAST.historyJs);
 
 const writes = [{ op: "set", collection: "hist", doc_id: docId, file_path: path.join(OUT, "hist.json") }];
 if (store.has("br.track.v1")) {
   fs.writeFileSync(path.join(OUT, "track.json"), store.get("br.track.v1"));
   writes.push({ op: "set", collection: "track", doc_id: "track", file_path: path.join(OUT, "track.json") });
+}
+if (store.has("br.index.v1")) {
+  fs.writeFileSync(path.join(OUT, "index.json"), store.get("br.index.v1"));
+  writes.push({ op: "set", collection: "index", doc_id: "index", file_path: path.join(OUT, "index.json") });
 }
 if (store.has("br.report.v1")) {
   fs.writeFileSync(path.join(OUT, "report.json"), store.get("br.report.v1"));

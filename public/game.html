@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Game | Spawnbook</title>
+<meta name="robots" content="noindex">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to the game</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks">
+      <li class="m-hide"><a href="market">Market</a></li>
+      <li class="s-hide"><a href="watchlist">Watchlist</a></li>
+      <li><a class="keep" href="board">Today's board</a></li>
+    </ul>
+  </nav>
+</div>
+
+<main id="main" tabindex="-1">
+  <section class="sec wrap page-top g-top" aria-labelledby="g-h">
+    <div class="g-head">
+      <h1 id="g-h" class="g-title">Game</h1>
+      <p class="g-meta" id="g-meta"></p>
+      <p class="g-links" id="g-links"></p>
+    </div>
+    <div class="g-watch" id="g-watch" hidden>
+      <div class="form-row">
+        <button type="button" class="button" id="w-btn" aria-pressed="false">Add to watchlist</button>
+        <label class="sortlabel" for="w-status" id="w-status-l" hidden>Status
+          <select id="w-status"></select>
+        </label>
+        <span class="status small" id="w-msg" aria-live="polite"></span>
+      </div>
+      <div class="field" id="w-note-f" hidden>
+        <label for="w-note">Your notes (only you can see these)</label>
+        <textarea id="w-note" maxlength="2000" rows="3"></textarea>
+        <div class="form-row"><button type="button" class="button quiet" id="w-save">Save notes</button></div>
+      </div>
+    </div>
+    <div id="g-missing" hidden></div>
+  </section>
+
+  <section class="sec wrap g-sec" aria-label="Numbers now" id="g-nums-sec" hidden>
+    <dl class="tiles" id="g-tiles"></dl>
+    <p class="small muted" id="g-asof"></p>
+  </section>
+
+  <section class="sec wrap g-sec g-charts" aria-labelledby="c-h" id="g-charts-sec" hidden>
+    <h2 id="c-h" class="tr-sub">Over time</h2>
+    <div class="chart-tools">
+      <div class="field cmp-field">
+        <label for="cmp-in">Compare with another game</label>
+        <input id="cmp-in" list="cmp-list" placeholder="Type a game's name" autocomplete="off">
+        <datalist id="cmp-list"></datalist>
+      </div>
+      <div class="seg" role="group" aria-label="Line up the games by">
+        <button type="button" id="x-date" aria-pressed="true">By date</button>
+        <button type="button" id="x-age" aria-pressed="false">By days since launch</button>
+      </div>
+      <div class="chips" id="cmp-chips"></div>
+    </div>
+    <p class="small muted" id="cmp-help">Compare up to two other games. "By days since launch" lines each game up at the same age, so you can see how this one's start compares.</p>
+
+    <div class="chart-block">
+      <h3 class="chart-h">Players at our daily reading</h3>
+      <div class="chart" id="ch-players"></div>
+    </div>
+    <div class="chart-block">
+      <h3 class="chart-h">Visits a day</h3>
+      <div class="chart" id="ch-visits"></div>
+    </div>
+    <div class="chart-block">
+      <h3 class="chart-h">Rating</h3>
+      <div class="chart" id="ch-rating"></div>
+    </div>
+    <details class="num-details">
+      <summary>Show the numbers</summary>
+      <div class="table-box" id="g-table"></div>
+    </details>
+  </section>
+
+  <section class="sec wrap g-sec" aria-labelledby="b-h" id="g-board-sec" hidden>
+    <h2 id="b-h" class="tr-sub">On the board</h2>
+    <div id="g-board"></div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <p class="small" id="foot-data"></p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent report. Not affiliated with, endorsed by or sponsored by Roblox Corporation. Prices are estimates from public numbers, not offers or appraisals.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script src="history.js"></script>
+<script src="data.js"></script>
+<script src="tools.js"></script>
+<script>
+(function () {
+  var T = window.SBT, $ = T.$, el = T.el, HX = T.HX;
+  var q = new URLSearchParams(location.search);
+  var pid = Number(q.get("pid")) || null, uid = Number(q.get("u")) || null;
+  if (!uid && pid) uid = T.uidByPid[pid] || null;
+  var g = uid ? T.game(uid) : null;
+
+  if (!HX) { $("g-missing").hidden = false; $("g-missing").appendChild(el("p", "lead", "The history didn't load. Refresh the page to try again.")); return; }
+  $("foot-data").textContent = "Daily readings through " + T.dayLabel(HX.dates[HX.dates.length - 1]) + ".";
+  if (!g) {
+    $("g-h").textContent = "We don't track this game";
+    var m = $("g-missing"); m.hidden = false;
+    m.appendChild(el("p", "lead", "We keep daily readings for young games on Roblox's chart lists, and for every game we've picked. This one isn't among them."));
+    var p = el("p"); var a = el("a", "button quiet", "Back to the board"); a.href = "board"; p.appendChild(a); m.appendChild(p);
+    return;
+  }
+
+  // ---------- header ----------
+  document.title = T.clean(g.name) + " | Spawnbook";
+  $("g-h").textContent = T.clean(g.name);
+  var lastD = HX.dates[HX.dates.length - 1];
+  var age = T.ageOn(g, lastD);
+  $("g-meta").textContent = "by " + String(g.creator || "unknown").replace(/\.+$/, "") + ". " + (g.genre2 || g.genre || "No genre listed") + "." + (g.created ? " Launched " + T.dayLabel(g.created) + (age != null ? ", " + age + " days ago." : ".") : "");
+  $("g-links").appendChild(T.extLink("Open on Roblox", T.robloxUrl(g.pid)));
+  if (g.cid) { $("g-links").appendChild(document.createTextNode(" ")); $("g-links").appendChild(T.extLink(g.ctype === "Group" ? "Group page" : "Creator's profile", T.creatorUrl(g.ctype, g.cid))); }
+
+  // ---------- today's board row, if any ----------
+  var BR = window.BR, row = null;
+  if (BR && BR.BOARD) BR.BOARD.forEach(function (r) { if (r[0] === g.pid) row = r; });
+  var MULT = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6] }, PER_VISIT = [0.004, 0.008, 0.012];
+
+  // ---------- numbers now ----------
+  var players = T.playersByDay(g), visits = T.visitsByDay(g), rating = T.ratingByDay(g);
+  var lastI = HX.dates.length - 1;
+  var latest = g.r[g.r.length - 1];
+  var back1 = T.dayBack(1, 0.5), back7 = T.dayBack(7, 5) || T.dayBack(7, 2.5);
+  function tile(label, value, sub) {
+    var d = el("div", "tile"); d.appendChild(el("dt", null, label)); d.appendChild(el("dd", null, value));
+    if (sub) d.appendChild(el("p", "tile-sub", sub)); $("g-tiles").appendChild(d); return d;
+  }
+  function renderTiles(live) {
+    $("g-tiles").textContent = "";
+    var nowP = live ? live.players : latest[1];
+    var y1 = back1 && T.readingAt(g, back1.i, 0), y7 = back7 && T.readingAt(g, back7.i, 0);
+    tile("Players " + (live ? "right now" : "at our last reading"), T.commas(nowP),
+      [y1 ? T.signed(T.pctChange(nowP, y1[1])) + " vs " + (back1.days === 1 ? "yesterday" : back1.days + " days ago") : null, y7 ? T.signed(T.pctChange(nowP, y7[1])) + " vs " + back7.days + " days ago" : null].filter(Boolean).join(". ") || null);
+    var vLast = null; for (var i = visits.length - 1; i >= 0; i--) if (visits[i] != null) { vLast = visits[i]; break; }
+    tile("Visits a day", vLast != null ? T.short(vLast) : "–", vLast != null ? "Between our last two readings" : "Needs two readings");
+    var up = live ? live.up : latest[3], down = live ? live.down : latest[4];
+    tile("Rating", up + down ? (Math.round(up / (up + down) * 1000) / 10) + "%" : "–", up + down ? T.commas(up + down) + " votes" : null);
+    if (live && live.favorites != null) tile("Favorites", T.short(live.favorites), null);
+    if (row) {
+      var rev = (row[8] * 30) * PER_VISIT[1], mult = row[25] || MULT[row[21]];
+      tile("On today's board", "#" + ((row[26] && row[26].rank) || "?") + ", score " + row[24], "Estimated price about " + T.money(rev * mult[1]));
+    } else {
+      tile("On today's board", "No", vLast ? "Estimated revenue about " + T.money(vLast * 30 * PER_VISIT[1]) + " a month" : null);
+    }
+    $("g-asof").textContent = live ? "Players, rating and favorites are live from Roblox. Visits a day come from our daily readings, the last on " + T.dayLabel(lastD) + "." : "From our daily reading on " + T.dayLabel(lastD) + ".";
+  }
+  $("g-nums-sec").hidden = false;
+  renderTiles(null);
+  T.live([g.uid]).then(function (j) { var lv = j.games && j.games[g.uid]; if (lv) renderTiles(lv); });
+
+  // ---------- charts ----------
+  $("g-charts-sec").hidden = false;
+  var others = [], mode = "date";
+  var KEYS = ["s1", "s2", "s3"];
+  var nameIndex = {};
+  var dl = $("cmp-list");
+  Object.keys(HX.games).forEach(function (u) {
+    if (Number(u) === g.uid) return;
+    var x = T.game(u), label = T.clean(x.name) + ", by " + x.creator;
+    if (nameIndex[label]) label += " (" + x.pid + ")";
+    nameIndex[label] = Number(u);
+    var o = el("option"); o.value = label; dl.appendChild(o);
+  });
+
+  function seriesFor(game, kind) {
+    return kind === "players" ? T.playersByDay(game) : kind === "visits" ? T.visitsByDay(game) : T.ratingByDay(game);
+  }
+  function build(kind, fmt, tick) {
+    var games = [g].concat(others);
+    if (mode === "date") {
+      return {
+        labels: HX.dates.map(T.dayLabel), fmt: fmt, tick: tick,
+        series: games.map(function (x, k) { return { name: T.clean(x.name), key: KEYS[k], values: seriesFor(x, kind) }; })
+      };
+    }
+    // By age: x is days since launch.
+    var per = games.map(function (x) {
+      var vals = seriesFor(x, kind), pts = {};
+      vals.forEach(function (v, i) { if (v == null) return; var a = T.ageOn(x, HX.dates[i]); if (a != null) pts[a] = v; });
+      return pts;
+    });
+    var ages = [];
+    per.forEach(function (p) { Object.keys(p).forEach(function (a) { ages.push(Number(a)); }); });
+    if (!ages.length) return { labels: ["–"], series: [], fmt: fmt, tick: tick };
+    var lo = Math.min.apply(null, ages), hi = Math.max.apply(null, ages), labels = [];
+    for (var a = lo; a <= hi; a++) labels.push("Day " + a);
+    return {
+      labels: labels, fmt: fmt, tick: tick,
+      series: games.map(function (x, k) { var vals = []; for (var a2 = lo; a2 <= hi; a2++) vals.push(per[k][a2] != null ? per[k][a2] : null); return { name: T.clean(x.name), key: KEYS[k], values: vals }; })
+    };
+  }
+  function drawCharts() {
+    var pc = build("players", T.commas); pc.label = "Players at each daily reading"; pc.empty = "No player readings yet.";
+    T.lineChart($("ch-players"), pc);
+    var vc = build("visits", function (v) { return T.short(v) + " a day"; }); vc.label = "Visits a day between readings"; vc.empty = "Visits a day need two readings.";
+    T.lineChart($("ch-visits"), vc);
+    var rc = build("rating", function (v) { return v + "%"; }, function (v) { return Math.round(v * 10) / 10 + "%"; }); rc.label = "Rating at each daily reading"; rc.minSpan = 5; rc.max = 100;
+    T.lineChart($("ch-rating"), rc);
+    var tb = $("g-table"); tb.textContent = "";
+    tb.appendChild(T.chartTable("Daily numbers for " + T.clean(g.name), HX.dates.map(T.dayLabel), [
+      { name: "Players", values: players, fmt: T.commas },
+      { name: "Visits a day", values: visits, fmt: T.commas },
+      { name: "Rating", values: rating, fmt: function (v) { return v + "%"; } },
+      { name: "Board rank", values: HX.dates.map(function (d, i) { var r = T.boardRank(g.uid, i); return r == null ? null : r; }), fmt: function (v) { return v ? "#" + v : "Not on it"; } }
+    ]));
+    var chips = $("cmp-chips"); chips.textContent = "";
+    others.forEach(function (o, k) {
+      var c = el("span", "chip"); c.appendChild(el("span", "key " + KEYS[k + 1]));
+      var a = el("a", "link", T.clean(o.name)); a.href = T.gamePage(o.pid); c.appendChild(a);
+      var x = el("button", "chip-x", "Remove"); x.type = "button"; x.setAttribute("aria-label", "Stop comparing with " + T.clean(o.name));
+      x.addEventListener("click", function () { others.splice(k, 1); drawCharts(); });
+      c.appendChild(x); chips.appendChild(c);
+    });
+    $("cmp-in").disabled = others.length >= 2;
+    $("cmp-in").placeholder = others.length >= 2 ? "Remove one to add another" : "Type a game's name";
+  }
+  $("cmp-in").addEventListener("change", function () {
+    var u = nameIndex[this.value];
+    if (u && others.length < 2 && !others.some(function (o) { return o.uid === u; })) { others.push(T.game(u)); this.value = ""; drawCharts(); }
+  });
+  function setMode(m2) { mode = m2; $("x-date").setAttribute("aria-pressed", m2 === "date"); $("x-age").setAttribute("aria-pressed", m2 === "age"); drawCharts(); }
+  $("x-date").addEventListener("click", function () { setMode("date"); });
+  $("x-age").addEventListener("click", function () { setMode("age"); });
+  (q.get("vs") || "").split(",").map(Number).filter(Boolean).slice(0, 2).forEach(function (p) { var u = T.uidByPid[p]; if (u && u !== g.uid) others.push(T.game(u)); });
+  drawCharts();
+
+  // ---------- board history ----------
+  var on = [];
+  HX.dates.forEach(function (d, i) { var r = T.boardRank(g.uid, i); if (r) on.push([d, r]); });
+  var known = HX.boards.filter(Boolean).length;
+  $("g-board-sec").hidden = false;
+  var bh = $("g-board");
+  if (!known) bh.appendChild(el("p", null, "Board history starts with our first saved board."));
+  else if (!on.length) bh.appendChild(el("p", null, "Not on the board on any of the " + known + " days we've saved."));
+  else {
+    var best = on.reduce(function (m, x) { return x[1] < m[1] ? x : m; }, on[0]);
+    bh.appendChild(el("p", null, "On the board " + on.length + " of the " + known + " days we've saved. Best rank #" + best[1] + " on " + T.dayLabel(best[0]) + "."));
+    var ul = el("ul", "rank-list");
+    on.slice(-14).forEach(function (x) { ul.appendChild(el("li", null, T.dayLabel(x[0]) + ": #" + x[1])); });
+    bh.appendChild(ul);
+  }
+
+  // ---------- watchlist ----------
+  var w = null;
+  var sel = $("w-status");
+  T.STATUS_ORDER.forEach(function (k) { var o = el("option", null, T.STATUS[k]); o.value = k; sel.appendChild(o); });
+  function renderWatch() {
+    $("w-btn").textContent = w ? "On your watchlist" : "Add to watchlist";
+    $("w-btn").setAttribute("aria-pressed", w ? "true" : "false");
+    $("w-btn").className = w ? "button watch-on" : "button";
+    $("w-status-l").hidden = !w; $("w-note-f").hidden = !w;
+    if (w) { sel.value = w.status; if (document.activeElement !== $("w-note")) $("w-note").value = w.note || ""; }
+  }
+  T.watchList().then(function (rows) {
+    rows.forEach(function (r) { if (r.uid === g.uid) w = r; });
+    $("g-watch").hidden = false; renderWatch();
+  });
+  function msg(t) { $("w-msg").textContent = t; }
+  $("w-btn").addEventListener("click", function () {
+    if (w) {
+      T.watchSave({ action: "remove", uid: g.uid }).then(function () { w = null; renderWatch(); msg("Removed from your watchlist."); }).catch(function () { msg("Couldn't save. Try again."); });
+    } else {
+      T.watchSave({ action: "add", uid: g.uid, pid: g.pid, name: g.name }).then(function (j) { w = j.row; renderWatch(); msg("Added. See it on your watchlist."); })
+        .catch(function (e) { msg(e.message === "full" ? "Your watchlist is full. Remove a game first." : "Couldn't save. Try again."); });
+    }
+  });
+  sel.addEventListener("change", function () {
+    T.watchSave({ action: "update", uid: g.uid, status: sel.value }).then(function (j) { w = j.row; msg("Status saved."); }).catch(function () { msg("Couldn't save. Try again."); });
+  });
+  $("w-save").addEventListener("click", function () {
+    T.watchSave({ action: "update", uid: g.uid, note: $("w-note").value }).then(function (j) { w = j.row; msg("Notes saved."); }).catch(function () { msg("Couldn't save. Try again."); });
+  });
+})();
+</script>
+</body>
+</html>

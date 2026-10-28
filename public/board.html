@@ -20,8 +20,8 @@
       <li><a href="#picks">Picks</a></li>
       <li class="s-hide"><a href="#board">Board</a></li>
       <li><a href="report">Weekly report</a></li>
-      <li class="m-hide"><a href="#pricing">Prices</a></li>
-      <li class="m-hide"><a href="#value">Value a game</a></li>
+      <li class="m-hide"><a href="market">Market</a></li>
+      <li class="m-hide"><a href="watchlist">Watchlist</a></li>
       <li class="m-hide"><a href="account">Account</a></li>
       <li><a class="keep" href="#requests">Free issue</a></li>
     </ul>
@@ -92,6 +92,9 @@
         <button type="button" id="s-rocket" aria-pressed="false">Fast-rise</button>
       </div>
       <label class="check" for="hide-wave"><input type="checkbox" id="hide-wave"> Hide games that follow a trend</label>
+      <label class="sortlabel" for="genre">Genre
+        <select id="genre"><option value="">All genres</option></select>
+      </label>
       <label class="sortlabel" for="sort">Sort by
         <select id="sort">
           <option value="score">Score</option>
@@ -103,7 +106,10 @@
         </select>
       </label>
     </div>
-    <p class="small board-count" id="board-count" aria-live="polite"></p>
+    <div class="board-tools">
+      <p class="small board-count" id="board-count" aria-live="polite"></p>
+      <button type="button" class="button quiet" id="csv">Download as a spreadsheet</button>
+    </div>
     <div class="board" id="board-list"><p class="empty">Loading today's games.</p></div>
     <div class="grid board-foot">
       <p class="small muted c-l" data-reveal>Fast-rise genres are trend and sim games that tend to grow fast and fade. Slow-build genres are competitive, social or fishing games that tend to grow over months and last longer. Prices are estimates from public numbers, not reported earnings, and they aren't offers or appraisals.</p>
@@ -934,15 +940,18 @@
   })();
 
   // ---------- board ----------
-  var bstate = { tier: "all", shape: "any", hideWave: false, sort: "score" };
+  var bstate = { tier: "all", shape: "any", hideWave: false, sort: "score", genre: "" };
   var detailOpen = {};
+  var shown = [];
   function renderBoard() {
     var list = P.filter(function (p) {
       if (bstate.tier !== "all" && p.tier !== bstate.tier) return false;
       if (bstate.shape !== "any" && p.shape !== bstate.shape) return false;
       if (bstate.hideWave && p.wave) return false;
+      if (bstate.genre && (p.g2 || p.genre) !== bstate.genre) return false;
       return true;
     });
+    shown = list;
     list.sort(function (a, b) {
       if (bstate.sort === "price") return b.val.fair[1] - a.val.fair[1];
       if (bstate.sort === "playing") return b.playing - a.playing;
@@ -1013,6 +1022,25 @@
       });
       det.appendChild(why);
       var md = moreData(p); if (md) det.appendChild(md);
+      var acts = el("div", "r-acts");
+      var gp = el("a", "button quiet", "Open game page"); gp.href = "game?pid=" + p.pid; acts.appendChild(gp);
+      var wb = el("button", "button quiet", watched[p.pid] ? "On your watchlist" : "Add to watchlist"); wb.type = "button";
+      wb.setAttribute("aria-pressed", watched[p.pid] ? "true" : "false");
+      var wm = el("span", "status small"); wm.setAttribute("aria-live", "polite");
+      wb.addEventListener("click", function () {
+        var on = !!watched[p.pid];
+        var body = on ? { action: "remove", uid: watched[p.pid] } : { action: "add", uid: uidOf(p), pid: p.pid, name: p.name };
+        if (!body.uid) { wm.textContent = "Open the game page to add this one."; return; }
+        fetch("/api/watch", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+          .then(function (r) { return r.json().then(function (j) { if (!r.ok || j.error) throw new Error(j.error || "save"); return j; }); })
+          .then(function () {
+            if (on) delete watched[p.pid]; else watched[p.pid] = body.uid;
+            wb.textContent = on ? "Add to watchlist" : "On your watchlist"; wb.setAttribute("aria-pressed", on ? "false" : "true");
+            wm.textContent = on ? "Removed." : "Added to your watchlist.";
+          }).catch(function (e) { wm.textContent = e.message === "full" ? "Your watchlist is full." : "Couldn't save. Try again."; });
+      });
+      acts.appendChild(wb); acts.appendChild(wm);
+      det.appendChild(acts);
       var mm = el("div", "money-math");
       var kv = el("dl", "kv");
       [["Players now (measured)", commas(p.playing)], ["Visits a day (" + visitsLabel(p) + ")", short(p.pace)], ["Minutes per visit (estimate)", String(p.sess)], ["Rating (measured)", p.like + "%"]].forEach(function (s) {
@@ -1049,6 +1077,40 @@
   segGroup({ any: "s-any", staircase: "s-stair", rocket: "s-rocket" }, "shape");
   $("hide-wave").addEventListener("change", function (e) { bstate.hideWave = e.target.checked; renderBoard(); });
   $("sort").addEventListener("change", function (e) { bstate.sort = e.target.value; renderBoard(); });
+  // Genre filter, from the genres on today's board.
+  Array.from(new Set(P.map(function (p) { return p.g2 || p.genre; }).filter(Boolean))).sort().forEach(function (gname) {
+    var o = el("option", null, gname); o.value = gname; $("genre").appendChild(o);
+  });
+  $("genre").addEventListener("change", function (e) { bstate.genre = e.target.value; renderBoard(); });
+
+  // Watchlist: which board games this member already follows (by universe id, which the
+  // history file maps from place ids).
+  var watched = {}, UID = {};
+  function uidOf(p) { return p.x.uid || UID[p.pid] || null; }
+  fetch("/api/watch", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : { rows: [] }; }).then(function (j) {
+    (j.rows || []).forEach(function (w) { if (w.pid) watched[w.pid] = w.uid; });
+    renderBoard();
+  }).catch(function () {});
+  var hxs = document.createElement("script"); hxs.src = "history.js"; hxs.async = true;
+  hxs.onload = function () { var H = window.HX; if (H) Object.keys(H.games).forEach(function (u) { UID[H.games[u][1]] = Number(u); }); };
+  document.body.appendChild(hxs);
+
+  // Download what's shown as a spreadsheet (CSV).
+  $("csv").addEventListener("click", function () {
+    var cell = function (v) { v = v == null ? "" : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var head = ["Rank", "Game", "Roblox link", "Creator", "Owner", "Genre", "Days old", "Players", "Visits a day", "Rating %", "Score", "Est. revenue a month", "Est. price low", "Est. price mid", "Est. price high", "Group or profile"];
+    var lines = [head.join(",")].concat(shown.map(function (p) {
+      var cid = p.x.cid, owner = p.x.ctype === "Group" ? "Group" : "Solo account";
+      return [p.x.rank || p.rank, p.name, "https://www.roblox.com/games/" + p.pid, p.creator, owner, p.g2 || p.genre, p.age, p.playing, Math.round(p.pace), p.like, p.score,
+        Math.round(p.val.rev[1]), Math.round(p.val.fair[0]), Math.round(p.val.fair[1]), Math.round(p.val.fair[2]),
+        cid ? (p.x.ctype === "Group" ? "https://www.roblox.com/communities/" + cid : "https://www.roblox.com/users/" + cid + "/profile") : ""].map(cell).join(",");
+    }));
+    var blob = new Blob([lines.join("\n") + "\n"], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = "spawnbook-board-" + (META.snapshot || "today").replace(/[^0-9A-Za-z]+/g, "-") + ".csv";
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  });
+
   renderBoard();
 
   // A pick in the top five opens its row on the board.
@@ -1057,7 +1119,8 @@
       var pid = a.getAttribute("data-open");
       var row = $("pr-" + pid);
       if (!row) {
-        bstate = { tier: "all", shape: "any", hideWave: false, sort: bstate.sort };
+        bstate = { tier: "all", shape: "any", hideWave: false, sort: bstate.sort, genre: "" };
+        $("genre").value = "";
         ["t-all", "s-any"].forEach(function (id) { $(id).click(); });
         $("hide-wave").checked = false;
         renderBoard();
