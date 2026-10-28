@@ -42,6 +42,7 @@
 
   <section class="sec wrap" aria-labelledby="gen-h">
     <h2 id="gen-h" class="tr-sub">Genres</h2>
+    <p class="m-market" id="m-market"></p>
     <div class="table-box">
       <table class="tr-table m-table">
         <caption class="sr-only">Players and growth by genre among young games</caption>
@@ -50,6 +51,8 @@
           <th scope="col">Games</th>
           <th scope="col">Players now</th>
           <th scope="col" id="m-ch-h">Change</th>
+          <th scope="col">Without its biggest mover</th>
+          <th scope="col">Games that grew</th>
           <th scope="col">Share of players</th>
           <th scope="col">Launched in the last 14 days</th>
           <th scope="col">Fastest riser</th>
@@ -127,18 +130,19 @@
     $("m-ch-h").textContent = back ? "Change " + label : "Change";
     $("m-asof").textContent = "Last reading " + T.dayLabel(lastD) + (back ? ", compared with " + T.dayLabel(HX.dates[back.i]) + "." : ". Changes start once there are two days of readings.");
 
-    var by = {}, total = 0;
+    var by = {}, total = 0, mNow = 0, mThen = 0, mN = 0, mUp = 0;
     games.forEach(function (g) {
       var now = T.readingAt(g, last, 0);
       if (!now) return;
       var key = g.genre || "No genre listed";
-      var G = by[key] || (by[key] = { name: key, games: 0, players: 0, sameNow: 0, sameThen: 0, fresh: 0, best: null });
+      var G = by[key] || (by[key] = { name: key, games: 0, players: 0, sameNow: 0, sameThen: 0, fresh: 0, best: null, pairs: [] });
       G.games++; G.players += now[1]; total += now[1];
       var age = T.ageOn(g, lastD);
       if (age != null && age <= 14) G.fresh++;
       var then = back ? T.readingAt(g, back.i, 0) : null;
       if (then && then[1] > 0) {
-        G.sameNow += now[1]; G.sameThen += then[1];
+        G.sameNow += now[1]; G.sameThen += then[1]; G.pairs.push([now[1], then[1]]);
+        mNow += now[1]; mThen += then[1]; mN++; if (now[1] > then[1]) mUp++;
         var ch = T.pctChange(now[1], then[1]);
         if (now[1] >= 500 && then[1] >= 100 && (!G.best || ch > G.best.ch)) G.best = { g: g, ch: ch };
       }
@@ -152,6 +156,16 @@
       tr.appendChild(el("td", "num", T.commas(G.players)));
       var ch = G.sameThen ? T.pctChange(G.sameNow, G.sameThen) : null;
       var tc = el("td", "num"); tc.appendChild(el("span", "ch " + (ch > 0 ? "up" : ""), T.signed(ch))); tr.appendChild(tc);
+      // One breakout can make a whole genre look hot, so show the change without the game that
+      // added the most players, and how many games actually grew.
+      var tw = el("td", "num");
+      if (G.pairs.length >= 2) {
+        var top = G.pairs.reduce(function (m, x) { return x[0] - x[1] > m[0] - m[1] ? x : m; }, G.pairs[0]);
+        var wn = G.sameNow - top[0], wt = G.sameThen - top[1], wc = wt > 0 ? T.pctChange(wn, wt) : null;
+        tw.appendChild(el("span", "ch " + (wc > 0 ? "up" : ""), T.signed(wc)));
+      } else tw.textContent = G.pairs.length ? "Only one game" : "–";
+      tr.appendChild(tw);
+      tr.appendChild(el("td", "num", G.pairs.length ? G.pairs.filter(function (x) { return x[0] > x[1]; }).length + " of " + G.pairs.length : "–"));
       var share = total ? G.players / total * 100 : null;
       tr.appendChild(el("td", "num", share == null ? "–" : share < 0.1 ? "Under 0.1%" : Math.round(share * 10) / 10 + "%"));
       tr.appendChild(el("td", "num", String(G.fresh)));
@@ -161,6 +175,10 @@
       tr.appendChild(rs);
       tb.appendChild(tr);
     });
+
+    // The whole market over the same window, as the yardstick for every genre.
+    var mt = $("m-market");
+    mt.textContent = back && mThen ? "All young games we read: " + T.signed(T.pctChange(mNow, mThen)) + " " + label + ", and " + mUp + " of " + mN + " grew. A genre only beat the market if it did better than that." : "";
 
     // Three biggest genres over time, each set to 100 on its first day, since Simulation alone can
     // be ten times the next genre and would flatten the others on a shared scale of raw players.
