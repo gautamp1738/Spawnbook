@@ -16,6 +16,9 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Store"] }],
   "observability": { "enabled": true },
+  // The daily leads check, at 03:23 UTC (8:23 PM Pacific in summer, 7:23 PM in winter), after the
+  // daily pull has usually published.
+  "triggers": { "crons": ["23 3 * * *"] },
   // Keep settings added in the Cloudflare dashboard (like ADMIN_KEY) when GitHub redeploys the site.
   "keep_vars": true
 }

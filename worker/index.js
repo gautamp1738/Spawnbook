@@ -33,6 +33,10 @@
 //   /admin                  accounts and access, behind the ADMIN_KEY secret (off until it's set)
 //   /admin/leads            finding games for each buyer, asking owners, verifying and sending leads
 //
+// Once a day (the cron in wrangler.jsonc) the Worker also runs a check that adds new games for each
+// buyer, flags leads whose game changed owner on Roblox, and emails a summary when Resend is set up
+// (the RESEND_API_KEY secret, and optionally EMAIL_FROM).
+//
 // Accounts are kept in a Durable Object with SQLite storage (Store, below), which Cloudflare
 // creates on deploy, so there's no database to set up. Passwords are stored only as salted
 // PBKDF2 hashes, worked out inside the Durable Object, which has a much larger CPU allowance
@@ -88,7 +92,83 @@ export default {
     }
     return secure(res);
   },
+
+  // Once a day (the cron in wrangler.jsonc), after the daily pull has published: find games for
+  // each buyer, check leads' owners on Roblox, and put together the summary for the admin page and email.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runDaily(env, "https://spawnbook.com").catch((e) => console.error("daily", e && e.stack || e)));
+  },
 };
+
+// ---------- email (Resend) ----------
+// Off until the RESEND_API_KEY secret is set in Cloudflare. EMAIL_FROM is the sender on a domain
+// verified in Resend; it defaults to an address on mail.spawnbook.com.
+const OWNER_EMAIL = "gautamuprasanna@gmail.com";
+const emailOn = (env) => !!env.RESEND_API_KEY;
+async function sendEmail(env, msg) {
+  if (!emailOn(env)) return { ok: false, off: true };
+  try {
+    const r = await fetch(env.RESEND_API_URL || "https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({ from: env.EMAIL_FROM || "Spawnbook <leads@mail.spawnbook.com>", reply_to: OWNER_EMAIL }, msg)),
+    });
+    if (!r.ok) console.error("email", r.status, await r.text());
+    return { ok: r.ok };
+  } catch (e) {
+    console.error("email", e && e.stack || e);
+    return { ok: false };
+  }
+}
+
+// The daily summary as a plain-text email.
+function digestText(d, origin) {
+  const admin = origin + "/admin/leads";
+  const lead = (id) => admin + "?id=" + id + "#lead-" + id;
+  const lines = ["Spawnbook leads for " + d.date, ""];
+  if (d.found.length) {
+    lines.push("New games for your buyers");
+    for (const f of d.found) {
+      lines.push("", "For " + f.email + ":");
+      for (const it of f.items) lines.push("- " + it.name + ": " + commas(it.players) + " players" + (it.change != null ? ", " + (it.change > 0 ? "+" : "") + Math.round(it.change * 100) + "% in players" : "") + (it.genre ? ", " + it.genre : "") + (it.owner ? ". Run by " + it.owner + " on Roblox" : "") + ". " + lead(it.id));
+    }
+    lines.push("", "Open each one for a message to send its owner from X or Discord.", "");
+  }
+  if (d.offers.length) {
+    lines.push("Owners who filled in the selling form");
+    for (const o of d.offers) lines.push("- " + o.name + ": contact " + o.contact + (o.asking ? ", asking " + o.asking : "") + ". " + lead(o.id));
+    lines.push("");
+  }
+  if (d.changed.length) {
+    lines.push("Games that changed owner on Roblox (they may have sold)");
+    for (const c of d.changed) lines.push("- " + c.name + ": now " + c.now + ", was " + c.was + (c.sentTo.length ? ". You sent it to " + c.sentTo.join(", ") + ", so ask whether they bought it" : "") + ". " + lead(c.id));
+    lines.push("");
+  }
+  if (d.updates.length) {
+    lines.push("Buyers' updates");
+    for (const u of d.updates) lines.push("- " + u.email + " marked " + u.name + " as " + (PICK_LABELS[u.status] || u.status) + ". " + lead(u.id));
+    lines.push("");
+  }
+  if (d.willing || d.stale.length) {
+    lines.push("Waiting on you");
+    if (d.willing) lines.push("- " + d.willing + (d.willing === 1 ? " owner has" : " owners have") + " said they'd sell but isn't verified yet.");
+    for (const s of d.stale) lines.push("- No answer from " + s.name + " for " + s.days + " days. Follow up? " + lead(s.id));
+    lines.push("");
+  }
+  lines.push("All leads: " + admin);
+  return lines.join("\n");
+}
+
+// The daily run: the Store does the work (it has the larger CPU allowance), using today's history.
+async function runDaily(env, origin) {
+  const asset = await env.ASSETS.fetch(new Request(new URL("/history.js", origin)));
+  const history = asset.ok ? await asset.text() : "";
+  const r = await call(env, "daily", { history, origin });
+  if (r.digest && r.digest.any) {
+    await sendEmail(env, { to: OWNER_EMAIL, subject: "Spawnbook leads: " + r.digest.headline, text: digestText(r.digest, origin) });
+  }
+  return r;
+}
 
 // The path as the asset server would see it: decoded, single slashes, lower case. Gate checks use
 // this so odd spellings like //data.js or /Board can't slip past.
@@ -360,6 +440,12 @@ async function live(request, env, url) {
 const GENRES = ["Action", "Adventure", "Entertainment", "Obby & Platformer", "Party & Casual", "Puzzle", "Roleplay & Avatar Sim", "RPG", "Shooter", "Shopping", "Simulation", "Social", "Sports & Racing", "Strategy", "Survival"];
 const LEAD_STATUSES = { found: "Found", asked: "Asked the owner", willing: "Owner would sell", verified: "Verified", declined: "Not selling", sold: "Sold" };
 const PICK_STATUSES = ["new", "interested", "talking", "passed", "bought"];
+const PICK_LABELS = { new: "New", interested: "Interested", talking: "Talking to the owner", passed: "Passed", bought: "Bought it" };
+// The daily run adds at most this many new games per buyer, and in total, so the list stays workable.
+// Suggestions nobody has touched after AUTO_KEEP_DAYS are cleared out.
+const AUTO_PER_BUYER = 3;
+const AUTO_TOTAL = 15;
+const AUTO_KEEP_DAYS = 14;
 const DEALS = { either: "All or part", all: "All of it", part: "Part of it", unsure: "Not sure yet" };
 const AGES = { unknown: "Not confirmed yet", adult: "18 or older", guardian: "Under 18, with a parent or guardian involved" };
 const ROLES = ["Owner", "Co-owner", "Group admin", "Developer on the team"];
@@ -460,6 +546,22 @@ async function robloxGames(uids) {
   return out;
 }
 
+// The Roblox account that actually controls a game: the creator itself for a solo game, or the
+// group's owner. Roblox shows Discord and X links only to signed-in visitors, so this is the most
+// we can look up on our own.
+async function ownerOf(type, id, name) {
+  if (!id) return null;
+  if (type === "User") return { id: Number(id), name: String(name || "") };
+  try {
+    const r = await fetch("https://groups.roblox.com/v1/groups/" + id, Object.assign({}, ROBLOX, withTimeout(8000)));
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && j.owner ? { id: Number(j.owner.userId), name: String(j.owner.username || "") } : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // The public form for owners who'd consider selling. It saves what they send as a lead with
 // status "Owner would sell"; nothing is shared with a buyer until we've checked it and they say yes.
 async function sellForm(request, env) {
@@ -490,12 +592,23 @@ async function sellForm(request, env) {
   if (!uid) return back("game");
   const info = (await robloxGames([uid]))[uid] || {};
   const c = info.creator || {};
+  const owner = await ownerOf(c.type, c.id, c.name);
+  const name = String(info.name || "").slice(0, 120);
   const r = await call(env, "offer", {
-    uid, pid: info.pid || pid, name: String(info.name || "").slice(0, 120), creator: String(c.name || "").slice(0, 120), ctype: c.type || null, cid: Number(c.id) || null,
+    uid, pid: info.pid || pid, name, creator: String(c.name || "").slice(0, 120), ctype: c.type || null, cid: Number(c.id) || null,
+    owner_user: owner ? owner.name : null, owner_user_id: owner ? owner.id : null,
     contact, age, deal, asking: asking ? asking : "",
     offer: JSON.stringify({ contact, role, deal, asking, notes, age }),
   });
   if (r.limited) return back("busy");
+  if (r.fresh) {
+    const link = new URL(request.url).origin + "/admin/leads?id=" + r.id + "#lead-" + r.id;
+    await sendEmail(env, {
+      to: OWNER_EMAIL,
+      subject: "Open to selling: " + (name || "a Roblox game"),
+      text: "Someone filled in the selling form.\n\nGame: " + (name || "Unknown") + " (" + gameUrl(info.pid || pid) + ")\nPlayers now: " + commas(info.players) + "\nContact: " + contact + "\nRole: " + role + "\nWould sell: " + DEALS[deal] + "\nAsking: " + (asking || "Not given") + "\nAge: " + AGES[age] + "\nNotes: " + (notes || "None") + "\n\nCheck it on Roblox before you reply, and ask for their Creator Dashboard recording:\n" + link,
+    });
+  }
   return done();
 }
 
@@ -546,8 +659,11 @@ function page(title, body, script) {
 .admin-nav [aria-current] { text-decoration: none; }
 .admin h3 { margin-top: 0.75rem; }
 .admin .steps { display: grid; gap: 0.4rem; padding-left: 1.25rem; max-width: 72ch; list-style: decimal; }
-.admin .table-box .button.quiet, .admin details.lead-row .button.quiet { background: var(--bg); }
+.admin .table-box .button.quiet, .admin details.lead-row .button.quiet, .admin .today .button.quiet { background: var(--bg); }
 .admin .msg { background: var(--pale); padding: 0.8rem 1rem; font-weight: 600; margin: 0; }
+.admin .today { background: var(--surface); padding: 1rem 1.25rem; display: grid; gap: 0.75rem; }
+.admin .today h3 { margin-top: 0.25rem; font-size: var(--step-body); }
+.admin ul.dlist { display: grid; gap: 0.3rem; padding-left: 1.25rem; list-style: disc; font-size: var(--step-small); }
 .admin .flag { background: var(--accent); color: var(--accent-ink); padding: 0.05rem 0.4rem; font-weight: 600; }
 .admin details.lead-row { background: var(--surface); padding: 0.9rem 1.1rem; }
 .admin details.lead-row + details.lead-row { margin-top: 0.5rem; }
@@ -783,14 +899,18 @@ async function adminLeads(request, env, url, path) {
     if (!uid) return redirect("/admin/leads?e=game#add");
     const info = (await robloxGames([uid]))[uid] || {};
     const c = info.creator || {};
-    const r = await call(env, "lead-upsert", { uid, pid: info.pid || pid, name: String(info.name || "Game " + pid).slice(0, 120), creator: String(c.name || "").slice(0, 120), ctype: c.type || null, cid: Number(c.id) || null, for_email: forEmail() });
+    const owner = await ownerOf(c.type, c.id, c.name);
+    const r = await call(env, "lead-upsert", { uid, pid: info.pid || pid, name: String(info.name || "Game " + pid).slice(0, 120), creator: String(c.name || "").slice(0, 120), ctype: c.type || null, cid: Number(c.id) || null, owner_user: owner ? owner.name : null, owner_user_id: owner ? owner.id : null, for_email: forEmail() });
     return redirect("/admin/leads?id=" + r.id + "#lead-" + r.id);
   }
 
   if (path === "/admin/leads/new" && form) {
     const uid = posInt(get("uid"), Number.MAX_SAFE_INTEGER);
     if (!uid) return redirect("/admin/leads");
-    const r = await call(env, "lead-upsert", { uid, pid: posInt(get("pid"), Number.MAX_SAFE_INTEGER), name: get("name").slice(0, 120), creator: get("creator").slice(0, 120), ctype: get("ctype") === "Group" ? "Group" : get("ctype") === "User" ? "User" : null, cid: posInt(get("cid"), Number.MAX_SAFE_INTEGER), for_email: forEmail() });
+    const ctype = get("ctype") === "Group" ? "Group" : get("ctype") === "User" ? "User" : null;
+    const cid = posInt(get("cid"), Number.MAX_SAFE_INTEGER);
+    const owner = await ownerOf(ctype, cid, get("creator"));
+    const r = await call(env, "lead-upsert", { uid, pid: posInt(get("pid"), Number.MAX_SAFE_INTEGER), name: get("name").slice(0, 120), creator: get("creator").slice(0, 120), ctype, cid, owner_user: owner ? owner.name : null, owner_user_id: owner ? owner.id : null, for_email: forEmail() });
     return redirect("/admin/leads?id=" + r.id + "#lead-" + r.id);
   }
 
@@ -832,8 +952,14 @@ async function adminLeads(request, env, url, path) {
     const r = await call(env, "lead-send", { id, email });
     if (r.error) return redirect("/admin/leads?id=" + id + "&e=" + r.error + "#lead-" + id);
     const link = url.origin + "/leads";
-    const body = "Hi,\n\nI've added a verified lead to your Spawnbook account: " + r.name + ". The owner has said they'd consider selling, I've seen their Creator Dashboard numbers, and their contact is on the page:\n\n" + link + "\n\nGautam";
-    return page("Lead sent", `${adminNav("leads")}<h1 class="head">Lead sent</h1><p><strong>${esc(r.name)}</strong> is now on <strong>${esc(email)}</strong>'s Leads page.</p><p>They won't get an email about it automatically, so let them know.</p><p><a class="button" href="mailto:${esc(email)}?subject=${encodeURIComponent("A verified lead from Spawnbook: " + r.name)}&body=${encodeURIComponent(body)}">Email them about it</a> <a class="button quiet" href="/admin/leads?id=${id}#lead-${id}">Back to the lead</a></p>`);
+    const first = String(r.buyer || "").trim().split(/\s+/)[0];
+    const subject = "A verified lead from Spawnbook: " + r.name;
+    const body = "Hi" + (first ? " " + first : "") + ",\n\nThere's a new verified lead on your Spawnbook account: " + r.name + ". The owner has said they'd consider selling, I've seen their Creator Dashboard numbers, and their contact is on the page:\n\n" + link + "\n\nGautam\nSpawnbook";
+    const sent = await sendEmail(env, { to: email, subject, text: body });
+    const note = sent.ok
+      ? `<p>We emailed them to say it's there.</p><p><a class="button quiet" href="/admin/leads?id=${id}#lead-${id}">Back to the lead</a></p>`
+      : `<p>${sent.off ? "Emails are off until Resend is connected" : "The email to them didn't go through"}, so let them know yourself.</p><p><a class="button" href="mailto:${esc(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}">Email them about it</a> <a class="button quiet" href="/admin/leads?id=${id}#lead-${id}">Back to the lead</a></p>`;
+    return page("Lead sent", `${adminNav("leads")}<h1 class="head">Lead sent</h1><p><strong>${esc(r.name)}</strong> is now on <strong>${esc(email)}</strong>'s Leads page.</p>${note}`);
   }
 
   if (path === "/admin/leads/unsend" && form) {
@@ -847,6 +973,11 @@ async function adminLeads(request, env, url, path) {
     if (get("sure") !== "yes") return redirect("/admin/leads?id=" + id + "&e=sure#lead-" + id);
     await call(env, "lead-delete", { id });
     return redirect("/admin/leads?deleted=1");
+  }
+
+  if (path === "/admin/leads/run" && form) {
+    await runDaily(env, url.origin);
+    return redirect("/admin/leads?ran=1#today");
   }
 
   if (path === "/admin/leads/match") return matchPage(env, url);
@@ -886,6 +1017,8 @@ async function matchPage(env, url) {
 
 async function leadsPage(env, url) {
   const d = await call(env, "lead-list", {});
+  let today = null;
+  try { today = d.digest ? JSON.parse(d.digest) : null; } catch (e) {}
   const live = await robloxGames(d.leads.map((l) => l.uid));
   const sendsBy = {};
   for (const s of d.sends) (sendsBy[s.lead_id] = sendsBy[s.lead_id] || []).push(s);
@@ -902,6 +1035,24 @@ async function leadsPage(env, url) {
   const E = { link: "That doesn't look like a Roblox game link.", game: "Roblox doesn't know that game. Check the link.", roblox: "Roblox didn't answer. Try again in a minute.", unverified: "Only a verified lead can be sent.", account: "There's no account with that email.", sure: "Tick the box to confirm you want to delete it." };
   if (E[q("e")]) msg = `<p class="msg" role="alert">${esc(E[q("e")])}</p>`;
   if (q("deleted")) msg = `<p class="msg" role="status">Deleted.</p>`;
+
+  // Today's summary from the daily check.
+  const leadLink = (id, name) => `<a class="link" href="/admin/leads?id=${id}#lead-${id}">${esc(name || "Game")}</a>`;
+  let todayBlock = "";
+  if (today) {
+    const parts = [];
+    if (today.found.length) parts.push(`<h3>New games for your buyers</h3><ul class="dlist">${today.found.map((f) => `<li>For ${esc(f.email)}: ${f.items.map((it) => leadLink(it.id, it.name) + " (" + commas(it.players) + " players)").join(", ")}</li>`).join("")}</ul>`);
+    if (today.offers.length) parts.push(`<h3>Owners who filled in the selling form</h3><ul class="dlist">${today.offers.map((o) => `<li>${leadLink(o.id, o.name)}: ${esc(o.contact)}${o.asking ? ", asking " + esc(o.asking) : ""}</li>`).join("")}</ul>`);
+    if (today.changed.length) parts.push(`<h3>Changed owner on Roblox</h3><ul class="dlist">${today.changed.map((c) => `<li>${leadLink(c.id, c.name)}: now ${esc(c.now)}, was ${esc(c.was)}${c.sentTo.length ? ". Sent to " + esc(c.sentTo.join(", ")) + ", so ask whether they bought it" : ""}</li>`).join("")}</ul>`);
+    if (today.updates.length) parts.push(`<h3>Buyers' updates</h3><ul class="dlist">${today.updates.map((u) => `<li>${esc(u.email)} marked ${leadLink(u.id, u.name)} as ${esc(PICK_LABELS[u.status] || u.status)}</li>`).join("")}</ul>`);
+    if (today.willing || today.stale.length) parts.push(`<h3>Waiting on you</h3><ul class="dlist">${today.willing ? `<li>${today.willing} ${today.willing === 1 ? "owner has" : "owners have"} said they'd sell but ${today.willing === 1 ? "isn't" : "aren't"} verified yet</li>` : ""}${today.stale.map((st) => `<li>No answer from ${leadLink(st.id, st.name)} for ${st.days} days. Follow up?</li>`).join("")}</ul>`);
+    if (!today.history) parts.unshift(`<p class="msg">The daily history didn't load, so this check couldn't look for new games.</p>`);
+    todayBlock = parts.length ? parts.join("") : `<p>Nothing new in the last check.</p>`;
+  }
+  const emailLine = emailOn(env)
+    ? "The summary is emailed to you after each daily check, buyers are emailed when you send them a lead, and you're emailed when an owner fills in the selling form."
+    : "Emails are off until Resend is connected (the RESEND_API_KEY secret in Cloudflare), so check this page instead.";
+  const today_ = `<section class="today" id="today" aria-labelledby="today-h"><h2 id="today-h">Today's summary</h2><p class="small muted">${today ? "From the daily check on " + esc(today.date) + " at " + esc(new Date(today.at).toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit" })) + " Pacific. It runs every evening after the daily pull, finds up to " + AUTO_PER_BUYER + " new games for each buyer and checks your leads' owners on Roblox. " : "The daily check runs every evening after the daily pull. "}${esc(emailLine)}</p>${q("ran") ? `<p class="msg" role="status">Done. Here's what it found.</p>` : ""}${todayBlock}<form class="inline" method="post" action="/admin/leads/run"><button class="button quiet" type="submit">Run the daily check now</button></form></section>`;
 
   const accounts = d.accounts || [];
   const boxes = d.boxes || [];
@@ -924,7 +1075,10 @@ async function leadsPage(env, url) {
     const now = live[l.uid];
     const sends = sendsBy[l.id] || [];
     const owner = creatorUrl(l.creator_type, l.creator_id);
-    const changed = now && now.creator && now.creator.id && l.creator_id && Number(now.creator.id) !== Number(l.creator_id);
+    let nowOwner = null;
+    try { nowOwner = l.owner_now ? JSON.parse(l.owner_now) : null; } catch (e) {}
+    if (now && now.creator && now.creator.id && l.creator_id && Number(now.creator.id) !== Number(l.creator_id)) nowOwner = now.creator;
+    const changed = !!nowOwner && Number(nowOwner.id) !== Number(l.creator_id);
     let offer = null;
     try { offer = l.offer ? JSON.parse(l.offer) : null; } catch (e) {}
     const meta = [
@@ -933,6 +1087,7 @@ async function leadsPage(env, url) {
       l.for_email ? "found for " + l.for_email : "",
       sends.length ? "sent to " + sends.length : "",
       l.source === "owner" ? "the owner came to us" : "",
+      l.auto ? "found by the daily check" : "",
     ].filter(Boolean).join(", ");
     const offerBlock = offer ? `<div class="offer"><h4>What the owner sent us${l.offered_at ? " on " + esc(shortDay(l.offered_at)) : ""}</h4><dl><dt>Contact</dt><dd>${esc(offer.contact)}</dd><dt>Role</dt><dd>${esc(offer.role)}</dd><dt>Would sell</dt><dd>${esc(DEALS[offer.deal] || "")}</dd><dt>Asking</dt><dd>${esc(offer.asking || "Not given")}</dd><dt>Age</dt><dd>${esc(AGES[offer.age] || "")}</dd><dt>Notes</dt><dd>${esc(offer.notes || "None")}</dd></dl><p class="small muted">They haven't agreed to share their contact with a specific buyer yet. Ask before you send it.</p></div>` : "";
     const sendList = sends.length
@@ -945,7 +1100,8 @@ async function leadsPage(env, url) {
     const f = (k) => esc(l[k] == null ? "" : l[k]);
     return `<details class="lead-row" id="lead-${l.id}"${l.id === openId ? " open" : ""}><summary>${esc(l.name || "Game " + l.pid)}${changed ? ` <span class="flag">Owner changed</span>` : ""}${l.source === "owner" && l.status === "willing" && !l.contact_ok ? ` <span class="flag">New from the selling form</span>` : ""}<span class="l-meta">${esc(meta)}</span></summary><div class="l-body">
 <p class="small"><a class="link" href="${esc(gameUrl(l.pid))}" target="_blank" rel="noopener">Game on Roblox</a>${owner ? ` and its owner, <a class="link" href="${esc(owner)}" target="_blank" rel="noopener">${esc(l.creator || "on Roblox")}</a> (${esc(l.creator_type || "")})` : ""}. ${now ? commas(now.players) + " players and " + commas(now.visits) + " visits right now." : ""} Added ${esc(shortDay(l.created_at))}.${l.verified_at ? " Verified " + esc(shortDay(l.verified_at)) + "." : ""}</p>
-${changed ? `<p class="msg">Roblox now shows <strong>${esc(now.creator.name)}</strong> (${esc(now.creator.type)}) as the owner, not ${esc(l.creator)}. If you sent this lead to someone, the game may have sold. Ask them.</p>` : ""}
+${l.owner_user && l.owner_user_id ? `<p class="small">Run on Roblox by <a class="link" href="https://www.roblox.com/users/${esc(l.owner_user_id)}/profile" target="_blank" rel="noopener">${esc(l.owner_user)}</a>${l.creator_type === "Group" ? ", who owns the group" : ""}. <a class="link" href="https://x.com/search?q=${encodeURIComponent(l.owner_user)}&amp;f=user" target="_blank" rel="noopener">Search X for that name</a>: it's a search, not a confirmed account, so check it's really them. If you're signed in to Roblox, the game page also shows any Discord or X link they've added.</p>` : ""}
+${changed ? `<p class="msg">Roblox now shows <strong>${esc(nowOwner.name)}</strong> (${esc(nowOwner.type)}) as the owner, not ${esc(l.creator)}. If you sent this lead to someone, the game may have sold. Ask them.</p>` : ""}
 ${offerBlock}
 <div class="out"><label class="small" for="msg-${l.id}">Message for the owner. Send it from X or Discord, not Roblox chat: messaging strangers about money there can get your Roblox account flagged. Look for their Discord or X on the game page or the group.</label><textarea id="msg-${l.id}" readonly rows="10">${esc(ownerMessage(l.name))}</textarea><div class="rowline"><button class="button quiet" type="button" data-copy="msg-${l.id}">Copy message</button><span class="status" aria-live="polite"></span></div></div>
 <form class="form" method="post" action="/admin/leads/save"><input type="hidden" name="id" value="${l.id}">
@@ -980,12 +1136,13 @@ ${offerBlock}
   return page("Verified leads", `${adminNav("leads")}<h1 class="head">Verified leads</h1>
 <p>Find games for each buyer, ask the owners, check their numbers, then send the lead. A buyer sees only the leads you send them, on their <a class="link" href="/leads">Leads page</a>.</p>
 <ol class="steps small">
-<li><strong>Find.</strong> Click Find games next to a buyer, or add a game by its link. Owners who fill in the selling form at /sell show up here on their own.</li>
+<li><strong>Find.</strong> Every evening the daily check adds up to ${AUTO_PER_BUYER} new games for each buyer, and owners who fill in the selling form at /sell show up on their own. You can also click Find games next to a buyer, or add a game by its link.</li>
 <li><strong>Ask.</strong> Open the lead, copy the message and send it to the owner from X or Discord.</li>
 <li><strong>Check.</strong> When they send a screen recording of their Creator Dashboard, compare it with the public numbers, fill in what they told you and set the status to Verified.</li>
-<li><strong>Send.</strong> Pick the buyer and click Send, then email them that it's there. If Roblox later shows a new owner for a lead's game, it's flagged here.</li>
+<li><strong>Send.</strong> Pick the buyer and click Send. Once Resend is connected, they're emailed automatically. If Roblox later shows a new owner for a lead's game, it's flagged here and in the summary.</li>
 </ol>
 ${msg}
+${today_}
 <h2>Buyers</h2>${buyers}
 ${add}
 <h2>Leads</h2>${groups || "<p>No leads yet.</p>"}`, LEAD_SCRIPT);
@@ -1060,6 +1217,12 @@ export class Store {
     this.sql.exec("CREATE TABLE IF NOT EXISTS buybox (email TEXT PRIMARY KEY, box TEXT NOT NULL, updated_at INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS leads (id INTEGER PRIMARY KEY, uid INTEGER NOT NULL UNIQUE, pid INTEGER, name TEXT NOT NULL DEFAULT '', creator TEXT NOT NULL DEFAULT '', creator_type TEXT, creator_id INTEGER, source TEXT NOT NULL DEFAULT 'scouted', status TEXT NOT NULL DEFAULT 'found', for_email TEXT, contact TEXT NOT NULL DEFAULT '', contact_ok INTEGER NOT NULL DEFAULT 0, owner_age TEXT NOT NULL DEFAULT 'unknown', asking TEXT NOT NULL DEFAULT '', deal TEXT NOT NULL DEFAULT '', revenue INTEGER, peak INTEGER, proof TEXT NOT NULL DEFAULT '', checked TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', offer TEXT, offered_at INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, verified_at INTEGER)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS lead_sends (lead_id INTEGER NOT NULL, email TEXT NOT NULL, sent_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'new', note TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL, PRIMARY KEY (lead_id, email))");
+    // Added with the daily check: whether the check found it, who runs the game on Roblox, and when
+    // Roblox started showing a different owner. kv keeps the time and summary of the last check.
+    for (const col of ["auto INTEGER NOT NULL DEFAULT 0", "owner_user TEXT", "owner_user_id INTEGER", "owner_now TEXT", "owner_changed_at INTEGER"]) {
+      try { this.sql.exec("ALTER TABLE leads ADD COLUMN " + col); } catch (e) { /* already there */ }
+    }
+    this.sql.exec("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
     this.seedOwner();
   }
 
@@ -1253,9 +1416,10 @@ export class Store {
       const have = this.sql.exec("SELECT id FROM leads WHERE uid = ?", p.uid).toArray()[0];
       if (have) {
         if (p.for_email) this.sql.exec("UPDATE leads SET for_email = COALESCE(for_email, ?) WHERE id = ?", p.for_email, have.id);
+        if (p.owner_user) this.sql.exec("UPDATE leads SET owner_user = COALESCE(owner_user, ?), owner_user_id = COALESCE(owner_user_id, ?) WHERE id = ?", p.owner_user, p.owner_user_id || null, have.id);
         return reply({ id: have.id, existed: true });
       }
-      this.sql.exec("INSERT INTO leads (uid, pid, name, creator, creator_type, creator_id, source, status, for_email, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'scouted', 'found', ?, ?, ?)", p.uid, p.pid || null, p.name || "", p.creator || "", p.ctype || null, p.cid || null, p.for_email || null, now, now);
+      this.sql.exec("INSERT INTO leads (uid, pid, name, creator, creator_type, creator_id, owner_user, owner_user_id, source, status, for_email, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scouted', 'found', ?, ?, ?)", p.uid, p.pid || null, p.name || "", p.creator || "", p.ctype || null, p.cid || null, p.owner_user || null, p.owner_user_id || null, p.for_email || null, now, now);
       return reply({ id: this.sql.exec("SELECT id FROM leads WHERE uid = ?", p.uid).toArray()[0].id, existed: false });
     }
 
@@ -1264,13 +1428,13 @@ export class Store {
       const recent = this.sql.exec("SELECT COUNT(*) AS n FROM leads WHERE offered_at > ?", now - 3600e3).toArray()[0].n;
       if (recent >= 30) return reply({ limited: true });
       const have = this.sql.exec("SELECT id, offered_at FROM leads WHERE uid = ?", p.uid).toArray()[0];
-      if (have && have.offered_at && now - have.offered_at < 10 * 60e3) return reply({ ok: true, id: have.id });
+      if (have && have.offered_at && now - have.offered_at < 10 * 60e3) return reply({ ok: true, id: have.id, fresh: false });
       if (!have) {
-        this.sql.exec("INSERT INTO leads (uid, pid, name, creator, creator_type, creator_id, source, status, contact, owner_age, asking, deal, offer, offered_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'owner', 'willing', ?, ?, ?, ?, ?, ?, ?, ?)", p.uid, p.pid || null, p.name || "", p.creator || "", p.ctype || null, p.cid || null, p.contact, p.age, p.asking || "", p.deal || "", p.offer, now, now, now);
+        this.sql.exec("INSERT INTO leads (uid, pid, name, creator, creator_type, creator_id, owner_user, owner_user_id, source, status, contact, owner_age, asking, deal, offer, offered_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'owner', 'willing', ?, ?, ?, ?, ?, ?, ?, ?)", p.uid, p.pid || null, p.name || "", p.creator || "", p.ctype || null, p.cid || null, p.owner_user || null, p.owner_user_id || null, p.contact, p.age, p.asking || "", p.deal || "", p.offer, now, now, now);
       } else {
-        this.sql.exec("UPDATE leads SET offer = ?, offered_at = ?, source = 'owner', status = CASE WHEN status IN ('found', 'asked', 'declined') THEN 'willing' ELSE status END, contact = CASE WHEN contact = '' THEN ? ELSE contact END, owner_age = CASE WHEN owner_age = 'unknown' THEN ? ELSE owner_age END, asking = CASE WHEN asking = '' THEN ? ELSE asking END, deal = CASE WHEN deal = '' THEN ? ELSE deal END, updated_at = ? WHERE id = ?", p.offer, now, p.contact, p.age, p.asking || "", p.deal || "", now, have.id);
+        this.sql.exec("UPDATE leads SET offer = ?, offered_at = ?, source = 'owner', auto = 0, status = CASE WHEN status IN ('found', 'asked', 'declined') THEN 'willing' ELSE status END, contact = CASE WHEN contact = '' THEN ? ELSE contact END, owner_age = CASE WHEN owner_age = 'unknown' THEN ? ELSE owner_age END, asking = CASE WHEN asking = '' THEN ? ELSE asking END, deal = CASE WHEN deal = '' THEN ? ELSE deal END, owner_user = COALESCE(owner_user, ?), owner_user_id = COALESCE(owner_user_id, ?), updated_at = ? WHERE id = ?", p.offer, now, p.contact, p.age, p.asking || "", p.deal || "", p.owner_user || null, p.owner_user_id || null, now, have.id);
       }
-      return reply({ ok: true });
+      return reply({ ok: true, fresh: true, id: this.sql.exec("SELECT id FROM leads WHERE uid = ?", p.uid).toArray()[0].id });
     }
 
     if (op === "lead-list") {
@@ -1279,6 +1443,7 @@ export class Store {
         sends: this.sql.exec("SELECT lead_id, email, sent_at, status, note, updated_at FROM lead_sends ORDER BY sent_at DESC").toArray(),
         accounts: this.sql.exec("SELECT email, name, company FROM signups ORDER BY created_at DESC").toArray(),
         boxes: this.sql.exec("SELECT b.email AS email, b.box AS box, b.updated_at AS updated_at, u.name AS name, u.company AS company, (SELECT COUNT(*) FROM lead_sends s WHERE s.email = b.email) AS sent FROM buybox b LEFT JOIN signups u ON u.email = b.email ORDER BY b.updated_at DESC").toArray(),
+        digest: (this.sql.exec("SELECT v FROM kv WHERE k = 'digest'").toArray()[0] || {}).v || null,
       });
     }
 
@@ -1294,7 +1459,8 @@ export class Store {
       if (!lead || lead.status !== "verified") return reply({ error: "unverified" });
       if (!this.account(p.email)) return reply({ error: "account" });
       this.sql.exec("INSERT OR IGNORE INTO lead_sends (lead_id, email, sent_at, status, note, updated_at) VALUES (?, ?, ?, 'new', '', ?)", p.id, p.email, now, now);
-      return reply({ ok: true, name: lead.name });
+      const buyer = this.sql.exec("SELECT name FROM signups WHERE email = ?", p.email).toArray()[0];
+      return reply({ ok: true, name: lead.name, buyer: buyer ? buyer.name : "" });
     }
 
     if (op === "lead-unsend") {
@@ -1320,6 +1486,80 @@ export class Store {
       if (p.status) this.sql.exec("UPDATE lead_sends SET status = ?, updated_at = ? WHERE email = ? AND lead_id = ?", p.status, now, p.email, p.id);
       if (p.note != null) this.sql.exec("UPDATE lead_sends SET note = ?, updated_at = ? WHERE email = ? AND lead_id = ?", p.note, now, p.email, p.id);
       return reply({ ok: true, row: this.sql.exec("SELECT lead_id AS id, status, note, updated_at FROM lead_sends WHERE email = ? AND lead_id = ?", p.email, p.id).toArray()[0] });
+    }
+
+    // The daily check: new games for each buyer, owner changes on Roblox, and a summary of what
+    // happened since the last check.
+    if (op === "daily") {
+      let HX = null;
+      const text = p.history || "";
+      const at = text.indexOf("{", text.indexOf("window.HX"));
+      try { HX = at > 0 ? JSON.parse(text.slice(at).trim().replace(/;\s*$/, "")) : null; } catch (e) { HX = null; }
+      const lastRow = this.sql.exec("SELECT v FROM kv WHERE k = 'daily_at'").toArray()[0];
+      const since = lastRow ? Number(lastRow.v) : now - DAY_MS;
+      const d = { at: now, date: new Date(now).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" }), history: !!HX, found: [], offers: [], changed: [], updates: [], stale: [], willing: 0 };
+
+      // Clear out the check's own suggestions that nobody has touched for a while.
+      this.sql.exec("DELETE FROM leads WHERE auto = 1 AND status = 'found' AND updated_at < ? AND id NOT IN (SELECT lead_id FROM lead_sends)", now - AUTO_KEEP_DAYS * DAY_MS);
+
+      // 1. New games for each buyer, skipping any game that's already a lead.
+      if (HX) {
+        const have = new Set(this.sql.exec("SELECT uid FROM leads").toArray().map((r) => Number(r.uid)));
+        let total = 0;
+        for (const b of this.sql.exec("SELECT email, box FROM buybox ORDER BY updated_at DESC").toArray()) {
+          if (total >= AUTO_TOTAL) break;
+          let box;
+          try { box = JSON.parse(b.box); } catch (e) { continue; }
+          const items = [];
+          for (const g of matchGames(HX, box)) {
+            if (items.length >= AUTO_PER_BUYER || total >= AUTO_TOTAL) break;
+            if (have.has(g.uid)) continue;
+            have.add(g.uid);
+            total++;
+            this.sql.exec("INSERT INTO leads (uid, pid, name, creator, creator_type, creator_id, source, status, for_email, auto, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'scouted', 'found', ?, 1, ?, ?)", g.uid, g.pid || null, g.name || "", g.creator || "", g.ctype || null, g.cid || null, b.email, now, now);
+            const id = this.sql.exec("SELECT id FROM leads WHERE uid = ?", g.uid).toArray()[0].id;
+            items.push({ id, name: g.name, players: g.players, change: g.change, genre: g.genre2 || g.genre, ctype: g.ctype, cid: g.cid, creator: g.creator });
+          }
+          if (items.length) d.found.push({ email: b.email, items });
+        }
+        // Who runs each new game on Roblox (for a group, its owner).
+        for (const f of d.found) for (const it of f.items) {
+          const o = await ownerOf(it.ctype, it.cid, it.creator);
+          if (o && o.name) { this.sql.exec("UPDATE leads SET owner_user = ?, owner_user_id = ? WHERE id = ?", o.name, o.id || null, it.id); it.owner = o.name; }
+          delete it.ctype; delete it.cid; delete it.creator;
+        }
+      }
+
+      // 2. Did a game we're working on, or sent to someone, change hands?
+      const watched = this.sql.exec("SELECT id, uid, name, creator, creator_id FROM leads WHERE owner_changed_at IS NULL AND creator_id IS NOT NULL AND (status IN ('asked', 'willing', 'verified') OR id IN (SELECT lead_id FROM lead_sends))").toArray();
+      if (watched.length) {
+        const live = await robloxGames(watched.map((l) => Number(l.uid)));
+        for (const l of watched) {
+          const g = live[l.uid];
+          if (!g || !g.creator || !g.creator.id || Number(g.creator.id) === Number(l.creator_id)) continue;
+          this.sql.exec("UPDATE leads SET owner_changed_at = ?, owner_now = ? WHERE id = ?", now, JSON.stringify(g.creator), l.id);
+          const sentTo = this.sql.exec("SELECT email FROM lead_sends WHERE lead_id = ?", l.id).toArray().map((r) => r.email);
+          d.changed.push({ id: l.id, name: l.name, was: l.creator, now: g.creator.name, sentTo });
+        }
+      }
+
+      // 3. What happened since the last check.
+      d.offers = this.sql.exec("SELECT id, name, contact, asking FROM leads WHERE offered_at > ? ORDER BY offered_at DESC LIMIT 30", since).toArray();
+      d.updates = this.sql.exec("SELECT s.lead_id AS id, l.name AS name, s.email AS email, s.status AS status FROM lead_sends s JOIN leads l ON l.id = s.lead_id WHERE s.updated_at > ? AND s.updated_at > s.sent_at AND s.status != 'new' ORDER BY s.updated_at DESC LIMIT 30", since).toArray();
+      d.willing = this.sql.exec("SELECT COUNT(*) AS n FROM leads WHERE status = 'willing'").toArray()[0].n;
+      d.stale = this.sql.exec("SELECT id, name, updated_at FROM leads WHERE status = 'asked' AND updated_at < ? ORDER BY updated_at LIMIT 20", now - 3 * DAY_MS).toArray()
+        .map((r) => ({ id: r.id, name: r.name, days: Math.floor((now - r.updated_at) / DAY_MS) }));
+      const newGames = d.found.reduce((n, f) => n + f.items.length, 0);
+      d.any = !!(newGames || d.offers.length || d.changed.length || d.updates.length);
+      const bits = [];
+      if (newGames) bits.push(newGames + (newGames === 1 ? " new game" : " new games") + " for your buyers");
+      if (d.offers.length) bits.push(d.offers.length + (d.offers.length === 1 ? " owner wants" : " owners want") + " to sell");
+      if (d.changed.length) bits.push(d.changed.length + (d.changed.length === 1 ? " game changed owner" : " games changed owner"));
+      if (d.updates.length) bits.push(d.updates.length + (d.updates.length === 1 ? " buyer update" : " buyer updates"));
+      d.headline = bits.join(", ") || "nothing new";
+      this.sql.exec("INSERT OR REPLACE INTO kv (k, v) VALUES ('daily_at', ?)", String(now));
+      this.sql.exec("INSERT OR REPLACE INTO kv (k, v) VALUES ('digest', ?)", JSON.stringify(d));
+      return reply({ ok: true, digest: d });
     }
 
     if (op === "make-link") {
