@@ -9,6 +9,7 @@
 //   POST /api/signout       ends this browser's session
 //   POST /api/password      sets a password, either from a one-time link (/account#t=...) or,
 //                           for a signed-in visitor, from the change-password form on /account
+//   POST /api/forgot        "Forgot your password?" on /signin: emails a one-time link (2 hours)
 //   GET  /api/me            { access: "none" | "active" | "expired", until, email, hasPassword }
 //   GET  /api/referrals     the signed-in visitor's referral link and how many people it brought in
 //   GET  /api/teaser        today's top pick without its name, for the landing page
@@ -29,6 +30,9 @@
 // creates on deploy, so there's no database to set up. Passwords are stored only as salted
 // PBKDF2 hashes, worked out inside the Durable Object, which has a much larger CPU allowance
 // than the Worker itself.
+//
+// Email goes out through Resend (see "email" below) once a RESEND_API_KEY secret is added to the
+// Worker. Without it the site works exactly as before and simply sends nothing.
 
 const FREE_MS = 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -40,6 +44,8 @@ const REFERRAL_DAYS = 31; // the free month a member gets when someone they refe
 const PAID_DAYS = 31; // what "Record a payment" adds on the admin page
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 200;
+const RESET_MS = 2 * 60 * 60 * 1000; // how long a link from "Forgot your password?" works
+const RESET_EVERY_MS = 10 * 60 * 1000; // at most one emailed link per address in this time
 
 const SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
@@ -50,17 +56,18 @@ const SECURITY_HEADERS = {
 };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = normalPath(url);
     let res;
     try {
       // Forms that change something must come from this site.
       if (request.method === "POST" && !sameOrigin(request, url)) res = new Response("Forbidden", { status: 403 });
-      else if (path === "/api/signup") res = await signup(request, env);
+      else if (path === "/api/signup") res = await signup(request, env, ctx, url);
       else if (path === "/api/signin") res = await signin(request, env);
       else if (path === "/api/signout") res = await signout(request, env);
       else if (path === "/api/password") res = await password(request, env);
+      else if (path === "/api/forgot") res = await forgot(request, env, ctx, url);
       else if (path === "/api/me") res = await me(request, env);
       else if (path === "/api/referrals") res = await referrals(request, env, url);
       else if (path === "/api/teaser") res = await teaser(env, url);
@@ -173,7 +180,7 @@ async function session(request, env) {
 
 // ---------- accounts ----------
 
-async function signup(request, env) {
+async function signup(request, env, ctx, url) {
   if (request.method !== "POST") return redirect("/#signup");
   const form = await request.formData();
   const get = (k) => String(form.get(k) || "").trim();
@@ -197,7 +204,39 @@ async function signup(request, env) {
   const token = randomToken();
   const r = await call(env, "signup", { email, name, company, role, password: pw, token, freeMs: FREE_MS, ref: /^[a-z0-9]{6,16}$/.test(ref) ? ref : null });
   if (r.exists) return redirect("/signin?e=exists");
+  // The welcome email goes out after the visitor is already on the board, so a slow or failed
+  // send never holds up or breaks the sign-up.
+  ctx.waitUntil(sendEmail(env, {
+    to: email,
+    template: "spawnbook-welcome",
+    variables: { NAME: greetingName(name), ACCESS_ENDS: pacificTime(r.until) },
+    key: "welcome/" + (await sha256(email)),
+  }));
   return redirect(nextPath("", r.until), { "Set-Cookie": sessionCookie(token) });
+}
+
+// "Forgot your password?" on the sign-in page. The answer is the same whether or not there's an
+// account for that email, so the form can't be used to find out who has signed up.
+async function forgot(request, env, ctx, url) {
+  if (request.method !== "POST") return redirect("/signin#forgot");
+  const form = await request.formData();
+  if (String(form.get("website") || "")) return redirect("/signin?sent=1#forgot");
+  if (!emailOn(env)) return redirect("/signin?e=nomail#forgot");
+  const email = String(form.get("email") || "").trim().toLowerCase().slice(0, 200);
+  if (!validEmail(email)) return redirect("/signin?e=forgot-email#forgot");
+
+  const t = randomToken();
+  const linkHash = await sha256(t);
+  const r = await call(env, "forgot", { email, linkHash, expires: Date.now() + RESET_MS, every: RESET_EVERY_MS });
+  if (r.ok) {
+    ctx.waitUntil(sendEmail(env, {
+      to: email,
+      template: "spawnbook-password-link",
+      variables: { NAME: greetingName(r.name), LINK: url.origin + "/account#t=" + t, EXPIRES: "2 hours" },
+      key: "pwlink/" + linkHash,
+    }));
+  }
+  return redirect("/signin?sent=1#forgot");
 }
 
 async function signin(request, env) {
@@ -262,6 +301,69 @@ async function referrals(request, env, url) {
   const r = await call(env, "referrals", { token: s.token });
   if (!r.code) return json({ error: "signin" }, 401);
   return json({ link: url.origin + "/?ref=" + r.code, code: r.code, signedUp: r.signedUp, paying: r.paying, monthsEarned: r.monthsEarned, days: REFERRAL_DAYS });
+}
+
+// ---------- email ----------
+//
+// Emails are Resend templates, sent by their alias with a few variables, so their wording can be
+// changed in the Resend dashboard without touching this code:
+//   spawnbook-welcome         NAME, ACCESS_ENDS
+//   spawnbook-password-link   NAME, LINK, EXPIRES
+// RESEND_API_KEY is a secret on this Worker: a "sending access" key limited to mail.spawnbook.com.
+
+const MAIL_FROM = "Spawnbook <hello@mail.spawnbook.com>";
+const MAIL_REPLY_TO = "gautamuprasanna@gmail.com";
+
+const emailOn = (env) => !!env.RESEND_API_KEY;
+
+// Sends one templated email. Retries twice on network errors, rate limits and Resend outages,
+// with the same Idempotency-Key so a retry can never send it twice. Returns the Resend email id,
+// or null if it wasn't sent (the reason goes to the Worker's logs).
+async function sendEmail(env, { to, template, variables, key }) {
+  if (!emailOn(env)) {
+    console.log("Email not sent (no RESEND_API_KEY yet): " + template);
+    return null;
+  }
+  const body = JSON.stringify({ from: MAIL_FROM, to: [to], reply_to: MAIL_REPLY_TO, template: { id: template, variables } });
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    let res = null;
+    try {
+      res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json", "Idempotency-Key": key },
+        body,
+      });
+    } catch (e) {
+      res = null;
+    }
+    if (res && res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.log("Email sent: " + template + " " + (data.id || ""));
+      return data.id || "sent";
+    }
+    const detail = res ? res.status + " " + (await res.text().catch(() => "")).slice(0, 300) : "network error";
+    const tryAgain = !res || res.status === 429 || res.status >= 500;
+    if (!tryAgain || attempt === 3) {
+      console.error("Email failed: " + template + " " + detail);
+      return null;
+    }
+    const wait = res ? Number(res.headers.get("retry-after")) : 0;
+    await new Promise((done) => setTimeout(done, wait > 0 ? Math.min(wait, 10) * 1000 : 500 * attempt));
+  }
+  return null;
+}
+
+// "Hi Sam," from whatever was typed in the name box. Anything that isn't a plain first name
+// (a link, an address, markup) becomes "there", so nobody can sign up someone else's email and
+// get their own words sent to that person from our domain.
+function greetingName(name) {
+  const first = String(name || "").trim().split(/\s+/)[0] || "";
+  if (!first || first.length > 30 || /[^\p{L}\p{M}'’-]/u.test(first)) return "there";
+  return first;
+}
+
+function pacificTime(t) {
+  return new Date(t).toLocaleString("en-US", { timeZone: "America/Los_Angeles", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " Pacific time";
 }
 
 // ---------- watchlist ----------
@@ -399,7 +501,32 @@ async function linkPage(env, url, email, intro) {
   const r = await call(env, "make-link", { email, linkHash: await sha256(t), expires: Date.now() + LINK_MS });
   if (!r.ok) return page("No such account", `<h1 class="head">No such account</h1><p>There's no account for ${esc(email)}.</p><p><a class="button quiet" href="/admin">Back to accounts</a></p>`);
   const link = url.origin + "/account#t=" + t;
-  return page("Password link", `<h1 class="head">Password link</h1><p>${intro}</p><p>Send this link to <strong>${esc(email)}</strong>. It works once, for 7 days, and lets them choose their own password. It won't be shown again, so copy it now.</p><p class="linkbox">${esc(link)}</p><p><a class="button" href="mailto:${esc(email)}?subject=${encodeURIComponent("Your Spawnbook sign-in")}&body=${encodeURIComponent("Hi,\n\nUse this link to choose your password for Spawnbook. It works once, for the next 7 days:\n\n" + link + "\n\nAfter that, sign in any time at " + url.origin + "/signin with your email and that password.\n\nGautam")}">Email it to them</a> <a class="button quiet" href="/admin">Back to accounts</a></p>`);
+  const mailto = `<a class="button${emailOn(env) ? " quiet" : ""}" href="mailto:${esc(email)}?subject=${encodeURIComponent("Your Spawnbook sign-in")}&body=${encodeURIComponent("Hi,\n\nUse this link to choose your password for Spawnbook. It works once, for the next 7 days:\n\n" + link + "\n\nAfter that, sign in any time at " + url.origin + "/signin with your email and that password.\n\nGautam")}">Email it from my own inbox</a>`;
+  const send = emailOn(env)
+    ? `<form class="inline" method="post" action="/admin/email-link" style="display:inline"><input type="hidden" name="email" value="${esc(email)}"><input type="hidden" name="t" value="${esc(t)}"><button class="button" type="submit">Send it from Spawnbook</button></form> `
+    : "";
+  return page("Password link", `<h1 class="head">Password link</h1><p>${intro}</p><p>Send this link to <strong>${esc(email)}</strong>. It works once, for 7 days, and lets them choose their own password. It won't be shown again, so copy it now.</p><p class="linkbox">${esc(link)}</p><p>${send}${mailto} <a class="button quiet" href="/admin">Back to accounts</a></p>`);
+}
+
+// "Send it from Spawnbook" on the password link page: emails that same link with the
+// spawnbook-password-link template, from hello@mail.spawnbook.com.
+async function emailLinkPage(request, env, url) {
+  const form = await request.formData();
+  const email = String(form.get("email") || "").toLowerCase();
+  const t = String(form.get("t") || "").trim().toLowerCase();
+  const back = `<p><a class="button quiet" href="/admin">Back to accounts</a></p>`;
+  if (!emailOn(env)) return page("Email is off", `<h1 class="head">Email is off</h1><p>Add the RESEND_API_KEY secret to the Worker first.</p>${back}`);
+  const linkHash = /^[0-9a-f]{64}$/.test(t) ? await sha256(t) : "";
+  const r = linkHash ? await call(env, "check-link", { email, linkHash }) : { ok: false };
+  if (!r.ok) return page("Link expired", `<h1 class="head">That link can't be sent</h1><p>It has expired, was already used, or was replaced by a newer one. Make a new link for ${esc(email)} and send that.</p>${back}`);
+  const id = await sendEmail(env, {
+    to: email,
+    template: "spawnbook-password-link",
+    variables: { NAME: greetingName(r.name), LINK: url.origin + "/account#t=" + t, EXPIRES: "7 days" },
+    key: "pwlink/" + linkHash,
+  });
+  if (!id) return page("Not sent", `<h1 class="head">Not sent</h1><p>Resend didn't accept the email for ${esc(email)}. The reason is in the Worker's logs in Cloudflare (Observability). You can still copy the link from the previous page and send it yourself.</p>${back}`);
+  return page("Sent", `<h1 class="head">Sent</h1><p>The password link is on its way to <strong>${esc(email)}</strong>, from hello@mail.spawnbook.com. You can check it was delivered under Emails in Resend.</p>${back}`);
 }
 
 async function admin(request, env, url, path) {
@@ -447,6 +574,8 @@ async function admin(request, env, url, path) {
     await call(env, "delete", { email: String(form.get("email") || "").toLowerCase() });
     return redirect("/admin");
   }
+
+  if (path === "/admin/email-link" && request.method === "POST") return emailLinkPage(request, env, url);
 
   if (path === "/admin/link" && request.method === "POST") {
     const form = await request.formData();
@@ -569,6 +698,8 @@ export class Store {
     // Watchlist: each member's starred games, with a deal status and private notes. "seen" is the
     // player count the member last saw, for "since you last looked".
     this.sql.exec("CREATE TABLE IF NOT EXISTS watch (email TEXT NOT NULL, uid INTEGER NOT NULL, pid INTEGER, name TEXT, status TEXT NOT NULL DEFAULT 'watching', note TEXT NOT NULL DEFAULT '', added_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, seen_players INTEGER, seen_at INTEGER, PRIMARY KEY (email, uid))");
+    // When "Forgot your password?" last emailed each address, so nobody can flood an inbox.
+    this.sql.exec("CREATE TABLE IF NOT EXISTS resets (email TEXT PRIMARY KEY, at INTEGER NOT NULL)");
     this.seedOwner();
   }
 
@@ -755,6 +886,25 @@ export class Store {
       return reply({ ok: true });
     }
 
+    // "Forgot your password?": adds a link alongside any the admin already sent (each works once,
+    // and using any of them ends the rest), at most once per address every few minutes.
+    if (op === "forgot") {
+      const acct = this.sql.exec("SELECT name FROM signups WHERE email = ?", p.email).toArray()[0];
+      if (!acct) return reply({ ok: false });
+      const last = this.sql.exec("SELECT at FROM resets WHERE email = ?", p.email).toArray()[0];
+      if (last && now - last.at < p.every) return reply({ ok: false });
+      this.sql.exec("INSERT OR REPLACE INTO resets (email, at) VALUES (?, ?)", p.email, now);
+      this.sql.exec("DELETE FROM links WHERE email = ? AND expires <= ?", p.email, now);
+      this.sql.exec("INSERT INTO links (hash, email, expires) VALUES (?, ?, ?)", p.linkHash, p.email, p.expires);
+      return reply({ ok: true, name: acct.name });
+    }
+
+    // Is this still a working link for this email? Used before the admin page emails it.
+    if (op === "check-link") {
+      const link = this.sql.exec("SELECT l.expires AS expires, u.name AS name FROM links l JOIN signups u ON u.email = l.email WHERE l.hash = ? AND l.email = ?", p.linkHash, p.email).toArray()[0];
+      return reply(link && link.expires > now ? { ok: true, name: link.name } : { ok: false });
+    }
+
     if (op === "create") {
       const existed = !!this.account(p.email);
       if (existed) this.sql.exec("UPDATE signups SET access_until = ? WHERE email = ?", p.until, p.email);
@@ -780,6 +930,7 @@ export class Store {
       this.sql.exec("DELETE FROM fails WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM credits WHERE referrer = ? OR referred = ?", p.email, p.email);
       this.sql.exec("DELETE FROM watch WHERE email = ?", p.email);
+      this.sql.exec("DELETE FROM resets WHERE email = ?", p.email);
       this.sql.exec("UPDATE signups SET referred_by = NULL WHERE referred_by = ?", p.email);
       this.sql.exec("DELETE FROM signups WHERE email = ?", p.email);
       return reply({ ok: true });

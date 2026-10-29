@@ -53,8 +53,29 @@
           <span class="err" id="s-err" role="alert"></span>
         </div>
         <p class="note">New here? <a class="link" href="/#signup">Sign up for a free day</a>.</p>
-        <p class="note">Forgot your password? Email <a class="link" href="mailto:gautamuprasanna@gmail.com?subject=Spawnbook%20password">gautamuprasanna@gmail.com</a> from the address you signed up with, and we'll send you a link to choose a new one.</p>
       </form>
+
+      <details class="forgot" id="forgot">
+        <summary>Forgot your password?</summary>
+        <form class="form" id="forgot-form" method="post" action="/api/forgot" novalidate>
+          <p class="note">Enter the email you signed up with, and we'll email you a link to choose a new password.</p>
+          <div class="fields one">
+            <div class="field">
+              <label for="f-email">Email</label>
+              <input id="f-email" name="email" type="email" autocomplete="username" maxlength="200">
+            </div>
+            <div class="field" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">
+              <label for="f-site">Leave this empty</label>
+              <input id="f-site" name="website" tabindex="-1" autocomplete="off">
+            </div>
+          </div>
+          <p class="done" id="f-done" role="status" tabindex="-1" hidden>If there's an account for that email, a link is on its way. It works once, for the next 2 hours. If it hasn't arrived in a few minutes, check your spam folder. You can ask again after 10 minutes.</p>
+          <div class="form-row">
+            <button class="button" type="submit">Email me a link</button>
+            <span class="err" id="f-err" role="alert"></span>
+          </div>
+        </form>
+      </details>
 
       <div class="signed-in" id="s-in" hidden>
         <p class="lead" id="s-in-text">You're signed in.</p>
@@ -96,14 +117,40 @@
     missing: "Enter your email and password.",
     bad: "That email and password don't match. Check them and try again.",
     locked: "Too many wrong passwords for this email. Wait 15 minutes, then try again.",
-    nopw: "This account doesn't have a password yet. Email gautamuprasanna@gmail.com and we'll send you a link to set one.",
+    nopw: "This account doesn't have a password yet. Use \"Forgot your password?\" below and we'll email you a link to set one.",
     exists: "There's already an account with that email. Sign in with your password."
+  };
+  var FORGOT = {
+    "forgot-email": "Enter the email you signed up with.",
+    nomail: "Emailed links aren't working right now. Email gautamuprasanna@gmail.com from the address you signed up with, and we'll send you a link."
   };
   var code = q.get("e");
   if (code && ERRORS[code]) $("s-err").textContent = ERRORS[code];
   else if (q.get("out")) $("s-err").textContent = "You're signed out.";
   var next = q.get("next");
   if (next) $("s-next").value = next;
+
+  // "Forgot your password?" opens by itself after a request, a problem with one, or a sign-in
+  // to an account that has no password yet.
+  var forgot = $("forgot");
+  var forgotOpen = location.hash === "#forgot" || q.get("sent") || FORGOT[code] || code === "nopw";
+  if (forgotOpen) forgot.open = true;
+  if (FORGOT[code]) $("f-err").textContent = FORGOT[code];
+  if (q.get("sent")) $("f-done").hidden = false;
+  forgot.addEventListener("toggle", function () {
+    if (forgot.open && !$("f-email").value) $("f-email").value = $("s-email").value.trim();
+  });
+  $("forgot-form").addEventListener("submit", function (e) {
+    var email = $("f-email").value.trim();
+    $("f-email").removeAttribute("aria-invalid");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      e.preventDefault();
+      $("f-done").hidden = true;
+      $("f-err").textContent = FORGOT["forgot-email"];
+      $("f-email").setAttribute("aria-invalid", "true");
+      $("f-email").focus();
+    }
+  });
 
   $("signin-form").addEventListener("submit", function (e) {
     var email = $("s-email").value.trim(), pw = $("s-pw").value;
@@ -121,8 +168,14 @@
 
   // Already signed in? Say so instead of showing the form.
   fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
-    if (!m || m.access === "none") { if (code !== "exists") $("s-email").focus(); return; }
+    if (!m || m.access === "none") {
+      if (q.get("sent")) $("f-done").focus();
+      else if (FORGOT[code]) $("f-email").focus();
+      else if (code !== "exists") $("s-email").focus();
+      return;
+    }
     $("signin-form").hidden = true;
+    forgot.hidden = true;
     $("s-in").hidden = false;
     $("s-in-text").textContent = "You're signed in as " + m.email + ".";
     if (m.access !== "active") {

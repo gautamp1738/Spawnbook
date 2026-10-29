@@ -21,7 +21,7 @@ Everything the site serves is in `public/`:
 | `track.html`, `track.js` | The public track record: every Monday's picks at 1, 2, 4 and 8 weeks, next to the games that made the cut but weren't picked. `track.js` only names a week's picks once they're a week old. |
 | `value.html` | The free valuation tool and request form for developers. Public. |
 | `subscribe.html` | Pricing, shown when someone's free day is over. |
-| `signin.html` | Sign in with email and password. Visitors who open the board signed out land here. |
+| `signin.html` | Sign in with email and password, or ask for an emailed link under "Forgot your password?". Visitors who open the board signed out land here. |
 | `account.html` | Who's signed in, when their access ends, change or set a password, and sign out. Also where one-time password links open (`/account#t=...`). |
 | `site.css`, `site.js` | Shared styles and page behaviour. |
 | `privacy.html`, `terms.html`, `cookies.html`, `refunds.html`, `legal.css` | The policy pages. |
@@ -38,13 +38,30 @@ Everything the site serves is in `public/`:
 
 Accounts are stored in a Cloudflare Durable Object (SQLite), which Cloudflare creates on deploy. Passwords are kept only as salted PBKDF2-SHA256 hashes (100,000 rounds), worked out inside the Durable Object. After 8 wrong passwords for one email, that email is locked for 15 minutes.
 
-There's no automatic email yet, so forgotten passwords go through you: on the admin page, **Make a link** creates a one-time link (good for 7 days) that lets the person choose a new password. Send it to them yourself. Accounts made before passwords existed can keep using the board on the device they signed up on, and are asked to set a password there.
+Forgotten passwords are self-serve once email is on (see **Email** below): **Forgot your password?** on `/signin` emails a one-time link that works for 2 hours. It answers the same way whether or not the email has an account, and sends at most one link per address every 10 minutes. You can still make a link yourself: on the admin page, **Make a link** creates a one-time link (good for 7 days), which you can copy, email from your own inbox, or click **Send it from Spawnbook**. Accounts made before passwords existed can keep using the board on the device they signed up on, and are asked to set a password there.
 
 To see accounts and give paying subscribers access, add a secret named `ADMIN_KEY` to the Worker in Cloudflare (Settings → Variables and Secrets) and open `/admin` with that password. From there you can add an account for someone who paid first, set anyone's days of access, end it, make a password link, delete someone, or download everyone as a CSV.
 
 **Referrals.** Every account gets a referral link on its account page (`/?ref=code`). A sign-up through it records who referred them (a hidden form field carries the code; no cookie). When someone pays, click **Record a payment** on the admin page: it adds 31 days to their access, and on their first payment it automatically adds a free month (31 days) to whoever referred them and lists it under "Free months given for referrals". If that person pays monthly, skip their next charge. Members only see counts, not who signed up through them.
 
 The owner's account (gautamuprasanna@gmail.com) is created automatically on first start with access until 2100, along with a one-time setup link that was handed over privately. Only a hash of that link is in the code.
+
+## Email
+
+Account emails go out through [Resend](https://resend.com) from `hello@mail.spawnbook.com`, with replies going to gautamuprasanna@gmail.com:
+
+| When | Resend template (alias) | Variables |
+| --- | --- | --- |
+| Someone signs up | `spawnbook-welcome` | `NAME`, `ACCESS_ENDS` |
+| Someone asks for a password link on `/signin`, or you click **Send it from Spawnbook** on the admin page | `spawnbook-password-link` | `NAME`, `LINK`, `EXPIRES` |
+
+The wording lives in Resend (Templates), not in this code, so you can change it there and click Publish without redeploying. Keep the variable names as they are.
+
+To turn email on, create an API key in Resend (API Keys → Create API key) with **Sending access** limited to `mail.spawnbook.com`, then add it to the Worker in Cloudflare (Settings → Variables and Secrets) as a secret named `RESEND_API_KEY`. Never put the key in this repository; it's public. Until the key is there, the site works as before and sends nothing, and "Forgot your password?" tells people to email you.
+
+Sends are logged in the Worker's logs (Cloudflare → the spawnbook Worker → Observability) with the Resend email id, and every email shows up under Emails in Resend. A failed send never blocks a sign-up.
+
+`news.spawnbook.com` is a second Resend domain kept for newsletters, so newsletter complaints can't hurt delivery of sign-in emails.
 
 ## Hosting
 

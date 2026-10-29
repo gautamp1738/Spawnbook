@@ -483,6 +483,9 @@ th.r, td.r, .mini .r { text-align: right; }
 .signup .form { margin-top: 0; }
 .signup .note { font-size: var(--step-small); color: var(--muted); }
 .signed-in { display: grid; gap: 1rem; align-content: start; background: var(--surface); padding: clamp(1.25rem, 3vw, 2.25rem); }
+.forgot { margin-top: 1.5rem; }
+.forgot summary { cursor: pointer; font-weight: 600; min-height: 2.75rem; display: inline-flex; align-items: center; }
+.forgot[hidden] { display: none; }
 .what { display: grid; gap: 1.6rem; list-style: none; padding: 0; margin: 0; }
 .what li { display: grid; gap: 0.3rem; }
 .what strong { font-size: var(--step-lead); line-height: 1.25; font-weight: 600; }
