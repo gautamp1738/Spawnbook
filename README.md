@@ -12,6 +12,7 @@ Everything the site serves is in `public/`:
 | `board.html` | The full daily board. Only signed-in visitors whose access hasn't run out can open it. |
 | `data.js` | Today's board, picks and tables, replaced automatically every day. Gated like the board. |
 | `report.html`, `report.js` | The weekly report: each Monday's top 10, biggest movers, what's new and what fell off the board (with the reason), and how last week's picks did. Has an archive and a "Copy as an email" button. Signed-in visitors with access only. `report.js` is rebuilt every day. |
+| `trends.html` | "What's working on Roblox": a public, shareable write-up of the Oct 28, 2026 reading of Roblox's top 100 games (minus the 10 biggest), comparing hits launched in the last six months with young games that stayed small. Static; rebuilt by hand from a fresh reading. |
 | `game.html` | A page for each game (`/game?pid=<place id>`): players, visits a day and rating over time, compared with up to two other games by date or by days since launch, board history, live numbers, and watchlist status and notes. Signed-in visitors with access only. |
 | `watchlist.html` | Each member's followed games with live player counts, change since they last looked and over a week, board rank, deal status and notes. |
 | `market.html` | Genre trends among young games: players, like-for-like change, share, new launches and the fastest riser per genre, plus the fastest-rising and newest games. |
