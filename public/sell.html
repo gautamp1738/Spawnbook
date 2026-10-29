@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Open to selling your Roblox game? | Spawnbook</title>
+<meta name="description" content="Tell us about your Roblox game. We match games with studios and investors who are buying now, and share your details with a buyer only after you say yes. Free for owners.">
+<link rel="canonical" href="https://spawnbook.com/sell">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Spawnbook">
+<meta property="og:url" content="https://spawnbook.com/sell">
+<meta property="og:title" content="Open to selling your Roblox game?">
+<meta property="og:description" content="Tell us about your game. We match it with buyers looking right now, and share your details only after you say yes. Free for owners, and no cut of the sale.">
+<meta property="og:image" content="https://spawnbook.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to the form</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks">
+      <li class="s-hide"><a href="value">Value your game</a></li>
+      <li class="m-hide"><a href="value#sale">How a sale works</a></li>
+      <li><a class="keep" href="#offer">Tell us about it</a></li>
+    </ul>
+  </nav>
+</div>
+
+<main id="main" tabindex="-1">
+  <section class="sec wrap grid page-top" aria-labelledby="s-h">
+    <div class="c-l stack">
+      <h1 id="s-h" class="head">Open to selling your game?</h1>
+      <p class="lead">Tell us about it. We match games with studios and investors who are buying now, and we only pass your details to a buyer after you say yes.</p>
+    </div>
+    <div class="c-r stack">
+      <ol class="sell-steps">
+        <li><strong>You tell us about your game</strong> with the form below.</li>
+        <li><strong>If it fits what a buyer wants,</strong> we message you and ask for a short screen recording of your Creator Dashboard, so buyers see real numbers.</li>
+        <li><strong>With your OK,</strong> we send your contact and those numbers to that buyer. You talk to them directly and decide everything yourself.</li>
+      </ol>
+      <p class="small muted">It's free for owners, and we don't take a cut of any sale. Not sure what it's worth? <a class="link" href="value">Value your game</a> first.</p>
+    </div>
+  </section>
+
+  <section class="sec wrap grid" id="offer" aria-labelledby="o-h">
+    <div class="c-l stack">
+      <h2 id="o-h" class="head">Tell us about your game</h2>
+      <p class="small muted">Never send us passwords, Roblox account cookies or payment card numbers. Nobody legitimate needs them to buy a game.</p>
+    </div>
+    <div class="c-r stack">
+      <p class="done" id="o-done" role="status" tabindex="-1" hidden>Thanks, we've got it. If a buyer is looking for a game like yours, we'll message you at the contact you gave. That can take a few days.</p>
+      <form class="form" id="o-form" method="post" action="/api/sell" novalidate>
+        <div class="fields">
+          <div class="field full">
+            <label for="o-link">Your game's Roblox link</label>
+            <input id="o-link" name="link" type="url" inputmode="url" maxlength="300" autocomplete="off" placeholder="https://www.roblox.com/games/…" aria-required="true">
+          </div>
+          <div class="field">
+            <label for="o-contact">Best way to reach you <span class="opt">(Discord, X or email)</span></label>
+            <input id="o-contact" name="contact" maxlength="200" autocomplete="off" aria-required="true">
+          </div>
+          <div class="field">
+            <label for="o-role">Your role</label>
+            <select id="o-role" name="role">
+              <option>Owner</option>
+              <option>Co-owner</option>
+              <option>Group admin</option>
+              <option>Developer on the team</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="o-deal">What would you sell?</label>
+            <select id="o-deal" name="deal">
+              <option value="unsure">Not sure yet</option>
+              <option value="all">All of it</option>
+              <option value="part">Part of it</option>
+              <option value="either">All or part</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="o-asking">Asking price <span class="opt">(optional)</span></label>
+            <input id="o-asking" name="asking" maxlength="80" autocomplete="off" placeholder="$10,000, or open to offers">
+          </div>
+          <div class="field full">
+            <label for="o-notes">Anything else <span class="opt">(optional)</span></label>
+            <textarea id="o-notes" name="notes" rows="3" maxlength="1500" placeholder="Who built it, how long it's been out, any offers so far" aria-describedby="o-notes-help"></textarea>
+            <span class="help" id="o-notes-help">Don't include other people's personal details.</span>
+          </div>
+          <fieldset class="age-set full" aria-required="true">
+            <legend>Your age</legend>
+            <label class="consent" for="o-adult"><input type="radio" id="o-adult" name="age" value="adult"><span>I'm 18 or older.</span></label>
+            <label class="consent" for="o-teen"><input type="radio" id="o-teen" name="age" value="guardian"><span>I'm 13 to 17, and a parent or guardian will be part of any sale.</span></label>
+            <p class="help">If you're under 13, ask a parent or guardian to fill this in for you.</p>
+          </fieldset>
+          <label class="consent full" for="o-agree">
+            <input type="checkbox" id="o-agree" name="agree" value="yes" aria-required="true">
+            <span>I agree that Spawnbook can keep these details to match my game with buyers and to contact me, and will share my contact with a buyer only after I say yes. See the <a class="link" href="privacy.html">Privacy Policy</a> and <a class="link" href="terms.html">Terms</a>.</span>
+          </label>
+          <div class="hp" aria-hidden="true"><label for="o-web">Leave this empty</label><input id="o-web" name="website" tabindex="-1" autocomplete="off"></div>
+        </div>
+        <div class="form-row">
+          <button class="button" type="submit">Send it to Spawnbook</button>
+          <span class="err" id="o-err" role="alert"></span>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <p><a class="link" href="value">Making a game? Get it valued</a></p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <h2 class="foot-mail"><span class="sr-only">Email us at </span><a href="mailto:gautamuprasanna@gmail.com">gautamuprasanna<span class="at">@gmail.com</span></a></h2>
+  <div class="foot-copy"><button type="button" class="button" id="foot-copy">Copy email address</button><span class="status" id="foot-status" aria-live="polite"></span></div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent report. Not affiliated with, endorsed by or sponsored by Roblox Corporation.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var ERR = {
+    link: ["o-link", "Paste your game's link from Roblox. It looks like roblox.com/games/123456789."],
+    game: ["o-link", "Roblox doesn't know that game. Check the link and try again."],
+    roblox: ["o-link", "We couldn't reach Roblox to check your game. Try again in a minute."],
+    contact: ["o-contact", "Add a Discord name, X handle or email so we can reach you."],
+    age: ["o-adult", "Choose your age."],
+    agree: ["o-agree", "Tick the box to agree, so we can keep your details."],
+    busy: ["o-link", "We're getting a lot of these right now. Try again in an hour."]
+  };
+  function show(code) {
+    var e = ERR[code]; if (!e) return;
+    $("o-err").textContent = e[1];
+    var f = $(e[0]); if (f) { f.setAttribute("aria-invalid", "true"); f.focus(); }
+  }
+  var q = new URLSearchParams(location.search);
+  if (q.get("sent")) { $("o-done").hidden = false; $("o-form").hidden = true; }
+  else if (q.get("e")) show(q.get("e"));
+
+  $("o-form").addEventListener("submit", function (ev) {
+    document.querySelectorAll("#o-form [aria-invalid]").forEach(function (n) { n.removeAttribute("aria-invalid"); });
+    $("o-err").textContent = "";
+    var link = $("o-link").value.trim();
+    var code = !/roblox\.com\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?games\/\d{3,}|^\d{3,}$/i.test(link) ? "link"
+      : !$("o-contact").value.trim() ? "contact"
+      : !document.querySelector("#o-form input[name=age]:checked") ? "age"
+      : !$("o-agree").checked ? "agree" : "";
+    ev.preventDefault();
+    if (code) { show(code); return; }
+    var btn = $("o-form").querySelector("button[type=submit]");
+    btn.disabled = true; $("o-err").textContent = "Sending.";
+    fetch("/api/sell", { method: "POST", body: new FormData($("o-form")), headers: { Accept: "application/json" }, credentials: "same-origin" })
+      .then(function (r) { return r.json().catch(function () { return { error: "roblox" }; }); })
+      .then(function (j) {
+        btn.disabled = false;
+        if (j && j.ok) { $("o-err").textContent = ""; $("o-form").hidden = true; $("o-done").hidden = false; $("o-done").focus(); return; }
+        $("o-err").textContent = ""; show(j && ERR[j.error] ? j.error : "roblox");
+      })
+      .catch(function () { btn.disabled = false; $("o-err").textContent = "That didn't send. Check your connection and try again."; });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Verified leads | Spawnbook</title>
+<meta name="robots" content="noindex">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to your leads</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks">
+      <li class="m-hide"><a href="watchlist">Watchlist</a></li>
+      <li class="s-hide"><a href="account">Account</a></li>
+      <li><a class="keep" href="board">Today's board</a></li>
+    </ul>
+  </nav>
+</div>
+
+<main id="main" tabindex="-1">
+  <section class="sec wrap grid page-top" aria-labelledby="l-h">
+    <div class="c-l stack">
+      <h1 id="l-h" class="head">Verified leads</h1>
+      <p class="lead">Games whose owners have told us they'd sell, with numbers we've seen on their own Creator Dashboard.</p>
+    </div>
+    <div class="c-r stack">
+      <p>Tell us what you buy, below. When a game fits, we ask its owner whether they'd sell, check their numbers and add it here with their contact. Only you can see the leads we send you.</p>
+      <p class="small muted" id="l-who"></p>
+    </div>
+  </section>
+
+  <section class="sec wrap" aria-labelledby="ll-h">
+    <h2 id="ll-h" class="form-h">Your leads</h2>
+    <p class="small muted" id="l-status" aria-live="polite">Loading your leads.</p>
+    <div class="lead-list" id="l-list"></div>
+    <div class="signed-in" id="l-empty" hidden>
+      <p class="lead">No leads yet.</p>
+      <p>Fill in what you buy below. We'll send your first lead once we've found a game that fits and checked it with the owner.</p>
+    </div>
+  </section>
+
+  <section class="sec wrap grid" aria-labelledby="box-h">
+    <div class="c-l stack">
+      <h2 id="box-h" class="head">What you buy</h2>
+      <p>We use this to pick games for you, and you can change it any time. It's private: sellers and other buyers never see it.</p>
+    </div>
+    <div class="c-r">
+      <form class="form" id="box" novalidate>
+        <fieldset class="genre-set">
+          <legend>Genres <span class="opt">(leave them all unticked for any genre)</span></legend>
+          <div class="genre-checks" id="b-genres"></div>
+        </fieldset>
+        <div class="fields">
+          <div class="field"><label for="b-minp">Players online, at least</label><input id="b-minp" inputmode="numeric" autocomplete="off" placeholder="100"></div>
+          <div class="field"><label for="b-maxp">Players online, at most</label><input id="b-maxp" inputmode="numeric" autocomplete="off" placeholder="5,000"></div>
+          <div class="field"><label for="b-visits">Total visits, at most <span class="opt">(optional)</span></label><input id="b-visits" inputmode="numeric" autocomplete="off" placeholder="500,000"></div>
+          <div class="field"><label for="b-age">Game age in days, at most <span class="opt">(optional)</span></label><input id="b-age" inputmode="numeric" autocomplete="off" placeholder="90"></div>
+          <div class="field"><label for="b-rev">Revenue a month, at least <span class="opt">(US dollars)</span></label><input id="b-rev" inputmode="numeric" autocomplete="off" placeholder="1,000"></div>
+          <div class="field"><label for="b-price">Budget per game, up to <span class="opt">(US dollars)</span></label><input id="b-price" inputmode="numeric" autocomplete="off" placeholder="50,000"></div>
+          <div class="field">
+            <label for="b-deal">What you'd buy</label>
+            <select id="b-deal">
+              <option value="either">All or part</option>
+              <option value="all">All of it</option>
+              <option value="part">Part of it</option>
+            </select>
+          </div>
+          <div class="field"><label for="b-avoid">Anything you won't buy <span class="opt">(optional)</span></label><input id="b-avoid" maxlength="300" autocomplete="off" placeholder="No anime or copyrighted games"></div>
+          <div class="field full"><label for="b-notes">Anything else <span class="opt">(optional)</span></label><textarea id="b-notes" rows="3" maxlength="1000" placeholder="We have a live-ops team ready and prefer games under 60 days old."></textarea></div>
+        </div>
+        <div class="form-row">
+          <button class="button" type="submit">Save what you buy</button>
+          <span class="status" id="b-status" aria-live="polite"></span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="sec wrap grid" aria-labelledby="v-h">
+    <div class="c-l stack">
+      <h2 id="v-h" class="head">What verified means</h2>
+    </div>
+    <div class="c-r stack">
+      <ul class="plain-list verified-list">
+        <li><strong>The owner told us they'd sell,</strong> and said we could share their contact and numbers with you.</li>
+        <li><strong>We've seen their Creator Dashboard</strong> for the game, in a screen recording or live, and checked it against Roblox's public numbers.</li>
+        <li><strong>We take no cut of the deal.</strong> You talk to the owner directly, and we don't take part in the sale.</li>
+      </ul>
+      <p class="small muted">Verified isn't a guarantee. Recordings can be faked and games change fast, so check the numbers yourself before you pay, put the deal in writing and use escrow. See <a class="link" href="value#sale">how a sale works</a>.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <p><a class="link" href="account">Your account</a></p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <h2 class="foot-mail"><span class="sr-only">Email us at </span><a href="mailto:gautamuprasanna@gmail.com">gautamuprasanna<span class="at">@gmail.com</span></a></h2>
+  <div class="foot-copy"><button type="button" class="button" id="foot-copy">Copy email address</button><span class="status" id="foot-status" aria-live="polite"></span></div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent report. Not affiliated with, endorsed by or sponsored by Roblox Corporation.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var GENRES = ["Action", "Adventure", "Entertainment", "Obby & Platformer", "Party & Casual", "Puzzle", "Roleplay & Avatar Sim", "RPG", "Shooter", "Shopping", "Simulation", "Social", "Sports & Racing", "Strategy", "Survival"];
+  var DEALS = { either: "All or part", all: "All of it", part: "Part of it", unsure: "Not sure yet" };
+  var AGES = { adult: "18 or older", guardian: "Under 18, with a parent or guardian involved" };
+  var STATUS = { "new": "New", interested: "Interested", talking: "Talking to the owner", passed: "Passed", bought: "Bought it" };
+  var DEVEX = 0.0038;
+
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function commas(n) { return n == null || !isFinite(n) ? "–" : Math.round(n).toLocaleString("en-US"); }
+  function money(n) { return "$" + commas(n); }
+  function day(t) { return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+  function num(v) { var n = Math.round(Number(String(v || "").replace(/[,$\s]/g, ""))); return isFinite(n) && n > 0 ? n : null; }
+  function setNum(id, v) { $(id).value = v ? Math.round(v).toLocaleString("en-US") : ""; }
+  function api(path, body) {
+    return fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), credentials: "same-origin" } : { credentials: "same-origin" })
+      .then(function (r) { if (!r.ok) { var e = new Error("http"); e.status = r.status; throw e; } return r.json(); });
+  }
+  function external(a) { a.target = "_blank"; a.rel = "noopener noreferrer"; a.appendChild(el("span", "sr-only", " (opens in a new tab)")); return a; }
+
+  // ---------- what you buy ----------
+  GENRES.forEach(function (g, i) {
+    var lab = el("label", "check"), cb = el("input");
+    cb.type = "checkbox"; cb.value = g; cb.id = "g-" + i; lab.htmlFor = cb.id;
+    lab.appendChild(cb); lab.appendChild(document.createTextNode(g));
+    $("b-genres").appendChild(lab);
+  });
+
+  function fillBox(b) {
+    if (!b) return;
+    document.querySelectorAll("#b-genres input").forEach(function (cb) { cb.checked = (b.genres || []).indexOf(cb.value) >= 0; });
+    setNum("b-minp", b.minPlayers); setNum("b-maxp", b.maxPlayers); setNum("b-visits", b.maxVisits); setNum("b-age", b.maxAgeDays);
+    setNum("b-rev", b.minRevenue); setNum("b-price", b.maxPrice);
+    $("b-deal").value = DEALS[b.deal] && b.deal !== "unsure" ? b.deal : "either";
+    $("b-avoid").value = b.avoid || ""; $("b-notes").value = b.notes || "";
+  }
+  function readBox() {
+    return {
+      genres: Array.prototype.filter.call(document.querySelectorAll("#b-genres input"), function (cb) { return cb.checked; }).map(function (cb) { return cb.value; }),
+      minPlayers: num($("b-minp").value), maxPlayers: num($("b-maxp").value), maxVisits: num($("b-visits").value), maxAgeDays: num($("b-age").value),
+      minRevenue: num($("b-rev").value), maxPrice: num($("b-price").value), deal: $("b-deal").value,
+      avoid: $("b-avoid").value.trim(), notes: $("b-notes").value.trim()
+    };
+  }
+  $("box").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var b = readBox();
+    $("b-minp").removeAttribute("aria-invalid");
+    if (b.minPlayers && b.maxPlayers && b.minPlayers > b.maxPlayers) {
+      $("b-minp").setAttribute("aria-invalid", "true");
+      $("b-status").textContent = "The lowest player count is above the highest. Swap them and save again.";
+      $("b-minp").focus();
+      return;
+    }
+    $("b-status").textContent = "Saving.";
+    api("/api/buybox", b).then(function (j) { fillBox(j.box); $("b-status").textContent = "Saved. We'll use this to pick games for you."; })
+      .catch(function (err) { $("b-status").textContent = err.status === 401 ? "You've been signed out. Sign in again, then save." : "That didn't save. Try again in a minute."; });
+  });
+
+  // ---------- your leads ----------
+  function creatorUrl(type, id) { return !id ? "" : type === "Group" ? "https://www.roblox.com/communities/" + id : "https://www.roblox.com/users/" + id + "/profile"; }
+
+  function card(r) {
+    var a = el("article", "lead-card"); a.id = "lead-" + r.id;
+    var top = el("div", "lc-top");
+    var h = el("h3"), link = el("a", "link", r.name || "Unnamed game");
+    link.href = "https://www.roblox.com/games/" + r.pid; h.appendChild(external(link)); top.appendChild(h);
+    top.appendChild(el("p", "small muted", "Sent " + day(r.sent_at) + "." + (r.verified_at ? " Verified " + day(r.verified_at) + "." : "")));
+    if (r.lead_status === "sold") top.appendChild(el("p", "lc-note", "This game has since been sold."));
+    if (r.lead_status === "declined") top.appendChild(el("p", "lc-note", "The owner has since told us they aren't selling."));
+    a.appendChild(top);
+
+    var dl = el("dl", "lc-facts");
+    function fact(label, value, sub) {
+      var d = el("div"), dd = el("dd", null, value);
+      d.appendChild(el("dt", null, label)); if (sub) dd.appendChild(el("span", "sub", sub)); d.appendChild(dd); dl.appendChild(d); return dd;
+    }
+    r.playersEl = fact("Players now", "–", "live from Roblox");
+    if (r.revenue) fact("Robux earned, last 30 days", commas(r.revenue), "about " + money(r.revenue * DEVEX) + " at the DevEx rate");
+    if (r.peak) fact("Peak players, last 30 days", commas(r.peak));
+    fact("Asking price", r.asking || "Open to offers");
+    if (r.deal) fact("Would sell", DEALS[r.deal] || r.deal);
+    fact("Owner's age", AGES[r.owner_age] || "Not confirmed");
+    a.appendChild(dl);
+
+    var who = el("div", "lc-contact");
+    who.appendChild(el("h4", null, "Contact the owner"));
+    if (r.contact) who.appendChild(el("p", "lc-addr", r.contact));
+    else who.appendChild(el("p", "small muted", "The owner hasn't confirmed we can share their contact. Email us and we'll ask them again."));
+    var cu = creatorUrl(r.creator_type, r.creator_id);
+    if (cu) {
+      var o = el("p", "small"), ol = el("a", "link", r.creator || "Owner on Roblox");
+      ol.href = cu; o.appendChild(document.createTextNode("Owner on Roblox: ")); o.appendChild(external(ol));
+      if (r.creator_type) o.appendChild(document.createTextNode(" (" + (r.creator_type === "Group" ? "group" : "user") + ")"));
+      who.appendChild(o);
+    }
+    a.appendChild(who);
+
+    if (r.checked) { var ck = el("p", "lc-checked"); ck.appendChild(el("strong", null, "What we checked: ")); ck.appendChild(document.createTextNode(r.checked)); a.appendChild(ck); }
+    if (r.proof && /^https:\/\//i.test(r.proof)) { var pp = el("p"), pl = el("a", "link", "Open the dashboard recording"); pl.href = r.proof; pp.appendChild(external(pl)); a.appendChild(pp); }
+
+    var yours = el("div", "lc-yours");
+    var f1 = el("div", "field"), l1 = el("label", null, "Where you are"), sel = el("select");
+    sel.id = "s-" + r.id; l1.htmlFor = sel.id;
+    Object.keys(STATUS).forEach(function (k) { var op = el("option", null, STATUS[k]); op.value = k; sel.appendChild(op); });
+    sel.value = STATUS[r.status] ? r.status : "new";
+    f1.appendChild(l1); f1.appendChild(sel);
+    var f2 = el("div", "field"), l2 = el("label", null, "Your notes"), ta = el("textarea");
+    ta.id = "n-" + r.id; l2.htmlFor = ta.id; l2.appendChild(el("span", "opt", " (only you see these)")); ta.rows = 2; ta.maxLength = 2000; ta.value = r.note || "";
+    f2.appendChild(l2); f2.appendChild(ta);
+    var row = el("div", "form-row"), btn = el("button", "button quiet", "Save"), st = el("span", "status");
+    btn.type = "button"; st.setAttribute("aria-live", "polite");
+    btn.addEventListener("click", function () {
+      st.textContent = "Saving.";
+      api("/api/leads", { id: r.id, status: sel.value, note: ta.value }).then(function () { st.textContent = "Saved."; })
+        .catch(function (err) { st.textContent = err.status === 401 ? "You've been signed out. Sign in again, then save." : "That didn't save. Try again."; });
+    });
+    row.appendChild(btn); row.appendChild(st);
+    yours.appendChild(f1); yours.appendChild(f2); yours.appendChild(row);
+    a.appendChild(yours);
+    return a;
+  }
+
+  api("/api/me").then(function (m) { if (m.email) $("l-who").textContent = "Signed in as " + m.email + "."; }).catch(function () {});
+  api("/api/buybox").then(function (j) { fillBox(j.box); }).catch(function () {});
+  api("/api/leads").then(function (j) {
+    var rows = j.rows || [];
+    $("l-status").textContent = rows.length ? (rows.length === 1 ? "1 lead." : rows.length + " leads, newest first.") : "";
+    $("l-empty").hidden = !!rows.length;
+    rows.forEach(function (r) { $("l-list").appendChild(card(r)); });
+    if (!rows.length) return;
+    // Current players straight from Roblox. This needs active access; without it the cards keep a dash.
+    api("/api/live?u=" + rows.map(function (r) { return r.uid; }).join(",")).then(function (lv) {
+      rows.forEach(function (r) { var g = (lv.games || {})[r.uid]; if (g && r.playersEl) r.playersEl.firstChild.textContent = commas(g.players); });
+    }).catch(function () {});
+  }).catch(function () { $("l-status").textContent = "Your leads didn't load. Refresh the page to try again."; });
+})();
+</script>
+</body>
+</html>

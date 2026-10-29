@@ -679,3 +679,31 @@ th.r, td.r, .mini .r { text-align: right; }
 .tw-cols { padding-bottom: 1.8rem; }
 .tw-list { display: grid; gap: 0.9rem; padding-left: 1.2rem; max-width: 60ch; margin: 1rem 0 0; }
 .tw-table td a { font-weight: 600; }
+
+/* ---------- verified leads (/leads) and the selling form (/sell) ---------- */
+.lead-list { display: grid; gap: 1.25rem; margin-top: 1rem; }
+.lead-card { background: var(--surface); padding: clamp(1.25rem, 3vw, 2rem); display: grid; gap: 1.25rem; }
+.lead-card h3 { font-size: var(--step-lead); line-height: 1.2; }
+.lc-top { display: grid; gap: 0.35rem; }
+.lc-note { font-weight: 600; }
+.lc-facts { display: grid; gap: 1rem 1.25rem; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); margin: 0; }
+.lc-facts dt { font-size: var(--step-small); color: var(--muted); }
+.lc-facts dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lc-facts .sub { display: block; font-weight: 400; color: var(--muted); font-size: var(--step-small); }
+.lc-contact { display: grid; gap: 0.35rem; }
+.lc-contact h4 { font-size: var(--step-small); font-weight: 600; color: var(--muted); }
+.lc-addr { font-weight: 600; font-size: var(--step-lead); overflow-wrap: anywhere; user-select: all; }
+.lc-checked { max-width: 70ch; }
+.lead-card .button.quiet { background: var(--bg); }
+.lc-yours { display: grid; gap: 1rem; padding-top: 1.25rem; border-top: 1px solid var(--surface-2); }
+@media (min-width: 40em) {
+  .lc-yours { grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); align-items: start; }
+  .lc-yours .form-row { grid-column: 1 / -1; }
+}
+.genre-set, .age-set { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 0.5rem; }
+.genre-set legend, .age-set legend { font-weight: 600; font-size: var(--step-small); padding: 0; margin-bottom: 0.5rem; }
+.genre-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0 1rem; }
+.verified-list { gap: 0.9rem; max-width: 62ch; }
+.sell-steps { display: grid; gap: 0.75rem; padding-left: 1.25rem; margin: 0; max-width: 60ch; list-style: decimal; }
+.age-set .consent input { border-radius: 50%; }
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }

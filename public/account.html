@@ -74,6 +74,12 @@
         <p class="note">Forgot your password? Email <a class="link" href="mailto:gautamuprasanna@gmail.com?subject=Spawnbook%20password">gautamuprasanna@gmail.com</a> from the address you signed up with, and we'll send you a link to choose a new one.</p>
       </div>
 
+      <section class="signed-in" id="acct-leads" aria-labelledby="al-h" hidden>
+        <h2 class="form-h" id="al-h">Verified leads</h2>
+        <p>Tell us what you buy, and we'll send games whose owners have said they'd sell, with numbers we've checked.</p>
+        <p><a class="button" href="leads">Your leads</a></p>
+      </section>
+
       <section class="form refer" id="refer" aria-labelledby="ref-h" hidden>
         <h2 class="form-h" id="ref-h">Refer a buyer, get a month free</h2>
         <p>Share your link with another studio or fund. When someone signs up through it and becomes a paying subscriber, you get a free month. The numbers below count the people who signed up through your link.</p>
@@ -168,6 +174,7 @@
       if (!needCurrent) $("p-new-help").textContent = "At least 8 characters. With a password, you can sign in on any device.";
       $("cur-field").hidden = !needCurrent;
       show("pw-form");
+      show("acct-leads");
       show("signout");
       fetch("/api/referrals", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (rf) {
         if (!rf || !rf.link) return;
