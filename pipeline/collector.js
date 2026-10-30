@@ -2,7 +2,7 @@
    Runs in Node through pipeline/runner.mjs (GitHub Actions, daily), which gives it a window and a
    localStorage backed by the files in pipeline/state/. It reads Roblox's public chart lists and game
    stats, keeps a daily history (key "br.hist.v1"), scores young games and builds the board's data file.
-   v2 adds, for the 25 board games: rank change and days on the board, a 14-day player series, peak
+   v2 adds, for the board games (up to 50): rank change and days on the board, a 14-day player series, peak
    players, 1- and 7-day changes, developer products, servers, creator portfolio, content maturity
    and badges. v3 adds the track record (key "br.track.v1": each Monday's picks and the games that
    made the cut but weren't picked, read again at 1, 2, 4 and 8 weeks) and the weekly report
@@ -70,7 +70,7 @@ window.BRC = (function () {
         if (s.contentType !== "Games" || !s.games || !s.games.length) continue;
         lists++;
         var games = s.games.slice(), next = s.nextPageToken, extra = 0;
-        while (next && extra < 2) {
+        while (next && extra < 4) {
           try {
             var k = await getJSON("https://apis.roblox.com/explore-api/v1/get-sort-content?sessionId=" + sid + "&sortId=" + encodeURIComponent(s.sortId) + "&pageToken=" + encodeURIComponent(next) + "&device=computer&country=all");
             games = games.concat(k.games || []); next = k.nextPageToken;
@@ -609,10 +609,13 @@ window.BRC = (function () {
       });
     }
     scoreAll({});
-    var cands = pool.filter(function (r) { return !r.ip && !r.flags.length; }).sort(function (a, b) { return b.score - a.score; }).slice(0, 35);
+    // The board holds up to BOARD_MAX games, all scoring 55 or more. Owner and pass details are read
+    // for a few more than that, since they can move a game's score either way.
+    var BOARD_MAX = 50;
+    var cands = pool.filter(function (r) { return !r.ip && !r.flags.length; }).sort(function (a, b) { return b.score - a.score; }).slice(0, BOARD_MAX + 15);
     var extra = await enrich(cands.map(function (r) { return { uid: r.uid, cid: r.cid, ctype: r.ctype }; }));
     scoreAll(extra);
-    var board = pool.filter(function (r) { return !r.ip && !r.flags.length && r.score >= 55; }).sort(function (a, b) { return b.score - a.score || b.playing - a.playing; }).slice(0, 25);
+    var board = pool.filter(function (r) { return !r.ip && !r.flags.length && r.score >= 55; }).sort(function (a, b) { return b.score - a.score || b.playing - a.playing; }).slice(0, BOARD_MAX);
 
     var r1 = function (x) { return Math.round(x * 10) / 10; };
 

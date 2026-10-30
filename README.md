@@ -9,7 +9,8 @@ Everything the site serves is in `public/`:
 | File | What it is |
 | --- | --- |
 | `index.html` | The landing page: what Spawnbook is, a peek at today's top pick, and the sign-up form. |
-| `board.html` | The full daily board. Only signed-in visitors whose access hasn't run out can open it. |
+| `board.html` | The full daily board: up to 50 young games that score 55 or more. Open to members and to visitors on their free 24 hours. Has a search box that opens the lookup. |
+| `lookup.html` | Look up any Roblox game (`/lookup?q=<link, place ID or name>`): its numbers from Roblox right now, its trend from our daily record, an estimated price, and a plain-English list of what looks good, what to check first and what's worth knowing, with an overall read. Same access as the board. The work happens in `worker/lookup.js` (`/api/lookup`), which caches each game for 10 minutes. |
 | `data.js` | Today's board, picks and tables, replaced automatically every day. Gated like the board. |
 | `report.html`, `report.js` | The weekly report: each Monday's top 10, biggest movers, what's new and what fell off the board (with the reason), and how last week's picks did. Has an archive and a "Copy as an email" button. Signed-in visitors with access only. `report.js` is rebuilt every day. |
 | `trends.html` | "What's working on Roblox": a public, shareable write-up of the Oct 28, 2026 reading of Roblox's top 100 games (minus the 10 biggest), comparing hits launched in the last six months with young games that stayed small. Static; rebuilt by hand from a fresh reading. |
@@ -71,7 +72,7 @@ GitHub Actions runs `.github/workflows/daily.yml` once a day, at 21:33 UTC (2:33
 - `pipeline/last-run.json`, a summary of the run
 - on Mondays, that week's picks in `pipeline/state/picks/` and `pipeline/picks-log.csv`, and a new issue in `pipeline/state/report/report.json`
 
-For each game that makes the board, the run also reads its developer products, live servers, maturity rating and badges, and the creator's group or profile and other games. The board compares each day with the one before to show rank changes, days on the board, a 14-day player line, and how players, favorites and rating moved over a day and a week. If one of those extra sources fails, the board still updates and that part shows as missing.
+The board holds up to 50 games (`BOARD_MAX` in `collector.js`). For each game that makes the board, the run also reads its developer products, live servers, maturity rating and badges, and the creator's group or profile and other games. The board compares each day with the one before to show rank changes, days on the board, a 14-day player line, and how players, favorites and rating moved over a day and a week. If one of those extra sources fails, the board still updates and that part shows as missing.
 
 GitHub sometimes starts scheduled runs late or skips them, so the workflow also has two backup times, 23:07 and 00:41 UTC. A backup quits right away if that day's board is already out.
 

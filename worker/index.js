@@ -26,6 +26,9 @@
 //   GET  /api/watch         the signed-in member's watched games, with status and notes
 //   POST /api/watch         { action: "add" | "update" | "remove" | "seen", ... } as JSON
 //   GET  /api/live?u=1,2    current Roblox numbers for up to 100 games, cached for 5 minutes
+//   GET  /lookup            look up any Roblox game, same access as the board
+//   GET  /api/lookup?q=     a link, place ID or name (or ?u=<universe ID>): the game's public numbers
+//                           and a plain-English read of them (worker/lookup.js), cached 10 minutes a game
 //   GET  /leads             verified leads: any signed-in account, even after its access ends, so a
 //                           free lead still shows
 //   GET  /api/buybox        what the signed-in buyer buys (genres, players, budget...), for matching
@@ -44,6 +47,8 @@
 // creates on deploy, so there's no database to set up. Passwords are stored only as salted
 // PBKDF2 hashes, worked out inside the Durable Object, which has a much larger CPU allowance
 // than the Worker itself.
+
+import { lookup } from "./lookup.js";
 
 const FREE_MS = 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -84,6 +89,7 @@ export default {
       else if (path === "/api/buybox") res = await buybox(request, env);
       else if (path === "/api/leads") res = await myLeads(request, env);
       else if (path === "/api/sell") res = await sellForm(request, env);
+      else if (path === "/api/lookup") res = await lookupApi(request, env, url);
       else if (signedInPage(path)) res = await signedIn(request, env, url, signedInPage(path));
       else if (GATED_DATA.includes(path)) res = await gated(request, env, url, path);
       else if (gatedPage(path)) res = await gated(request, env, url, gatedPage(path));
@@ -245,7 +251,7 @@ function signedInPage(path) {
 }
 
 // Pages and data files that need a signed-in visitor whose access hasn't run out.
-const GATED_PAGES = ["/board", "/report", "/game", "/market", "/watchlist"];
+const GATED_PAGES = ["/board", "/report", "/game", "/market", "/watchlist", "/lookup"];
 const GATED_DATA = ["/data.js", "/report.js", "/history.js"];
 // "/board", "/board.html", "/board/anything" all mean the board page.
 function gatedPage(path) {
@@ -478,6 +484,20 @@ async function live(request, env, url) {
   const res = json({ at: Date.now(), games }, 200, "private, max-age=300");
   if (cache && Object.keys(games).length) await cache.put(key, new Response(JSON.stringify({ at: Date.now(), games }), { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "max-age=300" } }));
   return res;
+}
+
+// Look up any Roblox game: same access as the board (an active account, or a free pass that's still
+// running). The work is in worker/lookup.js.
+async function lookupApi(request, env, url) {
+  const s = await session(request, env);
+  if (s) {
+    if (s.until <= Date.now()) return json({ error: "subscribe" }, 403);
+  } else {
+    const t = await readTrial(request, env);
+    if (!t) return json({ error: "signin" }, 401);
+    if (!t.active) return json({ error: "subscribe" }, 403);
+  }
+  return lookup(env, url);
 }
 
 // ---------- verified leads ----------

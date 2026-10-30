@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Look up a game | Spawnbook</title>
+<meta name="robots" content="noindex">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to the search</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks">
+      <li class="m-hide"><a href="market">Market</a></li>
+      <li class="s-hide"><a href="watchlist">Watchlist</a></li>
+      <li><a class="keep" href="board">Today's board</a></li>
+    </ul>
+  </nav>
+</div>
+
+<p class="access-note wrap small" id="access-note" role="status" hidden></p>
+
+<main id="main" tabindex="-1">
+  <section class="sec wrap page-top lk-top" aria-labelledby="lk-h">
+    <h1 id="lk-h" class="lk-h"><label for="lk-q">Look up any Roblox game. Paste its link or type its name, and we'll read its numbers and tell you what they mean.</label></h1>
+    <form class="lk-form" id="lk-form" role="search" action="lookup" method="get" novalidate>
+      <div class="lk-line" data-ui>
+        <input id="lk-q" name="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="200" enterkeyhint="search" placeholder="Game name or link" aria-describedby="lk-help">
+      </div>
+      <button class="button" type="submit" id="lk-go">Look it up</button>
+    </form>
+    <p class="small muted" id="lk-help">A link like roblox.com/games/123…, a place ID, or the game's name all work.</p>
+    <div class="examples" id="lk-try" hidden><span class="lbl">Try today's top games</span></div>
+  </section>
+
+  <p class="wrap lk-status" id="lk-status" role="status" aria-live="polite"></p>
+  <div id="lk-out"></div>
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent report. Not affiliated with, endorsed by or sponsored by Roblox Corporation. Prices are estimates from public numbers, not offers or appraisals.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script>
+(function () {
+  var $ = SB.$;
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function trim(v) { var s = v >= 100 ? v.toFixed(0) : v.toFixed(1); return s.indexOf(".") >= 0 ? s.replace(/0+$/, "").replace(/\.$/, "") : s; }
+  function short(n) {
+    n = Number(n) || 0;
+    if (n >= 999.5e6) return trim(n / 1e9) + "B";
+    if (n >= 999.5e3) return trim(n / 1e6) + "M";
+    if (n >= 1e4) return Math.round(n / 1e3) + "K";
+    if (n >= 1e3) return trim(n / 1e3) + "K";
+    return String(Math.round(n));
+  }
+  function money(x) {
+    if (!isFinite(x) || x <= 0) return "$0";
+    if (x >= 999.5e6) return "$" + trim(x / 1e9) + "B";
+    if (x >= 999.5e3) return "$" + trim(x / 1e6) + "M";
+    if (x >= 1e3) return "$" + Math.round(x / 1e3) + "K";
+    return "$" + Math.round(x);
+  }
+  function commas(n) { return Math.round(Number(n) || 0).toLocaleString("en-US"); }
+  function dateLabel(s) { var d = new Date(s.length === 10 ? s + "T12:00:00" : s); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric" }); }
+  var NEWTAB = " (opens in a new tab)";
+  function extLink(text, href) { var a = el("a", "link", text); a.href = href; a.target = "_blank"; a.rel = "noopener"; a.dir = "auto"; a.appendChild(el("span", "sr-only", NEWTAB)); return a; }
+
+  var form = $("lk-form"), input = $("lk-q"), out = $("lk-out"), status = $("lk-status");
+  var busy = false;
+
+  // ---------- running a lookup ----------
+  function run(params, push) {
+    if (busy) return;
+    var qs = new URLSearchParams(params).toString();
+    if (push && history.pushState) history.pushState(params, "", "lookup?" + qs);
+    busy = true;
+    form.setAttribute("aria-busy", "true");
+    $("lk-go").disabled = true;
+    out.textContent = "";
+    status.classList.remove("sr-only");
+    status.textContent = "Reading Roblox. This takes a few seconds…";
+    fetch("/api/lookup?" + qs, { credentials: "same-origin" })
+      .then(function (r) { return r.json().catch(function () { return { error: "roblox" }; }); })
+      .then(function (d) { if (d.error) showError(d, params); else showGame(d); })
+      .catch(function () { showError({ error: "network" }, params); })
+      .then(function () { busy = false; form.removeAttribute("aria-busy"); $("lk-go").disabled = false; });
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var q = input.value.trim();
+    if (!q) { status.classList.remove("sr-only"); status.textContent = "Type a game's name or paste its Roblox link."; input.focus(); return; }
+    run({ q: q }, true);
+  });
+  window.addEventListener("popstate", function () { fromUrl(); });
+  function fromUrl() {
+    var p = new URLSearchParams(location.search);
+    if (p.get("u")) { run({ u: p.get("u") }, false); }
+    else if (p.get("q")) { input.value = p.get("q"); run({ q: p.get("q") }, false); }
+    else { out.textContent = ""; status.textContent = ""; }
+  }
+
+  function pickList(list, intro) {
+    var box = el("div", "lk-pick");
+    if (intro) box.appendChild(el("p", null, intro));
+    var ul = el("ul", "lk-pick-list");
+    list.forEach(function (o) {
+      var li = el("li");
+      var b = el("button", "lk-pick-b"); b.type = "button";
+      b.appendChild(el("span", "n", o.name));
+      b.appendChild(el("span", "s", (o.as ? o.as + ". " : "") + commas(o.players) + " playing" + (o.creator ? ". By " + o.creator : "")));
+      b.addEventListener("click", function () { input.value = o.name; run({ u: o.uid }, true); });
+      li.appendChild(b); ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    return box;
+  }
+
+  function showError(d, params) {
+    var q = params.q || "";
+    var msgs = {
+      empty: "Type a game's name or paste its Roblox link.",
+      share: "Share links only open for people signed in to Roblox. Open the link, then copy the address of the game's page (it has /games/ in it) and paste that here.",
+      badlink: "That link isn't a Roblox game page. Paste a link with roblox.com/games/ in it, or type the game's name.",
+      notfound: d.kind === "name" ? "Nothing on Roblox matched “" + q + "”. Check the spelling, or paste the game's link instead." : "Roblox doesn't have a public game at that " + (d.kind === "link" ? "link" : "ID") + ". It may be private or deleted.",
+      roblox: "Roblox didn't answer just now. Try again in a minute.",
+      network: "We couldn't reach Spawnbook. Check your connection and try again.",
+      signin: "Looking up games is part of the board. Open today's board to start your free 24 hours, or sign in.",
+      subscribe: "Your access has ended, so lookups are off. Subscribe to keep the board and lookups.",
+      choose: d.kind === "both" ? "That number is the ID of two different games: one as a place ID (the number in a game's link) and one as a universe ID. Which one?" : "No game is called exactly “" + q + "”. Here's what Roblox found. Pick one:"
+    };
+    status.textContent = "";
+    var box = el("div", "wrap lk-msg");
+    if (d.error === "choose") { box.appendChild(pickList(d.others || [], msgs.choose)); }
+    else {
+      box.appendChild(el("p", "lead", msgs[d.error] || msgs.roblox));
+      if (d.error === "signin" || d.error === "subscribe") {
+        var a = el("a", "button", d.error === "signin" ? "Open today's board" : "See pricing"); a.href = d.error === "signin" ? "board" : "subscribe";
+        var p = el("p"); p.appendChild(a); box.appendChild(p);
+      }
+    }
+    out.appendChild(box);
+    status.classList.add("sr-only");
+    status.textContent = d.error === "choose" ? (d.kind === "both" ? "Two games match that number." : "No exact match. " + (d.others || []).length + " possible games listed.") : (msgs[d.error] || msgs.roblox);
+  }
+
+  // ---------- showing a game ----------
+  function sparkline(series) {
+    if (!series || series.length < 2) return null;
+    var w = 120, h = 32, ys = series.map(function (s) { return s[1]; });
+    var lo = Math.min.apply(null, ys), hi = Math.max.apply(null, ys), span = hi - lo || 1;
+    var pts = ys.map(function (y, i) { return [i / (ys.length - 1) * (w - 6) + 3, h - 3 - (y - lo) / span * (h - 6)]; });
+    var ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 " + w + " " + h); svg.setAttribute("class", "lk-spark"); svg.setAttribute("aria-hidden", "true"); svg.setAttribute("focusable", "false");
+    var path = document.createElementNS(ns, "path");
+    path.setAttribute("d", pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" "));
+    svg.appendChild(path);
+    var dot = document.createElementNS(ns, "circle"); var l = pts[pts.length - 1];
+    dot.setAttribute("cx", l[0]); dot.setAttribute("cy", l[1]); dot.setAttribute("r", 3); svg.appendChild(dot);
+    return svg;
+  }
+
+  function tile(dl, label, value, sub, extra) {
+    var d = el("div", "tile");
+    d.appendChild(el("dt", null, label));
+    var dd = el("dd", null, value); if (extra) dd.appendChild(extra); d.appendChild(dd);
+    if (sub) d.appendChild(el("p", "tile-sub", sub));
+    dl.appendChild(d);
+  }
+
+  function points(title, list, cls) {
+    var col = el("section", "lk-col " + cls);
+    var h = el("h3", "lk-col-h", title); col.appendChild(h);
+    if (!list.length) { col.appendChild(el("p", "muted", cls === "lk-check" ? "Nothing stood out. Still play it and talk to the owner before you offer." : "Nothing stood out here.")); return col; }
+    var ul = el("ul", "lk-pts");
+    list.forEach(function (p) {
+      var li = el("li");
+      li.appendChild(el("strong", null, p.title));
+      li.appendChild(el("span", null, p.text));
+      ul.appendChild(li);
+    });
+    col.appendChild(ul);
+    return col;
+  }
+
+  function group(title, rows) {
+    rows = rows.filter(Boolean);
+    if (!rows.length) return null;
+    var g = el("div", "lk-group");
+    g.appendChild(el("h4", null, title));
+    var dl = el("dl");
+    rows.forEach(function (r) {
+      var row = el("div");
+      row.appendChild(el("dt", null, r[0]));
+      var dd = el("dd");
+      if (r[1] instanceof Node) dd.appendChild(r[1]); else dd.textContent = r[1];
+      if (r[2]) dd.appendChild(el("span", "why", r[2]));
+      row.appendChild(dd); dl.appendChild(row);
+    });
+    g.appendChild(dl);
+    return g;
+  }
+
+  var VERDICT = { "Worth a closer look": "go", "Check first": "stop", "Mixed": "mixed", "Probably a pass": "pass", "Not what we look for": "pass" };
+
+  function showGame(d) {
+    var g = d.game, n = d.numbers, m = d.money, o = d.owner || {}, b = d.board || {};
+    status.textContent = "";
+    document.title = g.name + " | Look up | Spawnbook";
+    var sec = el("article", "sec wrap lk-res");
+    sec.setAttribute("aria-labelledby", "lk-name");
+
+    // Head: icon, name, who and when, links.
+    var head = el("div", "lk-head");
+    if (d.icon) { var img = el("img", "lk-icon"); img.src = d.icon; img.alt = ""; img.width = 112; img.height = 112; head.appendChild(img); }
+    var hb = el("div", "lk-head-b");
+    var h2 = el("h2", "g-title", g.name); h2.id = "lk-name"; h2.tabIndex = -1; h2.dir = "auto"; hb.appendChild(h2);
+    var who = (o.name ? "by " + o.name + ". " : "") + (g.genre2 || g.genre ? (g.genre2 || g.genre) + ". " : "") + "Launched " + dateLabel(g.created) + ", " + commas(g.age) + (g.age === 1 ? " day" : " days") + " ago.";
+    hb.appendChild(el("p", "g-meta", who));
+    var links = el("p", "g-links");
+    links.appendChild(extLink("Open on Roblox", g.url));
+    if (o.type === "Group") links.appendChild(extLink("Group page", "https://www.roblox.com/communities/" + o.id));
+    else if (o.type === "User") links.appendChild(extLink("Owner's profile", "https://www.roblox.com/users/" + o.id + "/profile"));
+    if (b.tracked) { var ga = el("a", "link", "Charts on Spawnbook"); ga.href = "game?u=" + g.uid; links.appendChild(ga); }
+    hb.appendChild(links);
+    head.appendChild(hb);
+    sec.appendChild(head);
+
+    // The call.
+    var v = el("div", "lk-verdict v-" + (VERDICT[d.verdict.call] || "mixed"));
+    v.appendChild(el("p", "lk-call-lbl", "Our read"));
+    v.appendChild(el("p", "lk-call", d.verdict.call));
+    v.appendChild(el("p", "lk-why", d.verdict.line));
+    sec.appendChild(v);
+
+    // Key numbers.
+    var tiles = el("dl", "tiles lk-tiles");
+    var pw = n.playersWeek;
+    tile(tiles, "Players right now", commas(g.players), pw ? (pw.change >= 0 ? "+" : "") + pw.change + "% over " + pw.days + " days at our daily readings" : null, sparkline(n.record && n.record.series));
+    tile(tiles, "Visits a day", short(n.perDay), n.basis === "week" ? "Average over the past " + n.basisDays + " days" : n.basis === "day" ? "Since our last daily reading" : "Lifetime average. We haven't tracked it");
+    tile(tiles, "Rating", g.rating != null ? g.rating + "%" : "–", commas(g.up + g.down) + " votes");
+    tile(tiles, "Estimated price", "About " + money(m.fair[1]), money(m.fair[0]) + " to " + money(m.fair[2]) + ". Low confidence");
+    tile(tiles, "Spawnbook board", b.rank ? "#" + b.rank + ", score " + b.score : "Not on it today", b.rank ? (b.days > 1 ? b.days + " days running" : "New today") : b.tracked ? "In our daily record" : "Not in our daily record");
+    sec.appendChild(tiles);
+
+    // The read.
+    var cols = el("div", "lk-cols");
+    cols.appendChild(points("What looks good", d.points.good, "lk-good"));
+    cols.appendChild(points("Check first", d.points.check, "lk-check"));
+    sec.appendChild(cols);
+    if (d.points.know.length) sec.appendChild(points("Worth knowing", d.points.know, "lk-know"));
+
+    // The numbers behind it.
+    var det = el("details", "num-details lk-numbers");
+    det.appendChild(el("summary", null, "Show the numbers behind it"));
+    var grid = el("div", "lk-groups");
+    var pr = m.passes, pd = m.products, sv = d.servers, mt = d.maturity;
+    var range = function (x) { return x && x.n ? (x.min === x.max ? commas(x.min) : commas(x.min) + " to " + commas(x.max)) + " Robux" : null; };
+    [
+      group("Growth", [
+        ["Visits a day", short(n.perDay), n.basis === "lifetime" ? "Lifetime average" : n.basis === "week" ? "Over the past " + n.basisDays + " days" : "Since our last reading"],
+        n.basis !== "lifetime" ? ["Lifetime average", short(n.lifetimePerDay) + " a day", n.accel != null ? "Now " + n.accel + "× that" : null] : null,
+        ["Total visits", commas(g.visits)],
+        pw ? ["Players at our readings", commas(pw.from) + " → " + commas(pw.to), (pw.change >= 0 ? "+" : "") + pw.change + "% over " + pw.days + " days"] : null,
+        n.record && n.record.peak ? ["Most players we've seen", commas(n.record.peak.players), "On " + dateLabel(n.record.peak.date) + ". In our record since " + dateLabel(n.record.since)] : null
+      ]),
+      group("Players and engagement", [
+        ["Minutes per visit", n.minutesPerVisit != null ? "About " + trim(n.minutesPerVisit) : "–", "Estimate. GameAnalytics' median is 6.6; the top quarter starts at 14.5" + (n.boardMedian.minutesPerVisit ? ". Today's board: " + trim(n.boardMedian.minutesPerVisit) : "")],
+        ["Favorites", commas(g.favorites), trim(n.favPer1k) + " per 1,000 visits" + (n.boardMedian.favPer1k ? ". Today's board: " + trim(n.boardMedian.favPer1k) : "")],
+        ["Votes", commas(g.up + g.down), trim(n.votesPer1k) + " per 1,000 visits. " + commas(g.up) + " up, " + commas(g.down) + " down"],
+        ["Last updated", dateLabel(g.updated), g.hoursSinceUpdate < 48 ? g.hoursSinceUpdate + " hours ago" : Math.round(g.hoursSinceUpdate / 24) + " days ago"]
+      ]),
+      group("Money", [
+        ["Game passes", pr ? commas(pr.n) + (pr.more ? "+" : "") : "Couldn't read", range(pr)],
+        ["Developer products", pd ? commas(pd.n) + (pd.more ? "+" : "") : "Couldn't read", range(pd)],
+        ["Revenue a month", money(m.revenue[0]) + " to " + money(m.revenue[2]), "Estimate: " + short(n.perDay) + " visits a day at $0.004 to $0.012 a visit"],
+        ["Estimated price", money(m.fair[0]) + " to " + money(m.fair[2]), m.months + " months of revenue. " + (m.shape === "staircase" ? "Its genre usually holds players for months" : "Trend and simulator games tend to fade faster")]
+      ]),
+      group("Owner", [
+        ["Owned by", o.type === "Group" ? "A group: " + o.name : o.type === "User" ? "A personal account: " + o.name : "–", o.verified ? "Has Roblox's verified badge" : null],
+        o.owner ? ["Group owner", extLink(o.owner.name, "https://www.roblox.com/users/" + o.owner.id + "/profile"), "The Roblox account that controls the group"] : null,
+        o.members != null ? ["Group members", commas(o.members)] : null,
+        o.games != null ? ["Public games", (o.moreGames ? "50+" : commas(o.games)), o.topOther ? "Biggest other: " + o.topOther.name + ", " + short(o.topOther.visits) + " visits" : o.games === 1 ? "This is the only one" : null] : null
+      ]),
+      group("Servers and audience", [
+        g.maxPlayers ? ["Players per server", "Up to " + g.maxPlayers] : null,
+        sv && sv.counted ? ["Servers running", (sv.complete ? "" : "At least ") + commas(sv.atLeast), "About " + trim(sv.avg) + " players each" + (sv.complete ? "" : ", in the fullest 100")] : null,
+        mt ? ["Age guidance", mt.name || "–", mt.minAge ? "For " + mt.minAge + " and over" : null] : null,
+        g.paid ? ["Costs to play", commas(g.paid) + " Robux"] : null
+      ])
+    ].forEach(function (x) { if (x) grid.appendChild(x); });
+    det.appendChild(grid);
+    sec.appendChild(det);
+
+    sec.appendChild(el("p", "small muted lk-src", "Players, visits, votes, passes, products, owner and servers are read from Roblox's public data just now (saved for up to 10 minutes). Trends come from our daily readings" + (d.dataDate ? ", the last on " + dateLabel(d.dataDate) : "") + ". Minutes per visit, revenue and price are our estimates, worked out the same way as on the board."));
+
+    if (d.others && d.others.length) {
+      var oth = el("section", "lk-others");
+      oth.appendChild(el("h3", "lk-col-h", "Not the one you meant?"));
+      oth.appendChild(pickList(d.others));
+      sec.appendChild(oth);
+    }
+
+    out.appendChild(sec);
+    status.classList.add("sr-only");
+    status.textContent = "Found " + g.name + ". Our read: " + d.verdict.call + ".";
+    h2.focus({ preventScroll: true });
+    var top = sec.getBoundingClientRect().top + window.scrollY - 90;
+    if (window.scrollY < top - 200 || window.scrollY > top + 200) window.scrollTo({ top: Math.max(0, top), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+
+  // ---------- examples and access ----------
+  fetch("/api/lookup?examples=1", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (x) {
+    if (!x || !x.examples || !x.examples.length) return;
+    var box = $("lk-try");
+    x.examples.forEach(function (name) {
+      var b = el("button", null, name); b.type = "button"; b.dir = "auto";
+      b.addEventListener("click", function () { input.value = name; run({ q: name }, true); });
+      box.appendChild(b);
+    });
+    box.hidden = false;
+  }).catch(function () {});
+
+  fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+    if (!m || m.access !== "none" || !m.trial || !m.trial.active) return;
+    var until = new Date(m.trial.until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+    var pn = $("access-note");
+    pn.appendChild(el("strong", null, "Free pass: "));
+    pn.appendChild(document.createTextNode("look up games and see the full board until " + until + ". "));
+    var sa = el("a", "link", "Subscribe for $500 a month"); sa.href = "subscribe"; pn.appendChild(sa);
+    pn.appendChild(document.createTextNode(" to keep both."));
+    pn.hidden = false;
+  }).catch(function () {});
+
+  fromUrl();
+})();
+</script>
+</body>
+</html>

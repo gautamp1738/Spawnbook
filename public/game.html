@@ -19,6 +19,7 @@
     <ul class="navlinks">
       <li class="m-hide"><a href="market">Market</a></li>
       <li class="s-hide"><a href="watchlist">Watchlist</a></li>
+      <li class="s-hide"><a href="lookup">Look up</a></li>
       <li><a class="keep" href="board">Today's board</a></li>
     </ul>
   </nav>
@@ -130,8 +131,10 @@
   if (!g) {
     $("g-h").textContent = "We don't track this game";
     var m = $("g-missing"); m.hidden = false;
-    m.appendChild(el("p", "lead", "We keep daily readings for young games on Roblox's chart lists, and for every game we've picked. This one isn't among them."));
-    var p = el("p"); var a = el("a", "button quiet", "Back to the board"); a.href = "board"; p.appendChild(a); m.appendChild(p);
+    m.appendChild(el("p", "lead", "We keep daily readings for young games on Roblox's chart lists, and for every game we've picked. This one isn't among them, but you can still look up its numbers today."));
+    var p = el("p", "form-row");
+    if (uid || pid) { var lk = el("a", "button", "Look it up instead"); lk.href = uid ? "lookup?u=" + uid : "lookup?q=" + pid; p.appendChild(lk); }
+    var a = el("a", "button quiet", "Back to the board"); a.href = "board"; p.appendChild(a); m.appendChild(p);
     return;
   }
 

@@ -20,6 +20,7 @@
       <li><a href="#picks">Picks</a></li>
       <li class="s-hide"><a href="#board">Board</a></li>
       <li><a href="report">Weekly report</a></li>
+      <li class="m-hide"><a href="lookup">Look up</a></li>
       <li class="m-hide"><a href="market">Market</a></li>
       <li class="m-hide"><a href="watchlist">Watchlist</a></li>
       <li class="m-hide"><a href="leads">Leads</a></li>
@@ -55,6 +56,13 @@
       <a class="button" href="#picks">See today's picks</a>
       <a class="plainlink" href="#requests" data-tab="tab-weekly">Get your first issue free</a>
     </div>
+    <form class="lk-mini" action="lookup" method="get" role="search" data-load style="--d:560ms">
+      <div class="field">
+        <label for="lk-mini-q">Look up any Roblox game</label>
+        <input id="lk-mini-q" name="q" type="search" placeholder="Paste its link or type its name" autocomplete="off" spellcheck="false" maxlength="200" enterkeyhint="search">
+      </div>
+      <button class="button quiet" type="submit">Look it up</button>
+    </form>
   </div>
 </header>
 
@@ -525,7 +533,7 @@
 <dialog class="pass" id="pass" aria-labelledby="pass-h">
   <div class="pass-in">
     <h2 id="pass-h" class="pass-h">Your free 24 hours have started</h2>
-    <p>You have the full board until <strong id="pass-until">this time tomorrow</strong>: every pick with its score, estimated price and red flags, plus game pages, the market view and the weekly report. No sign-up needed.</p>
+    <p>You have the full board until <strong id="pass-until">this time tomorrow</strong>: every pick with its score, estimated price and red flags, plus lookups for any Roblox game, game pages, the market view and the weekly report. No sign-up needed.</p>
     <div class="pass-act"><button type="button" class="button" data-close>Start exploring</button></div>
     <p class="small muted">Want to save games to a watchlist? <a class="link" href="/#signup">Create a free account</a>.</p>
   </div>
