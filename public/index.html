@@ -85,8 +85,8 @@
         </dl>
         <p class="t-more" id="t-more">Open the board to see which game it is, plus the rest of today's board with prices and red flags.</p>
       </figure>
-      <p data-reveal style="--i:2"><a class="button" href="board" id="teaser-cta">Open today's board free</a></p>
-      <p class="small muted" data-reveal style="--i:2">Free for 24 hours. No sign-up, no card.</p>
+      <p data-reveal style="--i:2" id="teaser-cta-row"><a class="button" href="board" id="teaser-cta">Open today's board free</a></p>
+      <p class="small muted" data-reveal style="--i:2" id="teaser-free">Free for 24 hours. No sign-up, no card.</p>
     </div>
 
     <div class="c-r" data-reveal style="--i:1">
@@ -294,6 +294,9 @@
     $("signup-form").hidden = true;
     $("signed-in").hidden = false;
     $("nav-signin").hidden = true;
+    // Account holders don't need the free-pass offer: the signed-in card next to it has their button.
+    $("teaser-cta-row").hidden = true;
+    $("teaser-free").hidden = true;
     $("signed-in-who").textContent = "Signed in as " + m.email + ".";
     if (!m.hasPassword) $("signed-in-pw").hidden = false;
     if (m.access === "active") {
@@ -302,6 +305,8 @@
       $("hero-cta").textContent = "Open today's board";
       $("hero-cta").href = "board";
     } else {
+      $("hero-cta").textContent = "See pricing";
+      $("hero-cta").href = "subscribe";
       $("signed-in-text").textContent = "Your free day is over. Subscribe to keep seeing the board every day.";
       $("signed-in-link").textContent = "See pricing";
       $("signed-in-link").href = "subscribe";
