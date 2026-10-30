@@ -434,7 +434,7 @@ function analyse(ctx) {
     else add(know, 20, "#" + niche.rank + " of " + niche.of + " in its genre", "Among " + niche.genre + " games under six months old on Roblox's charts today, by players right now.");
   }
   const where = inToday ? whereFrom(ex.s, g.genre_l1) : [];
-  const onTE = where.find((w) => w[2] === "te"), pushed = where.filter((w) => (w[2] === "uc" && w[1] <= 50) || (w[2] === "g" && w[1] <= 10) || (w[2] === "rv" && w[1] <= 50));
+  const onTE = where.find((w) => w[2] === "te" && w[1] <= 150), pushed = where.filter((w) => (w[2] === "uc" && w[1] <= 50) || (w[2] === "g" && w[1] <= 10) || (w[2] === "rv" && w[1] <= 50));
   if (onTE) add(good, 55, "On Top Earning (#" + onTE[1] + ")", "Roblox lists it among its top-earning games today, so it's already making real money, not just drawing players.");
   if (pushed.length) add(good, 45, "Roblox is sending it players", "Today it's on " + pushed.map((w) => w[0] + " (#" + w[1] + ")").join(" and ") + ". Those lists bring free, organic traffic.");
   else if (inToday && where.length && !onTE) add(know, 15, "Where players find it", "Today it's on " + where.slice(0, 3).map((w) => w[0] + " (#" + w[1] + ")").join(", ") + ".");

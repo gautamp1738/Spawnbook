@@ -791,3 +791,4 @@ th.r, td.r, .mini .r { text-align: right; }
 .lk-mini .field { flex: 1 1 16rem; }
 .g-sig dl { grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem 2rem; }
 .g-sig-more { margin-top: 1.25rem; }
+.g-sig dd { font-size: var(--step-body); line-height: 1.35; }
