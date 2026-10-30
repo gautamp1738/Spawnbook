@@ -61,6 +61,32 @@ window.BRC = (function () {
   var AFK = /afk|donate|pls |ugc/i;
   var CUE = /upd|update|world ?2|ch ?2|v3|new|🎃|season|halloween|release|event/i;
   function ipOf(name) { for (var i = 0; i < IP.length; i++) if (IP[i][0].test(name)) return IP[i][1]; return null; }
+  function upMin(g) { var t = Date.parse(g && g.updated); return isFinite(t) ? Math.round(t / 60000) : 0; }
+  // Roblox's chart lists, shortened for the published files. "g" is "Trending in <the game's genre>".
+  var SORT_CODE = { "top-trending": "tt", "up-and-coming": "uc", "top-playing-now": "pn", "fun-with-friends": "ff", "top-revisited": "rv", "top-earning": "te", "top-paid-access": "pa", "top-rated": "tr", "most-popular": "mp" };
+  function sortCodes(s) {
+    var o = {};
+    Object.keys(s || {}).forEach(function (k) {
+      var c = SORT_CODE[k] || (k.indexOf("trending-in-") === 0 && k !== "trending-in-music" ? "g" : null);
+      if (c && (!o[c] || s[k] < o[c])) o[c] = s[k];
+    });
+    return o;
+  }
+  // A game's update record from the daily readings: how many of the gaps between readings had an
+  // update in them, and how players moved after each rename (studios rename for big updates).
+  function updRecord(uid, snaps, nh) {
+    var rows = snaps.filter(function (s) { return s.g[uid]; }).slice(-15).map(function (s) { var a = s.g[uid]; return { t: Date.parse(s.t), d: s.d, p: a[1], u: a[5] ? a[5] * 60000 : 0 }; });
+    var withU = rows.filter(function (r) { return r.u; });
+    var changed = 0;
+    for (var i = 1; i < withU.length; i++) if (withU[i].u > withU[i - 1].u + 90 * 60000) changed++;
+    var renames = (nh || []).slice(-3).map(function (x) {
+      var before = rows.filter(function (r) { return r.d < x[0]; }).pop();
+      var after = rows.filter(function (r) { return r.d >= x[0]; });
+      var last = after[after.length - 1];
+      return [x[0], x[1], before ? before.p : null, last ? last.p : null, before && last ? Math.round((last.t - before.t) / 864e5) : null];
+    });
+    return { gaps: Math.max(0, withU.length - 1), changed: changed, renames: renames };
+  }
 
   async function collect(now) {
     var sid = crypto.randomUUID(), sorts = {}, tok = "", lists = 0;
@@ -486,7 +512,11 @@ window.BRC = (function () {
     var idx = loadJSON(INDEX, {}), today = pDate(now);
     games.forEach(function (g) {
       if (!g || !g.id) return;
-      idx[g.id] = { n: g.name, p: g.rootPlaceId, g: g.genre_l1 || (idx[g.id] && idx[g.id].g) || "", g2: g.genre_l2 || (idx[g.id] && idx[g.id].g2) || "",
+      // Renames, newest last: [the date we first saw the new name, the new name]. Studios often rename
+      // for a big update ("[UPD 2]", "PART 2"), so these mark the updates worth measuring.
+      var prev = idx[g.id], nh = prev && prev.nh ? prev.nh.slice() : [];
+      if (prev && prev.n && prev.n !== g.name) { nh.push([today, g.name]); if (nh.length > 8) nh = nh.slice(-8); }
+      idx[g.id] = { nh: nh.length ? nh : undefined, n: g.name, p: g.rootPlaceId, g: g.genre_l1 || (idx[g.id] && idx[g.id].g) || "", g2: g.genre_l2 || (idx[g.id] && idx[g.id].g2) || "",
         c: (g.creator && g.creator.name) || "", ct: g.creator && g.creator.type, ci: g.creator && g.creator.id, cr: String(g.created || "").slice(0, 10), ls: today };
     });
     var cutoff = new Date(now.getTime() - 130 * 864e5).toISOString().slice(0, 10);
@@ -495,12 +525,18 @@ window.BRC = (function () {
     return idx;
   }
 
-  function historyPublic(now, hist, idx) {
+  function historyPublic(now, hist, idx, sorts, niche) {
     var snaps = hist.snaps.slice(-60);
-    var onBoard = {}, series = {};
+    var onBoard = {}, series = {}, last = snaps.length - 1;
     snaps.forEach(function (s, di) {
       (s.b || []).forEach(function (u) { onBoard[u] = 1; });
-      Object.keys(s.g).forEach(function (u) { var a = s.g[u]; (series[u] = series[u] || []).push([di, a[1], a[0], a[3], a[4]]); });
+      var t = Date.parse(s.t);
+      Object.keys(s.g).forEach(function (u) {
+        var a = s.g[u], r = [di, a[1], a[0], a[3], a[4]];
+        // Hours between the game's last update and this reading, when we know it.
+        if (a[5]) r.push(Math.max(0, Math.round((t - a[5] * 60000) / 36e5)));
+        (series[u] = series[u] || []).push(r);
+      });
     });
     var games = {};
     Object.keys(series).forEach(function (u) {
@@ -508,7 +544,12 @@ window.BRC = (function () {
       if (!m) return;
       var peak = 0; sr.forEach(function (x) { if (x[1] > peak) peak = x[1]; });
       if (peak < 300 && !onBoard[u]) return;
+      var ex = {}, sc = sortCodes(sorts && sorts[u]);
+      if (m.nh) ex.nh = m.nh;
+      if (sr[sr.length - 1][0] === last && Object.keys(sc).length) ex.s = sc;
+      if (sr[sr.length - 1][0] === last && niche && niche[u]) ex.k = niche[u].slice(0, 2);
       games[u] = [m.n, m.p, m.g, m.g2, m.c, m.ct, m.ci, m.cr, sr];
+      if (Object.keys(ex).length) games[u].push(ex);
     });
     return { updated: pLabel(now), dates: snaps.map(function (s) { return s.d; }), times: snaps.map(function (s) { return s.t; }),
       boards: snaps.map(function (s) { return s.b || null; }), games: games };
@@ -530,7 +571,9 @@ window.BRC = (function () {
     // Save today's snapshot
     var hist = loadJSON(KEY, { v: 1, snaps: [] });
     var snap = { t: now.toISOString(), d: pDate(now), g: {} };
-    young.forEach(function (g) { var v = V[g.id] || {}; snap.g[g.id] = [g.visits, g.playing, g.favoritedCount, v.upVotes || 0, v.downVotes || 0]; });
+    // Readings are [visits, players, favorites, up votes, down votes, last update in minutes since 1970].
+    // The update time builds each game's update record, since Roblox only ever shows the latest one.
+    young.forEach(function (g) { var v = V[g.id] || {}; snap.g[g.id] = [g.visits, g.playing, g.favoritedCount, v.upVotes || 0, v.downVotes || 0, upMin(g)]; });
     hist.snaps = hist.snaps.filter(function (s) { return s.d !== snap.d; });
     hist.snaps.push(snap);
     hist.snaps.sort(function (a, b) { return a.t < b.t ? -1 : 1; });
@@ -664,11 +707,23 @@ window.BRC = (function () {
     }
 
     var DEEP = await deep(board);
+    // Today's names go into the index now, so renames show on today's board.
+    var idx0 = updateIndex(now, young);
+    // Where each game ranks among young games in its own genre (Roblox's finer genre when it has one).
+    var nicheKey = function (g) { return g.genre_l2 || g.genre_l1 || ""; };
+    var byNiche = {}, nicheByUid = {};
+    young.forEach(function (g) { var k = nicheKey(g); if (k) (byNiche[k] = byNiche[k] || []).push(g.playing || 0); });
+    young.forEach(function (g) {
+      var k = nicheKey(g), list = byNiche[k];
+      if (k && list && list.length >= 3) nicheByUid[g.id] = [1 + list.filter(function (p) { return p > (g.playing || 0); }).length, list.length, k];
+    });
+    var nicheOf = function (r) { return nicheByUid[r.uid] || null; };
     var BOARD = board.map(function (r, i) {
       var e = extra[r.uid] || {};
       return [r.pid, r.name, r.creator, r.own, r.genre, r.genre2, Math.round(r.age), r.playing, Math.round(r.pace), r.fresh, r.accel != null ? r1(r.accel) : null, r1(r.sess), r1(r.like * 100), r1(r.favk), r1(r.vk), Math.round(r.hrs), r.U, r.T, r.E, r.R, r.Gk, r.shape, r.wave ? 1 : 0, r.comp.join("/"), r.score, r.mult,
         { passes: e.passes, pmin: e.pmin, pmax: e.pmax, members: e.members, discord: /discord/i.test(r.g.description || "") ? 1 : 0, cid: r.cid, ctype: r.ctype, pgrowth7: r.pgrowth7 != null ? r1(r.pgrowth7) : null, decay: r.decay != null ? r1(r.decay * 100) : null,
-          rank: i + 1, uid: r.uid, trend: trendOf(r), deep: DEEP.byUid[r.uid] || null }];
+          rank: i + 1, uid: r.uid, trend: trendOf(r), deep: DEEP.byUid[r.uid] || null,
+          niche: nicheOf(r), where: sortCodes(r.sorts), upd: updRecord(r.uid, hist.snaps, idx0[r.uid] && idx0[r.uid].nh) }];
     });
     var big = rows.slice().sort(function (a, b) { return b.playing - a.playing; }).slice(0, 25);
     var abbr = { "up-and-coming": "U", "top-trending": "T", "top-earning": "E", "top-revisited": "R" };
@@ -706,10 +761,10 @@ window.BRC = (function () {
     catch (e) { trackError = String(e && e.message || e); tr = loadJSON(TRACK, { v: 1, batches: [] }); }
     // Tracked games that have left the chart lists keep a daily reading in the history.
     var carried = 0;
-    Object.keys(trackReadings).forEach(function (u) { if (!snap.g[u] && trackReadings[u]) { snap.g[u] = trackReadings[u]; carried++; } });
+    Object.keys(trackReadings).forEach(function (u) { if (!snap.g[u] && trackReadings[u]) { snap.g[u] = trackReadings[u].concat([upMin(G[u] || fetchedGames[u])]); carried++; } });
     if (carried) { try { saveJSON(KEY, hist); } catch (e) {} }
     var idx = updateIndex(now, young.concat(Object.keys(fetchedGames).map(function (u) { return fetchedGames[u]; })));
-    var HX = historyPublic(now, hist, idx);
+    var HX = historyPublic(now, hist, idx, sorts, nicheByUid);
     var historyJs = "/* Spawnbook daily history, built " + now.toISOString() + ". The game, watchlist and market pages read window.HX. */\nwindow.HX = " + JSON.stringify(HX) + ";\n";
 
     var issue = null;

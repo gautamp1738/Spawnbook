@@ -101,6 +101,7 @@
         <button type="button" id="s-rocket" aria-pressed="false">Fast-rise</button>
       </div>
       <label class="check" for="hide-wave"><input type="checkbox" id="hide-wave"> Hide games that follow a trend</label>
+      <label class="check" for="brand-only"><input type="checkbox" id="brand-only"> Brand-ready only</label>
       <label class="sortlabel" for="genre">Genre
         <select id="genre"><option value="">All genres</option></select>
       </label>
@@ -739,6 +740,42 @@
     if (o === "Gbig") return "Owned by a group with over 1 million members, so it may be an established studio.";
     return "Owned by a group, which makes a transfer simpler.";
   }
+  // ---------- buyer signals: niche rank, chart lists, brand deals, peak, update record ----------
+  var SORT_NAME = { uc: "Up-and-Coming", tt: "Top Trending", pn: "Top Playing Now", ff: "Fun with Friends", rv: "Top Revisited", te: "Top Earning", pa: "Top Paid Access", tr: "Top Rated", mp: "Most Popular" };
+  var SORT_ORDER = ["uc", "g", "tt", "te", "rv", "ff", "tr", "pn", "mp", "pa"];
+  function whereList(p) {
+    var s = p.x.where || {};
+    return SORT_ORDER.filter(function (k) { return s[k]; }).map(function (k) { return (k === "g" ? "Trending in " + (p.genre || "its genre") : SORT_NAME[k]) + " #" + s[k]; });
+  }
+  // Brands want games with nobody else's characters in them (board games have no copyright flags), and
+  // family brands want ones rated Minimal, suitable for everyone.
+  function brandOf(p) {
+    var m = p.x.deep && p.x.deep.maturity;
+    if (!m || !m.name || m.name === "Unrated") return null;
+    if (m.minAge >= 17) return "no";
+    if (/minimal/i.test(m.name)) return "ready";
+    if (/mild/i.test(m.name)) return "most";
+    if (/moderate/i.test(m.name)) return "some";
+    return null;
+  }
+  function peakHold(p) {
+    var t = p.x.trend || {}, s = t.series || [];
+    if (!t.peak || s.length < 4) return null;
+    return Math.round(s[s.length - 1][1] / t.peak * 100);
+  }
+  function signalsGroup(p) {
+    var x = p.x, n = x.niche, u = x.upd || {}, rn = (u.renames || [])[(u.renames || []).length - 1], w = whereList(p), ph = peakHold(p);
+    var brandTxt = { ready: "Ready: rated Minimal, no outside brands in the name", most: "Most brands: rated Mild. Family-only brands prefer Minimal", some: "Some brands: rated Moderate", no: "Unlikely: rated 17+" }[p.brand];
+    return mdGroup("Buyer signals", [
+      ["Rank in its genre", n ? "#" + n[0] + " of " + n[1] + " young " + n[2] + " games on the charts today" : null],
+      ["Where players find it", w.length ? w.join(", ") : null],
+      ["Brand deals", brandTxt || null],
+      ["Share of its peak", ph != null ? (ph >= 100 ? "At the most players we've seen" : ph + "% of the most players we've seen") : null],
+      ["Update rhythm", u.gaps ? "Updated between " + u.changed + " of our last " + u.gaps + " daily readings" : "Recording update times since Oct 30"],
+      ["Last rename", rn ? "“" + clean(rn[1]) + "” on " + dayLabel(rn[0]) + (rn[2] && rn[3] ? ". Players " + commas(rn[2]) + " → " + commas(rn[3]) + " since" : "") : null]
+    ]);
+  }
+
   function ownerChip(o) {
     if (o === "Gv") return ["", "Verified group"];
     if (o === "U") return ["risk", "Solo account"];
@@ -752,6 +789,7 @@
       shape: r[21], wave: r[22], comp: r[23].split("/").map(Number), score: r[24], mult: r[25] || null, x: r[26] || {} };
     o.tier = tierOf(o.playing);
     o.val = valueOf(o.pace, o.mult || MULT[o.shape]);
+    o.brand = brandOf(o);
     return o;
   });
   P.slice().sort(function (a, b) { return b.score - a.score; }).forEach(function (p, i) { p.rank = i + 1; });
@@ -900,6 +938,7 @@
     var rankTxt = !META.ranksKnown ? "Rank changes start tomorrow" : mv && mv.cls === "new" ? "#" + (x.rank || p.rank) + ", new today" : t.prevRank ? "#" + (x.rank || p.rank) + " today, #" + t.prevRank + " on " + dayLabel(META.prevDate) : null;
     var streak = t.daysOn == null ? null : t.daysOn === 1 ? "First day" : (t.daysOnAtLeast ? "At least " : "") + t.daysOn + " days in a row";
     var groups = [
+      signalsGroup(p),
       mdGroup("Trend", [
         ["Board rank", rankTxt],
         ["Days on the board", streak],
@@ -982,7 +1021,7 @@
   })();
 
   // ---------- board ----------
-  var bstate = { tier: "all", shape: "any", hideWave: false, sort: "score", genre: "" };
+  var bstate = { tier: "all", shape: "any", hideWave: false, brandOnly: false, sort: "score", genre: "" };
   var detailOpen = {};
   var shown = [];
   function renderBoard() {
@@ -990,6 +1029,7 @@
       if (bstate.tier !== "all" && p.tier !== bstate.tier) return false;
       if (bstate.shape !== "any" && p.shape !== bstate.shape) return false;
       if (bstate.hideWave && p.wave) return false;
+      if (bstate.brandOnly && p.brand !== "ready") return false;
       if (bstate.genre && (p.g2 || p.genre) !== bstate.genre) return false;
       return true;
     });
@@ -1050,6 +1090,8 @@
       if (p.E) chips.appendChild(el("span", "chip good", "Top Earning #" + p.E));
       if (p.U) chips.appendChild(el("span", "chip good", "Up-and-Coming #" + p.U));
       if (p.wave) chips.appendChild(el("span", "chip risk", "Follows a trend"));
+      if (p.x.niche && p.x.niche[0] <= 3) chips.appendChild(el("span", "chip good", (p.x.niche[0] === 1 ? "Top" : "#" + p.x.niche[0]) + " young " + p.x.niche[2] + " game"));
+      if (p.brand === "ready") chips.appendChild(el("span", "chip good", "Brand-ready"));
       det.appendChild(chips);
       det.appendChild(el("p", "comp", compLine(p)));
       var why = el("div", "why");
@@ -1121,6 +1163,7 @@
   segGroup({ all: "t-all", seed: "t-seed", "break": "t-break", chart: "t-chart" }, "tier");
   segGroup({ any: "s-any", staircase: "s-stair", rocket: "s-rocket" }, "shape");
   $("hide-wave").addEventListener("change", function (e) { bstate.hideWave = e.target.checked; renderBoard(); });
+  $("brand-only").addEventListener("change", function (e) { bstate.brandOnly = e.target.checked; renderBoard(); });
   $("sort").addEventListener("change", function (e) { bstate.sort = e.target.value; renderBoard(); });
   // Genre filter, from the genres on today's board.
   Array.from(new Set(P.map(function (p) { return p.g2 || p.genre; }).filter(Boolean))).sort().forEach(function (gname) {
@@ -1143,12 +1186,13 @@
   // Download what's shown as a spreadsheet (CSV).
   $("csv").addEventListener("click", function () {
     var cell = function (v) { v = v == null ? "" : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-    var head = ["Rank", "Game", "Roblox link", "Creator", "Owner", "Genre", "Days old", "Players", "Visits a day", "Rating %", "Score", "Est. revenue a month", "Est. price low", "Est. price mid", "Est. price high", "Group or profile"];
+    var head = ["Rank", "Game", "Roblox link", "Creator", "Owner", "Genre", "Days old", "Players", "Visits a day", "Rating %", "Score", "Est. revenue a month", "Est. price low", "Est. price mid", "Est. price high", "Group or profile", "Rank in genre", "Brand deals", "Chart lists today", "Share of peak %"];
     var lines = [head.join(",")].concat(shown.map(function (p) {
       var cid = p.x.cid, owner = p.x.ctype === "Group" ? "Group" : "Solo account";
       return [p.x.rank || p.rank, p.name, "https://www.roblox.com/games/" + p.pid, p.creator, owner, p.g2 || p.genre, p.age, p.playing, Math.round(p.pace), p.like, p.score,
         Math.round(p.val.rev[1]), Math.round(p.val.fair[0]), Math.round(p.val.fair[1]), Math.round(p.val.fair[2]),
-        cid ? (p.x.ctype === "Group" ? "https://www.roblox.com/communities/" + cid : "https://www.roblox.com/users/" + cid + "/profile") : ""].map(cell).join(",");
+        cid ? (p.x.ctype === "Group" ? "https://www.roblox.com/communities/" + cid : "https://www.roblox.com/users/" + cid + "/profile") : "",
+        p.x.niche ? p.x.niche[0] + " of " + p.x.niche[1] + " " + p.x.niche[2] : "", { ready: "Ready", most: "Most brands", some: "Some brands", no: "Unlikely" }[p.brand] || "", whereList(p).join("; "), peakHold(p)].map(cell).join(",");
     }));
     var blob = new Blob([lines.join("\n") + "\n"], { type: "text/csv;charset=utf-8" });
     var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
@@ -1164,10 +1208,11 @@
       var pid = a.getAttribute("data-open");
       var row = $("pr-" + pid);
       if (!row) {
-        bstate = { tier: "all", shape: "any", hideWave: false, sort: bstate.sort, genre: "" };
+        bstate = { tier: "all", shape: "any", hideWave: false, brandOnly: false, sort: bstate.sort, genre: "" };
         $("genre").value = "";
         ["t-all", "s-any"].forEach(function (id) { $(id).click(); });
         $("hide-wave").checked = false;
+        $("brand-only").checked = false;
         renderBoard();
         row = $("pr-" + pid);
       }

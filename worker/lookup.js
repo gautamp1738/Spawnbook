@@ -64,6 +64,7 @@ function ago(hours) {
   return d + (d === 1 ? " day ago" : " days ago");
 }
 const days = (n) => n + (n === 1 ? " day" : " days");
+const md = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 const median = (xs) => {
   const s = xs.filter((x) => x != null && isFinite(x)).sort((a, b) => a - b);
   if (!s.length) return null;
@@ -204,7 +205,29 @@ async function maturity(uid) {
   const rec = j && j.ageRecommendationDetails && j.ageRecommendationDetails.summary && j.ageRecommendationDetails.summary.ageRecommendation;
   if (!rec) return null;
   const unrated = rec.contentMaturity === "unrated";
-  return { name: unrated ? "Unrated" : String(rec.displayName || "").replace(/^Maturity:\s*/i, "") || null, minAge: unrated ? 0 : rec.minimumAge || 0 };
+  const ard = j.ageRecommendationDetails;
+  const has = (ard.descriptorUsages || []).filter((u) => u.contains !== false && u.descriptor && u.descriptor.displayName).map((u) => u.descriptor.displayName).slice(0, 6);
+  return { name: unrated ? "Unrated" : String(rec.displayName || "").replace(/^Maturity:\s*/i, "") || null, minAge: unrated ? 0 : rec.minimumAge || 0, has };
+}
+
+// Roblox's chart lists, as shortened in history.js by the collector.
+const SORT_NAME = { uc: "Up-and-Coming", tt: "Top Trending", pn: "Top Playing Now", ff: "Fun with Friends", rv: "Top Revisited", te: "Top Earning", pa: "Top Paid Access", tr: "Top Rated", mp: "Most Popular" };
+const SORT_ORDER = ["uc", "g", "tt", "te", "rv", "ff", "tr", "pn", "mp", "pa"];
+function whereFrom(s, genre) {
+  if (!s) return [];
+  return SORT_ORDER.filter((k) => s[k]).map((k) => [k === "g" ? "Trending in " + (genre || "its genre") : SORT_NAME[k], s[k], k]);
+}
+
+// Brand tie-ins are a big way studios earn from a game after buying it. Brands want games with nobody
+// else's characters in them, and family brands want ones rated Minimal (suitable for everyone).
+function brandOf(mat, ip, licensed) {
+  if (!mat || !mat.name || mat.name === "Unrated") return null;
+  if (ip && !licensed) return "no";
+  if (mat.minAge >= 17) return "no";
+  if (/minimal/i.test(mat.name)) return "ready";
+  if (/mild/i.test(mat.name)) return "most";
+  if (/moderate/i.test(mat.name)) return "some";
+  return null;
 }
 
 async function creatorInfo(c, pid, uid) {
@@ -270,7 +293,9 @@ function analyse(ctx) {
 
   // Our daily record for this game, oldest first, with the reading's exact time.
   const rec = hx && hx.games && hx.games[uid];
-  const rows = rec ? rec[8].map((r) => ({ t: Date.parse(hx.times[r[0]]), d: hx.dates[r[0]], players: r[1], visits: r[2], up: r[3], down: r[4] })) : [];
+  // r[5], when present, is hours between the game's last update and that reading.
+  const rows = rec ? rec[8].map((r) => { const t = Date.parse(hx.times[r[0]]); return { t, d: hx.dates[r[0]], players: r[1], visits: r[2], up: r[3], down: r[4], upd: r[5] != null ? t - r[5] * 36e5 : null }; }) : [];
+  const ex = (rec && rec[9]) || {};
   const nowRow = { t: now, players: g.playing, visits: g.visits };
   const p7 = readingBefore(rows, now, 5, 7), p1 = readingBefore(rows, now, 0.75, 1);
   let pace = null, basis = "lifetime", basisDays = null;
@@ -399,6 +424,58 @@ function analyse(ctx) {
     add(know, 40, "Owned by one person's account", "Every one of the 42 recent hits we studied is owned by a group. A personal account means one person to talk to, but agree how the game moves to you before you pay.");
   }
 
+  // Signals buyers care about.
+  const todayIdx = hx && hx.dates ? hx.dates.length - 1 : -1;
+  const inToday = !!(lastRow && rec && rec[8][rec[8].length - 1][0] === todayIdx);
+  const niche = inToday && ex.k && age <= 183 ? { rank: ex.k[0], of: ex.k[1], genre: g.genre_l2 || g.genre_l1 } : null;
+  if (niche) {
+    if (niche.rank === 1) add(good, 60, "The top young " + niche.genre + " game", "Of the " + niche.of + " " + niche.genre + " games under six months old on Roblox's charts today, none has more players. Studios like owning the top game in a category.");
+    else if (niche.rank <= 3) add(good, 45, "#" + niche.rank + " young " + niche.genre + " game", "Of the " + niche.of + " " + niche.genre + " games under six months old on Roblox's charts today, only " + (niche.rank - 1) + (niche.rank === 2 ? " has" : " have") + " more players.");
+    else add(know, 20, "#" + niche.rank + " of " + niche.of + " in its genre", "Among " + niche.genre + " games under six months old on Roblox's charts today, by players right now.");
+  }
+  const where = inToday ? whereFrom(ex.s, g.genre_l1) : [];
+  const onTE = where.find((w) => w[2] === "te"), pushed = where.filter((w) => (w[2] === "uc" && w[1] <= 50) || (w[2] === "g" && w[1] <= 10) || (w[2] === "rv" && w[1] <= 50));
+  if (onTE) add(good, 55, "On Top Earning (#" + onTE[1] + ")", "Roblox lists it among its top-earning games today, so it's already making real money, not just drawing players.");
+  if (pushed.length) add(good, 45, "Roblox is sending it players", "Today it's on " + pushed.map((w) => w[0] + " (#" + w[1] + ")").join(" and ") + ". Those lists bring free, organic traffic.");
+  else if (inToday && where.length && !onTE) add(know, 15, "Where players find it", "Today it's on " + where.slice(0, 3).map((w) => w[0] + " (#" + w[1] + ")").join(", ") + ".");
+
+  const brand = brandOf(mat, ip, licensed);
+  if (brand === "ready") add(good, 40, "Ready for brand deals", "Rated Minimal (suitable for everyone), with no one else's characters or brands in the name. That's what brands look for, and tie-ins are a big way studios earn from a game after buying it.");
+  else if (brand === "most") add(know, 20, "Fine for most brand deals", "Rated Mild" + (mat.has && mat.has.length ? " (" + mat.has.slice(0, 2).join(", ").toLowerCase() + ")" : "") + ", with no outside brands in the name. Most brands are fine with that; family-only brands prefer games rated Minimal.");
+  else if (brand === "some") add(know, 25, "Some brands will pass", "Rated Moderate" + (mat.has && mat.has.length ? " (" + mat.has.slice(0, 3).join(", ").toLowerCase() + ")" : "") + ". Some brands still do tie-ins with games like this; family brands usually won't.");
+
+  // Holding its peak: the latest daily reading against the most players we've seen.
+  let peakHold = null;
+  if (rows.length >= 4 && peak && lastRow && peak.players > 0) {
+    peakHold = lastRow.players / peak.players;
+    const falling = playersWeek && playersWeek.change <= -0.2;
+    if (peak !== lastRow && peakHold >= 0.9) add(good, 40, "Holding near its peak", "At our last reading it had " + Math.round(peakHold * 100) + "% of the most players we've seen (" + commas(peak.players) + " on " + md(peak.d) + "). It's keeping the players it found.");
+    else if (peakHold < 0.6 && !falling) add(check, 50, "Well below its peak", "At our last reading it had " + Math.round(peakHold * 100) + "% of the most players we've seen (" + commas(peak.players) + " on " + md(peak.d) + ").");
+  }
+
+  // Update record: how often it updated between our daily readings, and how players moved after renames.
+  const withU = rows.filter((r) => r.upd);
+  let gaps = 0, changed = 0;
+  for (let i = 1; i < withU.length; i++) { gaps++; if (withU[i].upd > withU[i - 1].upd + 1.5 * 36e5) changed++; }
+  if (gaps >= 3) {
+    if (changed / gaps >= 0.6) add(good, 45, "Updates constantly", "It updated between " + changed + " of our last " + gaps + " daily readings. Every new hit we studied had been updated in the past week.");
+    else if (changed / gaps <= 0.2) add(check, 45, "Rarely updated lately", "It updated between only " + changed + " of our last " + gaps + " daily readings.");
+  }
+  const renames = (ex.nh || []).slice(-3).map((x) => {
+    const before = rows.filter((r) => r.d < x[0]).pop();
+    const after = rows.filter((r) => r.d >= x[0]);
+    const last = after[after.length - 1];
+    return { date: x[0], name: x[1], before: before ? before.players : null, after: last ? last.players : null, days: before && last ? Math.round((last.t - before.t) / DAY) : null };
+  });
+  const lastRename = renames[renames.length - 1];
+  if (lastRename && lastRename.before && lastRename.after && lastRename.days >= 2) {
+    const c = lastRename.after / lastRename.before - 1;
+    const txt = "Renamed to “" + lastRename.name + "” on " + md(lastRename.date) + ", which usually means a big update. Players went from " + commas(lastRename.before) + " to " + commas(lastRename.after) + " over the next " + days(lastRename.days) + ".";
+    if (c >= 0.2) add(good, 55, "Its last big update worked", txt);
+    else if (c <= -0.2) add(check, 50, "Its last big update didn't stick", txt);
+    else add(know, 30, "Its last big update was flat", txt);
+  }
+
   // Our board.
   if (row) {
     const x = row[26] || {};
@@ -457,6 +534,10 @@ function analyse(ctx) {
     servers: srv,
     maturity: mat,
     board: row ? { rank: (row[26] || {}).rank || null, score: row[24], days: streak, tracked: true } : { tracked: !!rec },
+    signals: {
+      niche, brand, where: where.map((w) => [w[0], w[1]]), peakHold: peakHold != null ? Math.round(peakHold * 100) : null,
+      updates: { gaps, changed, since: withU.length ? withU[0].d : null }, renames,
+    },
     points: { good, check, know },
     verdict: { call, line: line.trim() },
   };

@@ -88,6 +88,12 @@
     </details>
   </section>
 
+  <section class="sec wrap g-sec" aria-labelledby="s-h" id="g-sig-sec" hidden>
+    <h2 id="s-h" class="tr-sub">Buyer signals</h2>
+    <div class="lk-group g-sig"><dl id="g-sig"></dl></div>
+    <p class="g-sig-more"><a class="button quiet" id="g-lookup" href="lookup">See the full read in the lookup</a></p>
+  </section>
+
   <section class="sec wrap g-sec" aria-labelledby="b-h" id="g-board-sec" hidden>
     <h2 id="b-h" class="tr-sub">On the board</h2>
     <div id="g-board"></div>
@@ -275,6 +281,38 @@
     on.slice(-14).forEach(function (x) { ul.appendChild(el("li", null, T.dayLabel(x[0]) + ": #" + x[1])); });
     bh.appendChild(ul);
   }
+
+  // ---------- buyer signals: rank in its genre, chart lists, update record, renames ----------
+  (function () {
+    var ex = g.ex || {}, last = HX.dates.length - 1, lastR = g.r[g.r.length - 1], todayIn = lastR && lastR[0] === last;
+    var NAMES = { uc: "Up-and-Coming", tt: "Top Trending", pn: "Top Playing Now", ff: "Fun with Friends", rv: "Top Revisited", te: "Top Earning", pa: "Top Paid Access", tr: "Top Rated", mp: "Most Popular" };
+    var ORDER = ["uc", "g", "tt", "te", "rv", "ff", "tr", "pn", "mp", "pa"];
+    var rows = [];
+    if (todayIn && ex.k) rows.push(["Rank in its genre", "#" + ex.k[0] + " of " + ex.k[1], "Young " + (g.genre2 || g.genre) + " games on Roblox's charts today, by players"]);
+    if (todayIn && ex.s) {
+      var w2 = ORDER.filter(function (k) { return ex.s[k]; }).map(function (k) { return (k === "g" ? "Trending in " + (g.genre || "its genre") : NAMES[k]) + " #" + ex.s[k]; });
+      if (w2.length) rows.push(["Where players find it", w2.join(", "), "Roblox's chart lists it's on today"]);
+    }
+    var peakR = g.r.reduce(function (m, r) { return r[1] > m[1] ? r : m; }, g.r[0]);
+    if (g.r.length >= 4 && peakR[1] > 0) rows.push(["Share of its peak", Math.round(lastR[1] / peakR[1] * 100) + "%", "Players at our last reading against the most we've seen (" + T.commas(peakR[1]) + " on " + T.dayLabel(HX.dates[peakR[0]]) + ")"]);
+    var withU = g.r.filter(function (r) { return r[5] != null; }).map(function (r) { return Date.parse(HX.times[r[0]]) - r[5] * 36e5; });
+    var gaps = 0, changed = 0;
+    for (var i = 1; i < withU.length; i++) { gaps++; if (withU[i] > withU[i - 1] + 1.5 * 36e5) changed++; }
+    rows.push(["Update rhythm", gaps ? changed + " of " + gaps : "Not enough readings yet", gaps ? "Daily readings with an update in between" : "We started recording update times on Oct 30"]);
+    (ex.nh || []).slice(-3).reverse().forEach(function (x) {
+      var before = g.r.filter(function (r) { return HX.dates[r[0]] < x[0]; }).pop();
+      var why = T.dayLabel(x[0]) + (before && lastR && lastR !== before ? ". Players " + T.commas(before[1]) + " → " + T.commas(lastR[1]) + " since" : "");
+      rows.push(["Renamed", "“" + x[1] + "”", why]);
+    });
+    var dl = $("g-sig");
+    rows.forEach(function (r) {
+      var d = el("div"); d.appendChild(el("dt", null, r[0]));
+      var dd = el("dd", null, r[1]); if (r[2]) dd.appendChild(el("span", "why", r[2]));
+      d.appendChild(dd); dl.appendChild(d);
+    });
+    $("g-lookup").href = "lookup?u=" + g.uid;
+    $("g-sig-sec").hidden = false;
+  })();
 
   // ---------- watchlist ----------
   var w = null;

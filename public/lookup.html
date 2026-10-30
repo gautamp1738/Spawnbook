@@ -305,6 +305,18 @@
         o.members != null ? ["Group members", commas(o.members)] : null,
         o.games != null ? ["Public games", (o.moreGames ? "50+" : commas(o.games)), o.topOther ? "Biggest other: " + o.topOther.name + ", " + short(o.topOther.visits) + " visits" : o.games === 1 ? "This is the only one" : null] : null
       ]),
+      (function () {
+        var sg = d.signals || {}, up = sg.updates || {}, rn = (sg.renames || [])[(sg.renames || []).length - 1];
+        var BRAND = { ready: "Ready", most: "Most brands", some: "Some brands", no: "Unlikely" };
+        return group("Buyer signals", [
+          sg.niche ? ["Rank in its genre", "#" + sg.niche.rank + " of " + sg.niche.of, "Young " + sg.niche.genre + " games on Roblox's charts today, by players"] : null,
+          sg.where && sg.where.length ? ["Where players find it", sg.where.slice(0, 4).map(function (w) { return w[0] + " #" + w[1]; }).join(", "), "Roblox's chart lists it's on today"] : null,
+          sg.brand ? ["Brand deals", BRAND[sg.brand], { ready: "Rated Minimal, no outside brands in the name", most: "Rated Mild. Family-only brands prefer Minimal", some: "Rated Moderate", no: "Rated 17+ or uses someone else's brand" }[sg.brand]] : null,
+          sg.peakHold != null ? ["Share of its peak", sg.peakHold >= 100 ? "At its peak" : sg.peakHold + "%", "Players at our last reading against the most we've seen"] : null,
+          up.gaps ? ["Update rhythm", up.changed + " of " + up.gaps, "Daily readings with an update in between, since " + dateLabel(up.since)] : ["Update rhythm", "Not enough readings yet", b.tracked ? "We started recording update times on Oct 30" : "It isn't in our daily record"],
+          rn ? ["Last rename", "“" + rn.name + "”", dateLabel(rn.date) + (rn.before && rn.after ? ". Players " + commas(rn.before) + " → " + commas(rn.after) + " since" : "")] : null
+        ]);
+      })(),
       group("Servers and audience", [
         g.maxPlayers ? ["Players per server", "Up to " + g.maxPlayers] : null,
         sv && sv.counted ? ["Servers running", (sv.complete ? "" : "At least ") + commas(sv.atLeast), "About " + trim(sv.avg) + " players each" + (sv.complete ? "" : ", in the fullest 100")] : null,

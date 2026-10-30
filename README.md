@@ -72,7 +72,9 @@ GitHub Actions runs `.github/workflows/daily.yml` once a day, at 21:33 UTC (2:33
 - `pipeline/last-run.json`, a summary of the run
 - on Mondays, that week's picks in `pipeline/state/picks/` and `pipeline/picks-log.csv`, and a new issue in `pipeline/state/report/report.json`
 
-The board holds up to 50 games (`BOARD_MAX` in `collector.js`). For each game that makes the board, the run also reads its developer products, live servers, maturity rating and badges, and the creator's group or profile and other games. The board compares each day with the one before to show rank changes, days on the board, a 14-day player line, and how players, favorites and rating moved over a day and a week. If one of those extra sources fails, the board still updates and that part shows as missing.
+The board holds up to 50 games (`BOARD_MAX` in `collector.js`).
+
+Each daily reading also keeps every game's last update time, and the index keeps a history of renames (studios often rename for a big update). From these, the board, game pages and lookup show "buyer signals": a game's rank among young games in its genre, which Roblox chart lists it's on today, whether it's ready for brand deals (rated Minimal or Mild with no outside brands in its name), its share of the most players we've seen, how often it updates between our readings, and how players moved after each rename. Update records started on Oct 30, 2026, so they fill in over the following weeks. For each game that makes the board, the run also reads its developer products, live servers, maturity rating and badges, and the creator's group or profile and other games. The board compares each day with the one before to show rank changes, days on the board, a 14-day player line, and how players, favorites and rating moved over a day and a week. If one of those extra sources fails, the board still updates and that part shows as missing.
 
 GitHub sometimes starts scheduled runs late or skips them, so the workflow also has two backup times, 23:07 and 00:41 UTC. A backup quits right away if that day's board is already out.
 

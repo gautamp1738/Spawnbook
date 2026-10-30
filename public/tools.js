@@ -48,7 +48,9 @@
   T.game = function (uid) {
     var g = HX && HX.games[uid];
     if (!g) return null;
-    return { uid: Number(uid), name: g[0], pid: g[1], genre: g[2], genre2: g[3], creator: g[4], ctype: g[5], cid: g[6], created: g[7], r: g[8] };
+    // r[5], when present, is hours between the game's last update and that reading. g[9] holds extras:
+    // nh (renames), s (today's chart ranks) and k (today's rank in its genre).
+    return { uid: Number(uid), name: g[0], pid: g[1], genre: g[2], genre2: g[3], creator: g[4], ctype: g[5], cid: g[6], created: g[7], r: g[8], ex: g[9] || {} };
   };
   T.uidByPid = {};
   if (HX) Object.keys(HX.games).forEach(function (u) { T.uidByPid[HX.games[u][1]] = Number(u); });
