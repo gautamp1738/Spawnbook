@@ -294,7 +294,10 @@
       T.watchSave({ action: "remove", uid: g.uid }).then(function () { w = null; renderWatch(); msg("Removed from your watchlist."); }).catch(function () { msg("Couldn't save. Try again."); });
     } else {
       T.watchSave({ action: "add", uid: g.uid, pid: g.pid, name: g.name }).then(function (j) { w = j.row; renderWatch(); msg("Added. See it on your watchlist."); })
-        .catch(function (e) { msg(e.message === "full" ? "Your watchlist is full. Remove a game first." : "Couldn't save. Try again."); });
+        .catch(function (e) {
+          msg(e.message === "full" ? "Your watchlist is full. Remove a game first." : e.message === "signin" ? "" : "Couldn't save. Try again.");
+          if (e.message === "signin") { var la = T.el("a", "link", "Create a free account"); la.href = "/#signup"; $("w-msg").appendChild(la); $("w-msg").appendChild(document.createTextNode(" to keep a watchlist.")); }
+        });
     }
   });
   sel.addEventListener("change", function () {

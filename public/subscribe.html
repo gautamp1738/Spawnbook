@@ -21,7 +21,7 @@
       <li class="s-hide"><a href="value">Value your game</a></li>
       <li class="m-hide"><a href="track">Track record</a></li>
       <li id="nav-signin"><a href="signin">Sign in</a></li>
-      <li><a class="keep" href="/#signup">Free board</a></li>
+      <li><a class="keep" href="board">Today's board</a></li>
     </ul>
   </nav>
 </div>
@@ -30,7 +30,7 @@
   <section class="sec wrap grid page-top" aria-labelledby="price-h">
     <div class="c-l stack">
       <h1 id="price-h" class="head">Keep the daily board</h1>
-      <p class="lead" id="sub-lead">Your first 24 hours are free. To keep seeing the board every day, subscribe.</p>
+      <p class="lead" id="sub-lead">The board is free for your first 24 hours. To keep seeing it every day, subscribe.</p>
     </div>
     <div class="c-r">
       <div class="card" data-ui style="max-width: 32rem">
@@ -74,7 +74,10 @@
 
 <script src="site.js"></script>
 <script>
+  var over = "Your free 24 hours are up. To keep seeing the board every day, subscribe.";
+  if (/[?&]over=1\b/.test(location.search)) document.getElementById("sub-lead").textContent = over;
   fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+    if (m && m.access === "none" && m.trial && !m.trial.active) document.getElementById("sub-lead").textContent = over;
     if (!m || m.access === "none") return;
     document.getElementById("nav-signin").hidden = true;
     if (m.access === "expired") document.getElementById("sub-lead").textContent = "Your free day is over. To keep seeing the board every day, subscribe.";

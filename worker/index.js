@@ -3,8 +3,11 @@
 // else (the landing page, the valuation tool, pricing, the policies) stays public.
 //
 // Routes
-//   POST /api/signup        the landing page's form: makes an account with a password, starts
-//                           24 hours of free access and signs the visitor in with a cookie
+//   POST /api/signup        the landing page's form: makes an account with a password and signs the
+//                           visitor in. The account runs on the browser's free pass (below), or
+//                           starts one: one free day either way
+//   (no route)              the free pass: opening a board page without an account starts 24 hours
+//                           of free access, kept in the signed sb_trial cookie
 //   POST /api/signin        email and password, from /signin
 //   POST /api/signout       ends this browser's session
 //   POST /api/password      sets a password, either from a one-time link (/account#t=...) or,
@@ -270,6 +273,39 @@ async function session(request, env) {
   return s.email ? Object.assign(s, { token }) : null;
 }
 
+// ---------- the free 24-hour pass ----------
+// Anyone who opens a board page without an account gets 24 hours of access, no sign-up needed. The
+// pass is a cookie holding when it started, signed with a key kept in the Store, so it can't be
+// edited to last longer. It's remembered for 30 days, so the same browser gets one free day.
+// Clearing cookies starts a new one; that's accepted, the same as signing up with a second email.
+const TRIAL_COOKIE = "sb_trial";
+const TRIAL_REMEMBER = 30 * DAY_MS;
+let trialKey = null;
+
+async function trialSig(env, start) {
+  if (!trialKey) {
+    const { secret } = await call(env, "trial-secret", {});
+    trialKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  }
+  const mac = await crypto.subtle.sign("HMAC", trialKey, new TextEncoder().encode("spawnbook-trial:" + start));
+  return Array.from(new Uint8Array(mac).slice(0, 16), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// The visitor's pass, or null when they have none (or it was tampered with).
+async function readTrial(request, env) {
+  const raw = readCookie(request, TRIAL_COOKIE);
+  const m = raw && /^(\d{13})\.([0-9a-f]{32})$/.exec(raw);
+  if (!m) return null;
+  const start = Number(m[1]), now = Date.now();
+  if (start > now + 60e3 || now - start > TRIAL_REMEMBER) return null;
+  if ((await trialSig(env, start)) !== m[2]) return null;
+  return { start, until: start + FREE_MS, active: now < start + FREE_MS };
+}
+
+async function trialCookie(env, start) {
+  return TRIAL_COOKIE + "=" + start + "." + (await trialSig(env, start)) + "; Path=/; Max-Age=" + Math.round(TRIAL_REMEMBER / 1000) + "; HttpOnly; Secure; SameSite=Lax";
+}
+
 // ---------- accounts ----------
 
 async function signup(request, env) {
@@ -293,10 +329,17 @@ async function signup(request, env) {
   if (bad) return back("password-" + bad);
   if (get("agree") !== "yes") return back("agree");
 
+  // An account runs on the same free day as the browser's pass: it doesn't add another one.
+  const t = await readTrial(request, env);
+  const now = Date.now();
+  const until = t ? t.until : now + FREE_MS;
   const token = randomToken();
-  const r = await call(env, "signup", { email, name, company, role, password: pw, token, freeMs: FREE_MS, ref: /^[a-z0-9]{6,16}$/.test(ref) ? ref : null });
+  const r = await call(env, "signup", { email, name, company, role, password: pw, token, until, ref: /^[a-z0-9]{6,16}$/.test(ref) ? ref : null });
   if (r.exists) return redirect("/signin?e=exists");
-  return redirect(nextPath("", r.until), { "Set-Cookie": sessionCookie(token) });
+  const headers = new Headers({ Location: nextPath("", r.until), "Cache-Control": "no-store" });
+  headers.append("Set-Cookie", sessionCookie(token));
+  if (!t) headers.append("Set-Cookie", await trialCookie(env, now));
+  return new Response(null, { status: 303, headers });
 }
 
 async function signin(request, env) {
@@ -350,7 +393,11 @@ async function password(request, env) {
 
 async function me(request, env) {
   const s = await session(request, env);
-  if (!s) return json({ access: "none" });
+  if (!s) {
+    // No account: say whether they have a free pass, and how long it has left.
+    const t = await readTrial(request, env);
+    return json({ access: "none", trial: t ? { active: t.active, start: t.start, until: t.until } : null });
+  }
   return json({ access: s.until > Date.now() ? "active" : "expired", until: s.until, email: s.email, hasPassword: !!s.hasPassword });
 }
 
@@ -401,7 +448,10 @@ async function watch(request, env) {
 // updates once a day; this fills in "right now". Answers are cached for five minutes per set of games.
 async function live(request, env, url) {
   const s = await member(request, env);
-  if (!s) return json({ error: "signin" }, 401);
+  if (!s) {
+    const t = await readTrial(request, env);
+    if (!t || !t.active) return json({ error: "signin" }, 401);
+  }
   const ids = Array.from(new Set(String(url.searchParams.get("u") || "").split(",").map(Number).filter((n) => Number.isSafeInteger(n) && n > 0))).sort((a, b) => a - b).slice(0, 100);
   if (!ids.length) return json({ at: Date.now(), games: {} });
   const key = new Request("https://live.spawnbook.internal/" + ids.join(","));
@@ -617,18 +667,27 @@ async function sellForm(request, env) {
 async function gated(request, env, url, assetPath) {
   const s = await session(request, env);
   const isData = assetPath.endsWith(".js");
-  if (!s || s.until <= Date.now()) {
-    if (isData) {
-      return new Response("/* Sign in at spawnbook.com to see today's board. */\n", {
-        status: 401, headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-store" },
-      });
+  const shut = (to) => (isData
+    ? new Response("/* Open spawnbook.com to see today's board. */\n", { status: 401, headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-store" } })
+    : redirect(to));
+  let setCookie = null;
+  if (s) {
+    // An account decides on its own: a used-up account doesn't get a new free pass.
+    if (s.until <= Date.now()) return shut("/subscribe");
+  } else {
+    const t = await readTrial(request, env);
+    if (t && !t.active) return shut("/subscribe?over=1");
+    if (!t) {
+      // No account and no pass yet: opening a board page starts the free 24 hours.
+      if (isData) return shut("/");
+      setCookie = await trialCookie(env, Date.now());
     }
-    return redirect(s ? "/subscribe" : "/signin?next=" + assetPath);
   }
   const asset = await env.ASSETS.fetch(new Request(new URL(assetPath, url), { headers: request.headers }));
   const res = new Response(asset.body, asset);
   res.headers.set("Cache-Control", "private, no-store");
   res.headers.set("X-Robots-Tag", "noindex");
+  if (setCookie) res.headers.append("Set-Cookie", setCookie);
   return res;
 }
 
@@ -1276,9 +1335,9 @@ export class Store {
       if (this.account(p.email)) return reply({ exists: true });
       const referrer = p.ref ? this.sql.exec("SELECT email FROM signups WHERE ref_code = ?", p.ref).toArray()[0] : null;
       const referredBy = referrer && referrer.email !== p.email ? referrer.email : null;
-      this.sql.exec("INSERT INTO signups (email, name, company, role, created_at, access_until, last_seen, pw, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", p.email, p.name, p.company, p.role || "", now, now + p.freeMs, now, pw, referredBy);
+      this.sql.exec("INSERT INTO signups (email, name, company, role, created_at, access_until, last_seen, pw, referred_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", p.email, p.name, p.company, p.role || "", now, p.until, now, pw, referredBy);
       this.newSession(p.token, p.email, now);
-      return reply({ until: now + p.freeMs });
+      return reply({ until: p.until });
     }
 
     if (op === "signin") {
@@ -1400,6 +1459,15 @@ export class Store {
     if (op === "watch-seen") {
       for (const [uid, players] of Object.entries(p.seen || {})) this.sql.exec("UPDATE watch SET seen_players = ?, seen_at = ? WHERE email = ? AND uid = ?", players, now, p.email, Number(uid));
       return reply({ ok: true });
+    }
+
+    if (op === "trial-secret") {
+      let row = this.sql.exec("SELECT v FROM kv WHERE k = 'trial_secret'").toArray()[0];
+      if (!row) {
+        this.sql.exec("INSERT OR IGNORE INTO kv (k, v) VALUES ('trial_secret', ?)", randomToken());
+        row = this.sql.exec("SELECT v FROM kv WHERE k = 'trial_secret'").toArray()[0];
+      }
+      return reply({ secret: row.v });
     }
 
     if (op === "buybox-get") {

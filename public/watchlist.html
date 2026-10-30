@@ -143,6 +143,14 @@
 
   $("f-status").addEventListener("change", function () { filter = this.value; render(); });
 
+  fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+    if (!m || m.access !== "none") return;
+    // On the free pass without an account: the watchlist needs one.
+    $("w-asof").textContent = "";
+    var p = $("w-empty").querySelector(".lead");
+    p.textContent = "A watchlist needs a free account.";
+    var b = $("w-empty").querySelector("a.button"); b.textContent = "Create a free account"; b.href = "/#signup";
+  }).catch(function () {});
   T.watchList().then(function (r) {
     rows = r;
     render();

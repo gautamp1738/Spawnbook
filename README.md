@@ -22,7 +22,7 @@ Everything the site serves is in `public/`:
 | `tools.js` | Shared code for those pages, including the charts. |
 | `track.html`, `track.js` | The public track record: every Monday's picks at 1, 2, 4 and 8 weeks, next to the games that made the cut but weren't picked. `track.js` only names a week's picks once they're a week old. |
 | `value.html` | The free valuation tool and request form for developers. Public. |
-| `subscribe.html` | Pricing, shown when someone's free day is over. |
+| `subscribe.html` | Pricing ($500 a month during the pilot), shown when someone's free day is over. |
 | `signin.html` | Sign in with email and password. Visitors who open the board signed out land here. |
 | `account.html` | Who's signed in, when their access ends, change or set a password, and sign out. Also where one-time password links open (`/account#t=...`). |
 | `site.css`, `site.js` | Shared styles and page behaviour. |
@@ -36,7 +36,7 @@ Everything the site serves is in `public/`:
 
 ## Accounts and access
 
-`worker/index.js` runs the accounts. Signing up on the landing page makes an account with an email and password and gives 24 hours of free access to the board, then sends people to the pricing page. After that, people sign in at `/signin`. Signing up again with an email that already has an account never signs anyone in; it sends them to the sign-in page instead.
+`worker/index.js` runs the accounts. Anyone who opens a board page without an account gets a free 24-hour pass, no sign-up needed: a signed `sb_trial` cookie holds when it started (the signing key is made once and kept in the Store), and the browser keeps it for 30 days so it gets one free day. The landing page offers the pass in a popup, and the board welcomes new pass holders and shows how long is left. When it runs out, board pages send people to the pricing page. Signing up on the landing page makes an account with an email and password that runs on the same free day (or starts one), for the watchlist, buyer criteria and verified leads. After that, people sign in at `/signin`. Signing up again with an email that already has an account never signs anyone in; it sends them to the sign-in page instead.
 
 Accounts are stored in a Cloudflare Durable Object (SQLite), which Cloudflare creates on deploy. Passwords are kept only as salted PBKDF2-SHA256 hashes (100,000 rounds), worked out inside the Durable Object. After 8 wrong passwords for one email, that email is locked for 15 minutes.
 

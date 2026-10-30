@@ -34,7 +34,7 @@
       <li class="m-hide"><a href="track">Track record</a></li>
       <li class="s-hide"><a href="value">Value your game</a></li>
       <li id="nav-signin"><a href="signin">Sign in</a></li>
-      <li><a class="keep" href="#signup">Free board</a></li>
+      <li><a class="keep" href="board" id="nav-board">Today's board</a></li>
     </ul>
   </nav>
 </div>
@@ -59,7 +59,7 @@
     <p class="lead" data-load style="--d:420ms">Grow a Garden had about 500 to 1,000 players when a studio bought into it. Spawnbook finds the next ones every day: small Roblox games growing fast, scored on public data and priced against past hits.</p>
     <p class="small hero-data" data-load style="--d:520ms" id="hero-data">A new board every afternoon, Pacific time.</p>
     <div class="hero-act" data-load style="--d:480ms">
-      <a class="button" href="#signup" id="hero-cta">See today's board free</a>
+      <a class="button" href="board" id="hero-cta">Open today's board free</a>
       <a class="plainlink" href="value">Making a game? Get it valued</a>
     </div>
   </div>
@@ -74,7 +74,7 @@
         <div class="c-top">
           <div>
             <span class="small muted" id="t-cap">Today's top pick</span>
-            <p class="c-name"><span class="redacted" role="img" aria-label="Game name hidden until you sign up"></span></p>
+            <p class="c-name"><span class="redacted" role="img" aria-label="Game name hidden until you open the board"></span></p>
           </div>
           <span class="c-score" id="t-score">–</span>
         </div>
@@ -83,13 +83,16 @@
           <div><dt>Players</dt><dd id="t-players">–</dd></div>
           <div><dt>Visits a day</dt><dd id="t-visits">–</dd></div>
         </dl>
-        <p class="t-more" id="t-more">Sign up to see which game it is, plus the rest of today's board with prices and red flags.</p>
+        <p class="t-more" id="t-more">Open the board to see which game it is, plus the rest of today's board with prices and red flags.</p>
       </figure>
+      <p data-reveal style="--i:2"><a class="button" href="board" id="teaser-cta">Open today's board free</a></p>
+      <p class="small muted" data-reveal style="--i:2">Free for 24 hours. No sign-up, no card.</p>
     </div>
 
     <div class="c-r" data-reveal style="--i:1">
       <form class="form" id="signup-form" method="post" action="/api/signup" novalidate>
-        <p class="hint">For studios and investors who buy Roblox games. Sign up to see today's full board free for 24 hours. No card needed.</p>
+        <h3 class="form-h">Create an account</h3>
+        <p class="hint">The board is free for 24 hours without one. An account lets you keep a watchlist, tell us what you buy and get verified leads. It doesn't add another free day.</p>
         <p class="note" id="f-refnote" hidden>You were invited by a Spawnbook member.</p>
         <input type="hidden" name="ref" id="f-ref" value="">
         <div class="fields">
@@ -132,7 +135,7 @@
           </label>
         </div>
         <div class="form-row">
-          <button class="button" type="submit">See today's board</button>
+          <button class="button" type="submit">Create account</button>
           <span class="err" id="f-err" role="alert"></span>
         </div>
         <p class="note">Already have an account? <a class="link" href="signin">Sign in</a>. After your free day, the pilot price is $500 a month. <a class="link" href="subscribe">See pricing</a>.</p>
@@ -195,6 +198,18 @@
   </div>
 </footer>
 
+<dialog class="pass" id="pass" aria-labelledby="pass-h">
+  <div class="pass-in">
+    <h2 id="pass-h" class="pass-h">Today's board is on us</h2>
+    <p>Open Spawnbook free for the next 24 hours: every fast-growing young Roblox game we track, with its score, estimated price and red flags. No sign-up, no card.</p>
+    <div class="pass-act">
+      <a class="button" href="board?from=pass">Open today's board</a>
+      <button type="button" class="button quiet" data-close>Maybe later</button>
+    </div>
+    <p class="small muted">Your 24 hours start when you open the board.</p>
+  </div>
+</dialog>
+
 <script src="site.js"></script>
 <script>
 (function () {
@@ -239,9 +254,43 @@
     }
   });
 
+
+  // The line under the hero: the free pass, if any, then how fresh the data is.
+  var heroDate = "", heroPass = "";
+  function heroLine(pass) {
+    if (pass != null) heroPass = pass;
+    $("hero-data").textContent = heroPass ? heroPass + (heroDate ? " Data as of " + heroDate + "." : "") : (heroDate ? "Data as of " + heroDate + ". " : "") + "A new board every afternoon, Pacific time.";
+  }
+
+  // The free-pass popup: a native dialog, closed with its buttons, Escape or a click outside it.
+  function openPass(id) {
+    var d = $(id);
+    if (!d) return;
+    if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", "");
+    d.addEventListener("click", function (e) { if (e.target === d) closePass(d); });
+    d.querySelectorAll("[data-close]").forEach(function (b) { b.addEventListener("click", function () { closePass(d); }); });
+  }
+  function closePass(d) { if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); }
+
   // Already signed in? Point straight at the board, or at pricing once the free day is over.
+  // No account: offer the free pass, or say how long the visitor's pass has left.
   fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
-    if (!m || m.access === "none") return;
+    if (!m) return;
+    if (m.access === "none") {
+      var t = m.trial;
+      if (!t) { setTimeout(function () { openPass("pass"); }, 700); return; }
+      if (t.active) {
+        var until = new Date(t.until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+        $("hero-cta").textContent = "Open today's board";
+        $("teaser-cta").textContent = "Open today's board";
+        heroLine("Your free pass runs until " + until + ".");
+      } else {
+        $("hero-cta").textContent = "See pricing"; $("hero-cta").href = "subscribe";
+        $("teaser-cta").textContent = "See pricing"; $("teaser-cta").href = "subscribe";
+        heroLine("Your free 24 hours are up. Subscribe to keep seeing the board every day.");
+      }
+      return;
+    }
     $("signup-form").hidden = true;
     $("signed-in").hidden = false;
     $("nav-signin").hidden = true;
@@ -266,9 +315,9 @@
     $("t-age").textContent = t.top.age;
     $("t-players").textContent = commas(t.top.players);
     $("t-visits").textContent = short(t.top.visitsPerDay);
-    $("t-more").textContent = "Sign up to see which game it is, plus the other " + (t.count - 1) + " games on today's board with prices and red flags.";
+    $("t-more").textContent = "Open the board to see which game it is, plus the other " + (t.count - 1) + " games on today's board with prices and red flags.";
     if (t.date) {
-      $("hero-data").textContent = "Data as of " + t.date + ". A new board every afternoon, Pacific time.";
+      heroDate = t.date; heroLine();
       $("foot-data").textContent = "Data as of " + t.date + ".";
     }
   }).catch(function () {});

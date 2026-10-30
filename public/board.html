@@ -522,6 +522,15 @@
 </footer>
 
 <script src="data.js"></script>
+<dialog class="pass" id="pass" aria-labelledby="pass-h">
+  <div class="pass-in">
+    <h2 id="pass-h" class="pass-h">Your free 24 hours have started</h2>
+    <p>You have the full board until <strong id="pass-until">this time tomorrow</strong>: every pick with its score, estimated price and red flags, plus game pages, the market view and the weekly report. No sign-up needed.</p>
+    <div class="pass-act"><button type="button" class="button" data-close>Start exploring</button></div>
+    <p class="small muted">Want to save games to a watchlist? <a class="link" href="/#signup">Create a free account</a>.</p>
+  </div>
+</dialog>
+
 <script>
 (function () {
   document.documentElement.lang = "en";
@@ -597,7 +606,31 @@
   onBarScroll();
 
   // ---------- account: who's signed in, when access ends, missing password ----------
+  // Visitors without an account are on the free 24-hour pass: say until when, and welcome them
+  // with a popup the first time, unless they came from the landing page's popup.
+  function closePass(d) { if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); }
   fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+    if (m && m.access === "none" && m.trial && m.trial.active) {
+      var until = new Date(m.trial.until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+      var pn = $("access-note");
+      pn.appendChild(el("strong", null, "Free pass: "));
+      pn.appendChild(document.createTextNode("you have the full board until " + until + ". "));
+      var sa = el("a", "link", "Subscribe for $500 a month"); sa.href = "subscribe"; pn.appendChild(sa);
+      pn.appendChild(document.createTextNode(" to keep it, or "));
+      var ca = el("a", "link", "create a free account"); ca.href = "/#signup"; pn.appendChild(ca);
+      pn.appendChild(document.createTextNode(" to save games to a watchlist."));
+      pn.hidden = false;
+      var fromPass = /[?&]from=pass\b/.test(location.search);
+      if (fromPass && history.replaceState) history.replaceState(null, "", location.pathname + location.hash);
+      if (!fromPass && Date.now() - m.trial.start < 2 * 60e3) {
+        var d = $("pass");
+        $("pass-until").textContent = until;
+        if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", "");
+        d.addEventListener("click", function (e) { if (e.target === d) closePass(d); });
+        d.querySelectorAll("[data-close]").forEach(function (b) { b.addEventListener("click", function () { closePass(d); }); });
+      }
+      return;
+    }
     if (!m || m.access !== "active" || !m.until) return;
     $("foot-who").textContent = "Signed in as " + m.email + ".";
     $("foot-account").hidden = false;
@@ -1038,7 +1071,10 @@
             if (on) delete watched[p.pid]; else watched[p.pid] = body.uid;
             wb.textContent = on ? "Add to watchlist" : "On your watchlist"; wb.setAttribute("aria-pressed", on ? "false" : "true");
             wm.textContent = on ? "Removed." : "Added to your watchlist.";
-          }).catch(function (e) { wm.textContent = e.message === "full" ? "Your watchlist is full." : "Couldn't save. Try again."; });
+          }).catch(function (e) {
+            wm.textContent = e.message === "full" ? "Your watchlist is full." : e.message === "signin" ? "" : "Couldn't save. Try again.";
+            if (e.message === "signin") { var la = el("a", "link", "Create a free account"); la.href = "/#signup"; wm.appendChild(la); wm.appendChild(document.createTextNode(" to keep a watchlist.")); }
+          });
       });
       acts.appendChild(wb); acts.appendChild(wm);
       det.appendChild(acts);
