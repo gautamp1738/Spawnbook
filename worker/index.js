@@ -27,6 +27,11 @@
 //   POST /api/watch         { action: "add" | "update" | "remove" | "seen", ... } as JSON
 //   GET  /api/live?u=1,2    current Roblox numbers for up to 100 games, cached for 5 minutes
 //   GET  /lookup            look up any Roblox game, same access as the board
+//   POST /api/daily-email   { email, source } signs up for the daily top 5 by email (free for 7 days
+//                           without an account); signed in, { action: "off" } stops it. GET: status
+//   GET|POST /unsubscribe?t= the link in every daily email
+//   GET|POST /api/discord   a member's Discord webhook for the daily top 5: save, test, remove
+//   /admin/activity         what people do on the site: visits, free passes, pages, lookups, sign-ups
 //   GET  /api/lookup?q=     a link, place ID or name (or ?u=<universe ID>): the game's public numbers
 //                           and a plain-English read of them (worker/lookup.js), cached 10 minutes a game
 //   GET  /leads             verified leads: any signed-in account, even after its access ends, so a
@@ -70,14 +75,14 @@ const SECURITY_HEADERS = {
 };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = normalPath(url);
     let res;
     try {
       // Forms that change something must come from this site.
       if (request.method === "POST" && !sameOrigin(request, url)) res = new Response("Forbidden", { status: 403 });
-      else if (path === "/api/signup") res = await signup(request, env);
+      else if (path === "/api/signup") res = await signup(request, env, ctx);
       else if (path === "/api/signin") res = await signin(request, env);
       else if (path === "/api/signout") res = await signout(request, env);
       else if (path === "/api/password") res = await password(request, env);
@@ -89,12 +94,18 @@ export default {
       else if (path === "/api/buybox") res = await buybox(request, env);
       else if (path === "/api/leads") res = await myLeads(request, env);
       else if (path === "/api/sell") res = await sellForm(request, env);
-      else if (path === "/api/lookup") res = await lookupApi(request, env, url);
+      else if (path === "/api/lookup") res = await lookupApi(request, env, url, ctx);
+      else if (path === "/api/daily-email") res = await dailyEmailApi(request, env, url, ctx);
+      else if (path === "/api/discord") res = await discordApi(request, env, url, ctx);
+      else if (path === "/unsubscribe") res = await unsubscribe(request, env, url);
       else if (signedInPage(path)) res = await signedIn(request, env, url, signedInPage(path));
-      else if (GATED_DATA.includes(path)) res = await gated(request, env, url, path);
-      else if (gatedPage(path)) res = await gated(request, env, url, gatedPage(path));
+      else if (GATED_DATA.includes(path)) res = await gated(request, env, url, path, ctx);
+      else if (gatedPage(path)) res = await gated(request, env, url, gatedPage(path), ctx);
       else if (path === "/admin" || path.startsWith("/admin/")) res = await admin(request, env, url, path);
-      else res = await env.ASSETS.fetch(request);
+      else {
+        if (path === "/" && request.method === "GET") trackVisit(request, env, url, ctx);
+        res = await env.ASSETS.fetch(request);
+      }
     } catch (err) {
       console.error(err && err.stack || err);
       res = new Response("Something went wrong on our side. Try again in a minute.", { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8" } });
@@ -105,7 +116,9 @@ export default {
   // Once a day (the cron in wrangler.jsonc), after the daily pull has published: find games for
   // each buyer, check leads' owners on Roblox, and put together the summary for the admin page and email.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runDaily(env, "https://spawnbook.com").catch((e) => console.error("daily", e && e.stack || e)));
+    const origin = "https://spawnbook.com";
+    ctx.waitUntil(runDaily(env, origin).catch((e) => console.error("daily", e && e.stack || e))
+      .then(() => sendDailyPicks(env, origin)).catch((e) => console.error("picks", e && e.stack || e)));
   },
 };
 
@@ -166,6 +179,248 @@ function digestText(d, origin) {
   }
   lines.push("All leads: " + admin);
   return lines.join("\n");
+}
+
+// ---------- activity ----------
+// A light record of what people do, for /admin/activity: landing visits (with the site that sent
+// them), free passes started, board pages opened, lookups and sign-ups. A visitor without an
+// account shows as "pass" and the last digits of their pass, so one person's visits group together
+// without naming them. Bots and link previews are left out.
+const BOT_UA = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|curl|wget|python|httpclient|headless|lighthouse|monitor|uptime|scan/i;
+function isBot(request) { return BOT_UA.test(request.headers.get("User-Agent") || ""); }
+function track(env, ctx, type, who, detail) {
+  const p = call(env, "track", { type, who: String(who || "").slice(0, 120), detail: String(detail || "").slice(0, 200) }).catch(() => {});
+  if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+}
+const passWho = (start) => "pass " + String(start || "").slice(-7);
+function trackVisit(request, env, url, ctx) {
+  if (isBot(request)) return;
+  const raw = readCookie(request, TRIAL_COOKIE);
+  const m = raw && /^(\d{13})\./.exec(raw);
+  let from = "";
+  try {
+    const ref = request.headers.get("Referer");
+    if (ref) { const h = new URL(ref).hostname.replace(/^www\./, ""); if (h && h !== url.hostname) from = h; }
+  } catch (e) { /* no usable referrer */ }
+  if (url.searchParams.get("ref")) from = from ? from + ", referral link" : "referral link";
+  track(env, ctx, "visit", m ? passWho(m[1]) : "new visitor", from);
+}
+
+// ---------- the daily top 5, by email and in Discord ----------
+// Every evening (the cron in wrangler.jsonc), after the daily pull, today's top 5 goes to everyone on
+// the email list and to each member's Discord webhook. Someone without an account gets the emails
+// free for FREE_EMAIL_DAYS, then one last email that says so. Emails need Resend (RESEND_API_KEY).
+const FREE_EMAIL_DAYS = 7;
+const DISCORD_HOOK = /^https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d{5,25}\/[\w-]{20,120}$/;
+const ADDRESS = "3094 Pine Valley Road, San Ramon, CA 94583";
+const trimNum = (v) => { const s = v >= 100 ? v.toFixed(0) : v.toFixed(1); return s.indexOf(".") >= 0 ? s.replace(/0+$/, "").replace(/\.$/, "") : s; };
+const shortNum = (n) => { n = Number(n) || 0; return n >= 999.5e6 ? trimNum(n / 1e9) + "B" : n >= 999.5e3 ? trimNum(n / 1e6) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "K" : n >= 1e3 ? trimNum(n / 1e3) + "K" : String(Math.round(n)); };
+const usd = (x) => (!(x > 0) ? "$0" : x >= 999.5e6 ? "$" + trimNum(x / 1e9) + "B" : x >= 999.5e3 ? "$" + trimNum(x / 1e6) + "M" : x >= 1e3 ? "$" + Math.round(x / 1e3) + "K" : "$" + Math.round(x));
+const cleanName = (n) => { let s = String(n || ""); try { s = s.replace(/\p{Extended_Pictographic}|️|‍|⃣/gu, ""); } catch (e) {} s = s.replace(/\[\s*\]|\(\s*\)/g, "").replace(/\[\s+/g, "[").replace(/\s+\]/g, "]").replace(/\s{2,}/g, " ").trim(); return s || String(n || ""); };
+const noYear = (d) => String(d || "").replace(/,\s*\d{4}$/, "");
+
+// Today's top 5 from data.js, with the board's middle price estimate.
+async function todaysPicks(env, origin) {
+  const asset = await env.ASSETS.fetch(new Request(new URL("/data.js", origin)));
+  if (!asset.ok) return null;
+  const text = await asset.text();
+  const at = text.indexOf("window.BR =");
+  if (at < 0) return null;
+  const BR = JSON.parse(text.slice(at + 11).trim().replace(/;\s*$/, ""));
+  const board = BR.BOARD || [];
+  const picks = board.slice().sort((a, b) => b[24] - a[24] || b[7] - a[7]).slice(0, 5).map((r) => {
+    const mult = (r[25] && r[25][1]) || (r[21] === "staircase" ? 4.5 : 1.5);
+    return { name: cleanName(r[1]), pid: r[0], uid: (r[26] && r[26].uid) || null, score: r[24], players: r[7], perDay: r[8], price: r[8] * 30 * 0.008 * mult, genre: r[5] || r[4] || "", age: r[6] };
+  });
+  return { date: (BR.META && BR.META.snapshot) || "", picks, total: board.length };
+}
+
+function dailyEmail(today, origin, d, final) {
+  const unsub = origin + "/unsubscribe?t=" + d.token;
+  const until = new Date(d.until).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" });
+  const lines = ["Hi,", "", (final ? "Here's your last free top 5" : "Here's today's top 5") + " from Spawnbook (" + noYear(today.date) + "): young Roblox games growing fast, scored out of 100.", ""];
+  today.picks.forEach((p, i) => {
+    lines.push((i + 1) + ". " + p.name + " (score " + p.score + ")");
+    lines.push("   " + commas(p.players) + " playing, " + shortNum(p.perDay) + " visits a day, " + (p.genre ? p.genre + ", " : "") + p.age + " days old. Estimated price about " + usd(p.price) + ".");
+    lines.push("   " + gameUrl(p.pid), "");
+  });
+  lines.push("The full board has all " + today.total + " games, with prices, red flags and how to reach each owner:", origin + "/board", "");
+  if (!d.member) lines.push(final ? "That was the last of your free week. To keep the daily board, subscribe for $500 a month: " + origin + "/subscribe" : "These emails are free until " + until + ". To keep the full board every day, subscribe: " + origin + "/subscribe", "");
+  lines.push("Gautam Prasanna", "Spawnbook, spawnbook.com", "", ADDRESS, "Unsubscribe: " + unsub);
+  return {
+    to: d.email,
+    subject: final ? "Your last free top 5 from Spawnbook" : "Today's top 5 young Roblox games (" + noYear(today.date) + ")",
+    text: lines.join("\n"),
+    headers: { "List-Unsubscribe": "<" + unsub + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+  };
+}
+
+function discordPicks(today, origin) {
+  return {
+    username: "Spawnbook",
+    allowed_mentions: { parse: [] },
+    embeds: [{
+      title: "Today's top 5 young Roblox games",
+      url: origin + "/board",
+      description: noYear(today.date) + ". Scored out of 100 on growth, stickiness, updates, originality, earnings and ease of buying.",
+      color: 0xf6e016,
+      fields: today.picks.map((p, i) => ({
+        name: (i + 1) + ". " + p.name.slice(0, 200) + " (" + p.score + ")",
+        value: commas(p.players) + " playing, " + shortNum(p.perDay) + " visits a day, about " + usd(p.price) + "\n[Open on Roblox](" + gameUrl(p.pid) + ")" + (p.uid ? " | [Look it up](" + origin + "/lookup?u=" + p.uid + ")" : ""),
+      })),
+      footer: { text: "All " + today.total + " games are on the board at spawnbook.com" },
+    }],
+  };
+}
+
+// Posts to a Discord webhook. DISCORD_API_URL stands in for https://discord.com in tests.
+async function postDiscord(env, hook, payload) {
+  const target = env.DISCORD_API_URL ? hook.replace(/^https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com/, env.DISCORD_API_URL) : hook;
+  try {
+    const r = await fetch(target, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined });
+    return { ok: r.ok, gone: r.status === 401 || r.status === 404, status: r.status };
+  } catch (e) {
+    return { ok: false, status: "network" };
+  }
+}
+
+// Sends up to 100 emails in one call to Resend.
+async function sendEmailBatch(env, msgs) {
+  if (!emailOn(env) || !msgs.length) return { ok: false, off: !emailOn(env) };
+  try {
+    const from = env.EMAIL_FROM || "Spawnbook <leads@mail.spawnbook.com>";
+    const r = await fetch((env.RESEND_API_URL || "https://api.resend.com/emails") + "/batch", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + env.RESEND_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(msgs.map((m) => Object.assign({ from, reply_to: OWNER_EMAIL }, m))),
+    });
+    if (!r.ok) console.error("email batch", r.status, await r.text());
+    return { ok: r.ok };
+  } catch (e) {
+    console.error("email batch", e && e.stack || e);
+    return { ok: false };
+  }
+}
+
+async function sendDailyPicks(env, origin, opts) {
+  opts = opts || {};
+  const today = await todaysPicks(env, origin);
+  if (!today || !today.picks.length) return { skipped: "There's no board to send." };
+  const last = await call(env, "kv-get", { k: "picks_sent" });
+  if (last.v === today.date && !opts.force) return { skipped: "Today's picks (" + today.date + ") already went out." };
+  const out = { date: today.date, at: Date.now(), emails: 0, finals: 0, discord: 0, discordFailed: 0, emailsOff: !emailOn(env) };
+
+  const hooks = (await call(env, "discord-due", {})).rows || [];
+  const results = [];
+  for (const h of hooks) {
+    const r = await postDiscord(env, h.url, discordPicks(today, origin));
+    results.push({ email: h.email, ok: r.ok, gone: r.gone, err: r.ok ? null : "Discord answered " + r.status });
+    if (r.ok) out.discord++; else out.discordFailed++;
+  }
+  if (results.length) await call(env, "discord-results", { rows: results });
+
+  if (emailOn(env)) {
+    const due = (await call(env, "daily-email-due", { date: today.date })).rows || [];
+    const now = Date.now();
+    const all = due.map((d) => { const final = !d.member && d.until <= now; return { email: d.email, final, msg: dailyEmail(today, origin, d, final) }; });
+    for (let i = 0; i < all.length; i += 100) {
+      const chunk = all.slice(i, i + 100);
+      const r = await sendEmailBatch(env, chunk.map((x) => x.msg));
+      if (!r.ok) { out.emailError = true; continue; }
+      await call(env, "daily-email-sent", { date: today.date, rows: chunk.map((x) => ({ email: x.email, final: x.final })) });
+      out.emails += chunk.length;
+      out.finals += chunk.filter((x) => x.final).length;
+    }
+  }
+  await call(env, "kv-set", { k: "picks_sent", v: today.date });
+  await call(env, "kv-set", { k: "picks_last", v: JSON.stringify(out) });
+  return out;
+}
+
+// The sign-up box ("email me the daily top 5") on the landing page and board, and the switch on the
+// account page. Answers JSON for the page's script; a plain form post is sent back to the landing page.
+async function dailyEmailApi(request, env, url, ctx) {
+  const s = await session(request, env);
+  if (request.method === "GET") {
+    if (!s) return json({ error: "signin" }, 401);
+    const r = await call(env, "daily-email-get", { email: s.email });
+    return json({ on: r.on, email: s.email, sending: emailOn(env) });
+  }
+  if (request.method !== "POST") return json({ error: "method" }, 405);
+  const wantsJson = (request.headers.get("Accept") || "").includes("application/json");
+  let b = {};
+  if ((request.headers.get("Content-Type") || "").includes("application/json")) b = await request.json().catch(() => ({}));
+  else { const f = await request.formData(); b = { email: f.get("email"), source: f.get("source"), website: f.get("website") }; }
+  const done = (data, status) => (wantsJson ? json(data, status) : redirect("/?emailed=" + (data.error ? "bad" : "1") + "#teaser"));
+  if (b.website) return done({ ok: true });
+  if (b.action === "off") {
+    if (!s) return json({ error: "signin" }, 401);
+    await call(env, "daily-email-off", { email: s.email });
+    return json({ ok: true, on: false });
+  }
+  const email = String(b.email || (s ? s.email : "")).trim().toLowerCase().slice(0, 200);
+  if (!validEmail(email)) return done({ error: "email" }, 400);
+  const r = await call(env, "daily-email-add", { email, token: randomToken(), until: Date.now() + FREE_EMAIL_DAYS * DAY_MS, source: String(b.source || "").slice(0, 40) });
+  if (r.limited) return done({ error: "busy" }, 429);
+  if (r.fresh) {
+    track(env, ctx, "email", email, String(b.source || ""));
+    const member = !!(s && s.email === email && s.until > Date.now());
+    const unsub = url.origin + "/unsubscribe?t=" + r.token;
+    const p = sendEmail(env, {
+      to: email,
+      subject: "You're in: Spawnbook's daily top 5",
+      text: ["Hi,", "", "Thanks for signing up. Every evening, Pacific time, you'll get Spawnbook's top 5 young Roblox games: the small games growing fastest, scored out of 100." + (member ? "" : " It's free for the next " + FREE_EMAIL_DAYS + " days."), "", "The full board is at " + url.origin + "/board", "", "Gautam Prasanna", "Spawnbook, spawnbook.com", "", ADDRESS, "Unsubscribe: " + unsub].join("\n"),
+      headers: { "List-Unsubscribe": "<" + unsub + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+    });
+    if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p;
+  }
+  return done({ ok: true, on: true, already: !!r.already, sending: emailOn(env) });
+}
+
+// The link in every daily email. Opening it asks first (so link scanners can't unsubscribe anyone);
+// the button, and mail apps' one-click unsubscribe, post to it.
+async function unsubscribe(request, env, url) {
+  const t = String(url.searchParams.get("t") || "");
+  const home = `<p><a class="button quiet" href="/">Go to Spawnbook</a></p>`;
+  if (!/^[0-9a-f]{64}$/.test(t)) return page("Unsubscribe", `<h1 class="head">That link didn't work</h1><p>Use the unsubscribe link from the bottom of one of our emails, or reply to any email and we'll take you off the list.</p>${home}`);
+  if (request.method === "POST") {
+    const r = await call(env, "daily-email-unsub", { token: t });
+    return page("Unsubscribed", r.ok ? `<h1 class="head">You're unsubscribed</h1><p>We won't send you the daily top 5 again.</p>${home}` : `<h1 class="head">That link didn't work</h1><p>Reply to any of our emails and we'll take you off the list.</p>${home}`);
+  }
+  return page("Unsubscribe", `<h1 class="head">Stop the daily emails?</h1><p>You'll stop getting Spawnbook's daily top 5.</p><form method="post" action="/unsubscribe?t=${t}"><button class="button" type="submit">Unsubscribe</button></form>`);
+}
+
+// A member's Discord webhook. Saving one posts a short hello first, so a wrong link is caught now
+// rather than tonight. The full link is never sent back to the page.
+async function discordApi(request, env, url, ctx) {
+  const s = await member(request, env);
+  if (!s) return json({ error: "signin" }, 401);
+  if (request.method === "GET") return json(await call(env, "discord-get", { email: s.email }));
+  if (request.method !== "POST") return json({ error: "method" }, 405);
+  const b = await request.json().catch(() => ({}));
+  if (b.action === "remove") {
+    await call(env, "discord-set", { email: s.email, url: null });
+    return json({ ok: true, set: false });
+  }
+  if (b.action === "save") {
+    const hook = String(b.url || "").trim();
+    if (!DISCORD_HOOK.test(hook)) return json({ error: "url" }, 400);
+    const r = await postDiscord(env, hook, { username: "Spawnbook", allowed_mentions: { parse: [] }, content: "Connected. Spawnbook will post the daily top 5 young Roblox games here every evening, Pacific time." });
+    if (!r.ok) return json({ error: r.gone ? "gone" : "post" }, 400);
+    await call(env, "discord-set", { email: s.email, url: hook });
+    track(env, ctx, "discord", s.email, "");
+    return json({ ok: true, set: true });
+  }
+  if (b.action === "test") {
+    const cur = await call(env, "discord-get", { email: s.email, full: true });
+    if (!cur.url) return json({ error: "none" }, 400);
+    const today = await todaysPicks(env, url.origin);
+    if (!today) return json({ error: "board" }, 503);
+    const r = await postDiscord(env, cur.url, discordPicks(today, url.origin));
+    await call(env, "discord-results", { rows: [{ email: s.email, ok: r.ok, gone: r.gone, err: r.ok ? null : "Discord answered " + r.status }] });
+    return r.ok ? json({ ok: true }) : json({ error: r.gone ? "gone" : "post" }, 400);
+  }
+  return json({ error: "action" }, 400);
 }
 
 // The daily run: the Store does the work (it has the larger CPU allowance), using today's history.
@@ -314,7 +569,7 @@ async function trialCookie(env, start) {
 
 // ---------- accounts ----------
 
-async function signup(request, env) {
+async function signup(request, env, ctx) {
   if (request.method !== "POST") return redirect("/#signup");
   const form = await request.formData();
   const get = (k) => String(form.get(k) || "").trim();
@@ -342,6 +597,7 @@ async function signup(request, env) {
   const token = randomToken();
   const r = await call(env, "signup", { email, name, company, role, password: pw, token, until, ref: /^[a-z0-9]{6,16}$/.test(ref) ? ref : null });
   if (r.exists) return redirect("/signin?e=exists");
+  track(env, ctx, "signup", email, company);
   const headers = new Headers({ Location: nextPath("", r.until), "Cache-Control": "no-store" });
   headers.append("Set-Cookie", sessionCookie(token));
   if (!t) headers.append("Set-Cookie", await trialCookie(env, now));
@@ -488,16 +744,19 @@ async function live(request, env, url) {
 
 // Look up any Roblox game: same access as the board (an active account, or a free pass that's still
 // running). The work is in worker/lookup.js.
-async function lookupApi(request, env, url) {
+async function lookupApi(request, env, url, ctx) {
   const s = await session(request, env);
+  let who;
   if (s) {
     if (s.until <= Date.now()) return json({ error: "subscribe" }, 403);
+    who = s.email;
   } else {
     const t = await readTrial(request, env);
     if (!t) return json({ error: "signin" }, 401);
     if (!t.active) return json({ error: "subscribe" }, 403);
+    who = passWho(t.start);
   }
-  return lookup(env, url);
+  return lookup(env, url, (g) => { if (!url.searchParams.has("examples")) track(env, ctx, "lookup", who, String(g.name || "").slice(0, 120) + " u " + g.uid); });
 }
 
 // ---------- verified leads ----------
@@ -684,9 +943,10 @@ async function sellForm(request, env) {
 
 // ---------- the board ----------
 
-async function gated(request, env, url, assetPath) {
+async function gated(request, env, url, assetPath, ctx) {
   const s = await session(request, env);
   const isData = assetPath.endsWith(".js");
+  let passStart = null;
   const shut = (to) => (isData
     ? new Response("/* Open spawnbook.com to see today's board. */\n", { status: 401, headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-store" } })
     : redirect(to));
@@ -697,11 +957,18 @@ async function gated(request, env, url, assetPath) {
   } else {
     const t = await readTrial(request, env);
     if (t && !t.active) return shut("/subscribe?over=1");
-    if (!t) {
+    if (t) passStart = t.start;
+    else {
       // No account and no pass yet: opening a board page starts the free 24 hours.
       if (isData) return shut("/");
-      setCookie = await trialCookie(env, Date.now());
+      passStart = Date.now();
+      setCookie = await trialCookie(env, passStart);
     }
+  }
+  if (!isData && !isBot(request)) {
+    const page = assetPath.slice(1);
+    const id = page === "game" ? (url.searchParams.get("pid") ? " pid " + url.searchParams.get("pid") : url.searchParams.get("u") ? " u " + url.searchParams.get("u") : "") : "";
+    track(env, ctx, setCookie ? "pass" : "view", s ? s.email : passWho(passStart), page + id);
   }
   const asset = await env.ASSETS.fetch(new Request(new URL(assetPath, url), { headers: request.headers }));
   const res = new Response(asset.body, asset);
@@ -765,6 +1032,8 @@ function page(title, body, script) {
 .admin .button { min-height: 2.5rem; padding: 0 1rem; }
 .admin input[type=password] { min-height: 3rem; padding: 0 0.75rem; border: 2px solid var(--field); background: var(--bg); width: min(100%, 22rem); }
 .admin .add { max-width: 48rem; }
+.admin .two { display: grid; gap: 1.5rem 2.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+.admin .two h2 { margin-bottom: 0.75rem; }
 .admin .linkbox { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--step-small); background: var(--surface); padding: 1rem; overflow-wrap: anywhere; user-select: all; }
 </style></head><body><main class="wrap admin">${body}</main>${script ? "<script>" + script + "</script>" : ""}</body></html>`, {
     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" },
@@ -805,6 +1074,7 @@ async function admin(request, env, url, path) {
   }
 
   if (path === "/admin/leads" || path.startsWith("/admin/leads/")) return adminLeads(request, env, url, path);
+  if (path === "/admin/activity" || path === "/admin/picks/send") return adminActivity(request, env, url, path);
 
   if (path === "/admin/access" && request.method === "POST") {
     const form = await request.formData();
@@ -891,9 +1161,107 @@ async function admin(request, env, url, path) {
   return page("Accounts", `${adminNav("accounts")}<h1 class="head">Accounts</h1><p>${rows.length} ${rows.length === 1 ? "account" : "accounts"}. When someone pays, click <strong>Record a payment</strong>: it adds ${PAID_DAYS} days to their access, and on their first payment, whoever referred them gets a free month (${REFERRAL_DAYS} days) automatically. Use <strong>Set days from now</strong> to correct someone's access, or 0 to end it. If someone forgets their password, make a link and send it to them. Delete removes a person completely, for example when they ask you to delete their data.</p><p><a class="button quiet" href="/admin/signups.csv">Download as a spreadsheet (CSV)</a></p>${table}${creditList}${add}`);
 }
 
+// ---------- admin: activity ----------
+const ACT_TYPES = ["visit", "pass", "view", "lookup", "signup", "email", "discord"];
+async function adminActivity(request, env, url, path) {
+  if (path === "/admin/picks/send" && request.method === "POST") {
+    const r = await sendDailyPicks(env, url.origin);
+    const msg = r.skipped ? r.skipped : "Sent " + r.date + "'s top 5: " + r.discord + " Discord " + (r.discord === 1 ? "channel" : "channels") + (r.discordFailed ? " (" + r.discordFailed + " failed)" : "") + ", " + (r.emailsOff ? "no emails (Resend isn't connected yet)" : r.emails + " " + (r.emails === 1 ? "email" : "emails") + (r.emailError ? ", and some emails failed" : "")) + ".";
+    return redirect("/admin/activity?sent=" + encodeURIComponent(msg) + "#picks");
+  }
+  const a = await call(env, "activity", { days: 14 });
+  // Game names for game pages opened, from today's history file.
+  const names = {};
+  try {
+    const h = await env.ASSETS.fetch(new Request(new URL("/history.js", url.origin)));
+    const t = h.ok ? await h.text() : "";
+    const at = t.indexOf("window.HX =");
+    if (at >= 0) {
+      const HX = JSON.parse(t.slice(at + 11).trim().replace(/;\s*$/, ""));
+      for (const u of Object.keys(HX.games || {})) { names["u " + u] = HX.games[u][0]; names["pid " + HX.games[u][1]] = HX.games[u][0]; }
+    }
+  } catch (e) { /* names are a nicety */ }
+  const gameName = (detail) => {
+    const m = /^game ((?:pid|u) \d+)$/.exec(detail || "");
+    if (m) return names[m[1]] ? cleanName(names[m[1]]) : "a game (" + m[1] + ")";
+    const l = /^(.*) u (\d+)$/.exec(detail || "");
+    return l ? cleanName(l[1]) : detail;
+  };
+  const when = (t) => new Date(t).toLocaleString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const day = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
+
+  // Last 7 days at a glance.
+  const wk = {};
+  for (const r of a.week) wk[r.type] = r;
+  const tile = (label, n, sub) => `<div class="tile"><dt>${esc(label)}</dt><dd>${commas(n)}</dd>${sub ? `<p class="tile-sub">${esc(sub)}</p>` : ""}</div>`;
+  const tiles = `<dl class="tiles">${[
+    tile("Home page visitors", (wk.visit || {}).u || 0, commas((wk.visit || {}).n || 0) + " visits"),
+    tile("Free passes started", (wk.pass || {}).u || 0),
+    tile("People who opened the board", a.boardWeek),
+    tile("Lookups", (wk.lookup || {}).n || 0, commas((wk.lookup || {}).u || 0) + " people"),
+    tile("Accounts made", (wk.signup || {}).n || 0),
+    tile("Email sign-ups", (wk.email || {}).n || 0),
+    tile("Discord connected", (wk.discord || {}).n || 0),
+  ].join("")}</dl>`;
+
+  // Day by day.
+  const byDay = {};
+  for (const r of a.daily) (byDay[r.day] = byDay[r.day] || {})[r.type] = r;
+  for (const r of a.boardDaily) (byDay[r.day] = byDay[r.day] || {}).board = r.u;
+  const days = Object.keys(byDay).sort().reverse();
+  const cell = (d, t, key) => commas(((byDay[d] || {})[t] || {})[key || "n"] || 0);
+  const dayRows = days.map((d) => `<tr><th scope="row">${esc(day(d))}</th><td>${cell(d, "visit", "u")}</td><td>${cell(d, "pass")}</td><td>${commas(byDay[d].board || 0)}</td><td>${cell(d, "lookup")}</td><td>${cell(d, "signup")}</td><td>${cell(d, "email")}</td></tr>`).join("");
+  const dayTable = days.length
+    ? `<div class="table-box"><table><thead><tr><th scope="col">Day (Pacific)</th><th scope="col">Home page visitors</th><th scope="col">Free passes</th><th scope="col">Opened the board</th><th scope="col">Lookups</th><th scope="col">Accounts</th><th scope="col">Email sign-ups</th></tr></thead><tbody>${dayRows}</tbody></table></div>`
+    : `<p>Nothing yet. Activity starts recording from today.</p>`;
+
+  const fromList = a.from.length ? `<ul class="dlist">${a.from.map((r) => `<li>${esc(r.detail)}: ${commas(r.n)}</li>`).join("")}</ul>` : `<p class="small muted">No visits from other sites in the past week. Visits from a typed address, a bookmark or some apps show no source.</p>`;
+  const gameList = a.games.length ? `<ul class="dlist">${a.games.map((r) => `<li>${esc(gameName(r.detail.replace(/^game /, "game ")))}: ${commas(r.n)} ${r.n === 1 ? "time" : "times"}${r.u > 1 ? " by " + r.u + " people" : ""}</li>`).join("")}</ul>` : `<p class="small muted">No game pages opened or lookups in the past week.</p>`;
+
+  // The daily top 5.
+  const last = a.lastPicks ? JSON.parse(a.lastPicks) : null;
+  const sentMsg = url.searchParams.get("sent") ? `<p class="msg" role="status">${esc(url.searchParams.get("sent"))}</p>` : "";
+  const now = Date.now();
+  const state = (r) => r.state === "off" ? "Unsubscribed" : r.state === "ended" ? "Free week over" : r.access_until > now ? "On (member)" : "On, free until " + shortDay(r.until);
+  const on = a.emails.filter((r) => r.state === "on").length;
+  const emailRows = a.emails.map((r) => `<tr><td><a class="link" href="mailto:${esc(r.email)}">${esc(r.email)}</a></td><td>${esc(when(r.created_at))}</td><td>${esc(r.source || "")}</td><td>${esc(state(r))}</td><td>${commas(r.sends)}</td></tr>`).join("");
+  const emailTable = a.emails.length
+    ? `<div class="table-box"><table><thead><tr><th scope="col">Email</th><th scope="col">Signed up (Pacific)</th><th scope="col">From</th><th scope="col">Status</th><th scope="col">Emails sent</th></tr></thead><tbody>${emailRows}</tbody></table></div>`
+    : `<p>Nobody on the list yet.</p>`;
+  const hookRows = a.discord.map((r) => `<li>${esc(r.email)}: ${r.access_until > now ? "" : "access ended, so nothing is posted. "}${r.discord_at ? (r.discord_err ? "last try " + esc(when(r.discord_at)) + " failed (" + esc(r.discord_err) + ")" : "last posted " + esc(when(r.discord_at))) : "nothing posted yet"}</li>`).join("");
+  const picks = `<section class="today" id="picks" aria-labelledby="pk-h"><h2 id="pk-h">Daily top 5 by email and Discord</h2>
+<p>${emailOn(env) ? "Emails are on." : "<strong>Emails are off until Resend is connected</strong> (the RESEND_API_KEY secret and the mail.spawnbook.com DNS records). Sign-ups are saved and will start getting emails once it is."} Discord posts work now. Both go out every evening after the daily pull.</p>
+<p>${last ? "Last sent: " + esc(last.date) + ", " + last.discord + " Discord " + (last.discord === 1 ? "channel" : "channels") + ", " + (last.emailsOff ? "emails off" : last.emails + " emails") + "." : "Nothing sent yet."} ${on} on the email list, ${a.discord.length} Discord ${a.discord.length === 1 ? "channel" : "channels"}.</p>
+<form method="post" action="/admin/picks/send"><button class="button quiet" type="submit">Send today's top 5 now</button></form>${sentMsg}
+<h3>Email list</h3>${emailTable}
+<h3>Discord</h3>${a.discord.length ? `<ul class="dlist">${hookRows}</ul>` : "<p>No member has connected Discord yet.</p>"}</section>`;
+
+  const label = (r) => {
+    if (r.type === "visit") return "Opened the home page" + (r.detail ? " from " + r.detail : "");
+    if (r.type === "pass") return "Started a free pass on the " + (r.detail.startsWith("game") ? "page for " + gameName(r.detail) : r.detail + " page");
+    if (r.type === "view") return "Opened " + (r.detail.startsWith("game") ? "the page for " + gameName(r.detail) : "the " + r.detail + " page");
+    if (r.type === "lookup") return "Looked up " + gameName(r.detail);
+    if (r.type === "signup") return "Made an account" + (r.detail ? " (" + r.detail + ")" : "");
+    if (r.type === "email") return "Signed up for the daily email" + (r.detail ? " on the " + r.detail : "");
+    if (r.type === "discord") return "Connected Discord";
+    return r.type + " " + r.detail;
+  };
+  const recent = a.recent.length
+    ? `<div class="table-box"><table><thead><tr><th scope="col">When (Pacific)</th><th scope="col">Who</th><th scope="col">What</th></tr></thead><tbody>${a.recent.map((r) => `<tr><td>${esc(when(r.at))}</td><td>${esc(r.who)}</td><td>${esc(label(r))}</td></tr>`).join("")}</tbody></table></div>`
+    : `<p>Nothing yet.</p>`;
+
+  return page("Activity", `${adminNav("activity")}<h1 class="head">Activity</h1>
+<p>What people do on Spawnbook, so you can tell whether outreach brings anyone in. "pass" and a number is one visitor without an account; accounts show their email. Bots and link previews are left out. Records are kept 120 days.</p>
+<h2>Last 7 days</h2>${tiles}
+<h2>Day by day</h2>${dayTable}
+<div class="two"><section><h2>Where visitors came from</h2>${fromList}</section><section><h2>Games people looked at</h2>${gameList}</section></div>
+${picks}
+<h2>Latest activity</h2>${recent}`);
+}
+
 // ---------- admin: verified leads ----------
 
-const adminNav = (here) => `<nav class="admin-nav" aria-label="Admin"><a class="link" href="/admin"${here === "accounts" ? ' aria-current="page"' : ""}>Accounts</a><a class="link" href="/admin/leads"${here === "leads" ? ' aria-current="page"' : ""}>Verified leads</a></nav>`;
+const adminNav = (here) => `<nav class="admin-nav" aria-label="Admin"><a class="link" href="/admin"${here === "accounts" ? ' aria-current="page"' : ""}>Accounts</a><a class="link" href="/admin/activity"${here === "activity" ? ' aria-current="page"' : ""}>Activity</a><a class="link" href="/admin/leads"${here === "leads" ? ' aria-current="page"' : ""}>Verified leads</a></nav>`;
 const commas = (n) => (n == null || !Number.isFinite(Number(n)) ? "–" : Math.round(Number(n)).toLocaleString("en-US"));
 const shortDay = (t) => new Date(t).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" });
 const gameUrl = (pid) => "https://www.roblox.com/games/" + pid;
@@ -1302,6 +1670,18 @@ export class Store {
       try { this.sql.exec("ALTER TABLE leads ADD COLUMN " + col); } catch (e) { /* already there */ }
     }
     this.sql.exec("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
+    // Activity: one row per thing someone did (landing visit, free pass started, page opened, lookup,
+    // sign-up), kept 120 days, for the admin activity page. "who" is an account's email, or "pass"
+    // and a number for a visitor without an account.
+    this.sql.exec("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, at INTEGER NOT NULL, day TEXT NOT NULL, type TEXT NOT NULL, who TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '')");
+    this.sql.exec("CREATE INDEX IF NOT EXISTS events_day ON events (day)");
+    // The daily top 5 by email. state: on, ended (a non-member's free week ran out) or off
+    // (unsubscribed). Members with access get it for as long as they're members.
+    this.sql.exec("CREATE TABLE IF NOT EXISTS daily_emails (email TEXT PRIMARY KEY, created_at INTEGER NOT NULL, until INTEGER NOT NULL, token TEXT NOT NULL UNIQUE, source TEXT NOT NULL DEFAULT '', state TEXT NOT NULL DEFAULT 'on', last_sent TEXT, sends INTEGER NOT NULL DEFAULT 0)");
+    // The daily top 5 in Discord: a member's webhook, and how the last post went.
+    for (const col of ["discord TEXT", "discord_at INTEGER", "discord_err TEXT"]) {
+      try { this.sql.exec("ALTER TABLE signups ADD COLUMN " + col); } catch (e) { /* already there */ }
+    }
     this.seedOwner();
   }
 
@@ -1676,7 +2056,101 @@ export class Store {
       return reply({ ok: true });
     }
 
+    // ---------- activity ----------
+    if (op === "track") {
+      const day = new Date(now).toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+      this.sql.exec("INSERT INTO events (at, day, type, who, detail) VALUES (?, ?, ?, ?, ?)", now, day, String(p.type || "").slice(0, 20), String(p.who || "").slice(0, 120), String(p.detail || "").slice(0, 200));
+      if (Math.random() < 0.02) this.sql.exec("DELETE FROM events WHERE at < ?", now - 120 * DAY_MS);
+      return reply({ ok: true });
+    }
+
+    if (op === "activity") {
+      const since = new Date(now - (p.days || 14) * DAY_MS).toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+      const week = now - 7 * DAY_MS;
+      return reply({
+        daily: this.sql.exec("SELECT day, type, COUNT(*) AS n, COUNT(DISTINCT who) AS u FROM events WHERE day >= ? GROUP BY day, type", since).toArray(),
+        boardDaily: this.sql.exec("SELECT day, COUNT(DISTINCT who) AS u FROM events WHERE day >= ? AND type IN ('pass', 'view') AND detail = 'board' GROUP BY day", since).toArray(),
+        week: this.sql.exec("SELECT type, COUNT(*) AS n, COUNT(DISTINCT who) AS u FROM events WHERE at > ? GROUP BY type", week).toArray(),
+        boardWeek: (this.sql.exec("SELECT COUNT(DISTINCT who) AS u FROM events WHERE at > ? AND type IN ('pass', 'view') AND detail = 'board'", week).toArray()[0] || {}).u || 0,
+        from: this.sql.exec("SELECT detail, COUNT(*) AS n FROM events WHERE at > ? AND type = 'visit' AND detail != '' GROUP BY detail ORDER BY n DESC LIMIT 12", week).toArray(),
+        games: this.sql.exec("SELECT detail, COUNT(*) AS n, COUNT(DISTINCT who) AS u FROM events WHERE at > ? AND (type = 'lookup' OR (type IN ('view', 'pass') AND detail LIKE 'game %')) GROUP BY detail ORDER BY n DESC LIMIT 15", week).toArray(),
+        recent: this.sql.exec("SELECT at, type, who, detail FROM events ORDER BY id DESC LIMIT 120").toArray(),
+        emails: this.sql.exec("SELECT d.email, d.created_at, d.until, d.source, d.state, d.last_sent, d.sends, s.access_until FROM daily_emails d LEFT JOIN signups s ON s.email = d.email ORDER BY d.created_at DESC LIMIT 200").toArray(),
+        discord: this.sql.exec("SELECT email, discord_at, discord_err, access_until FROM signups WHERE discord IS NOT NULL ORDER BY email").toArray(),
+        lastPicks: (this.sql.exec("SELECT v FROM kv WHERE k = 'picks_last'").toArray()[0] || {}).v || null,
+      });
+    }
+
+    if (op === "kv-get") {
+      return reply({ v: (this.sql.exec("SELECT v FROM kv WHERE k = ?", String(p.k)).toArray()[0] || {}).v || null });
+    }
+    if (op === "kv-set") {
+      this.sql.exec("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)", String(p.k), String(p.v));
+      return reply({ ok: true });
+    }
+
+    // ---------- the daily top 5 by email ----------
+    if (op === "daily-email-add") {
+      const row = this.sql.exec("SELECT state FROM daily_emails WHERE email = ?", p.email).toArray()[0];
+      if (row && row.state === "on") return reply({ ok: true, already: true });
+      if (row) {
+        // Signing up again turns it back on, with a new free week for someone who isn't a member.
+        this.sql.exec("UPDATE daily_emails SET state = 'on', until = MAX(until, ?), source = ? WHERE email = ?", p.until, p.source || "", p.email);
+        const t = this.sql.exec("SELECT token FROM daily_emails WHERE email = ?", p.email).toArray()[0];
+        return reply({ ok: true, fresh: true, token: t.token });
+      }
+      const today = this.sql.exec("SELECT COUNT(*) AS n FROM daily_emails WHERE created_at > ?", now - DAY_MS).toArray()[0].n;
+      if (today >= (p.cap || 300)) return reply({ limited: true });
+      this.sql.exec("INSERT INTO daily_emails (email, created_at, until, token, source) VALUES (?, ?, ?, ?, ?)", p.email, now, p.until, p.token, p.source || "");
+      return reply({ ok: true, fresh: true, token: p.token });
+    }
+    if (op === "daily-email-get") {
+      const row = this.sql.exec("SELECT state FROM daily_emails WHERE email = ?", p.email).toArray()[0];
+      return reply({ on: !!row && row.state === "on" });
+    }
+    if (op === "daily-email-off") {
+      this.sql.exec("UPDATE daily_emails SET state = 'off' WHERE email = ?", p.email);
+      return reply({ ok: true });
+    }
+    if (op === "daily-email-unsub") {
+      const row = this.sql.exec("SELECT email FROM daily_emails WHERE token = ?", p.token).toArray()[0];
+      if (row) this.sql.exec("UPDATE daily_emails SET state = 'off' WHERE token = ?", p.token);
+      return reply({ ok: !!row });
+    }
+    if (op === "daily-email-due") {
+      return reply({ rows: this.sql.exec("SELECT d.email, d.until, d.token, d.sends, (s.access_until IS NOT NULL AND s.access_until > ?) AS member FROM daily_emails d LEFT JOIN signups s ON s.email = d.email WHERE d.state = 'on' AND (d.last_sent IS NULL OR d.last_sent != ?)", now, p.date).toArray() });
+    }
+    if (op === "daily-email-sent") {
+      for (const r of p.rows || []) {
+        this.sql.exec("UPDATE daily_emails SET last_sent = ?, sends = sends + 1, state = CASE WHEN ? THEN 'ended' ELSE state END WHERE email = ?", p.date, r.final ? 1 : 0, r.email);
+      }
+      return reply({ ok: true });
+    }
+
+    // ---------- the daily top 5 in Discord ----------
+    if (op === "discord-set") {
+      this.sql.exec("UPDATE signups SET discord = ?, discord_at = NULL, discord_err = NULL WHERE email = ?", p.url || null, p.email);
+      return reply({ ok: true });
+    }
+    if (op === "discord-get") {
+      const r = this.sql.exec("SELECT discord, discord_at, discord_err FROM signups WHERE email = ?", p.email).toArray()[0] || {};
+      return reply(p.full ? { url: r.discord || null } : { set: !!r.discord, tail: r.discord ? r.discord.slice(-6) : null, at: r.discord_at || null, err: r.discord_err || null });
+    }
+    if (op === "discord-due") {
+      return reply({ rows: this.sql.exec("SELECT email, discord AS url FROM signups WHERE discord IS NOT NULL AND access_until > ?", now).toArray() });
+    }
+    if (op === "discord-results") {
+      for (const r of p.rows || []) {
+        // A webhook Discord says no longer exists is removed, so we stop posting to it.
+        if (r.gone) this.sql.exec("UPDATE signups SET discord = NULL, discord_at = ?, discord_err = 'removed in Discord' WHERE email = ?", now, r.email);
+        else this.sql.exec("UPDATE signups SET discord_at = ?, discord_err = ? WHERE email = ?", now, r.ok ? null : String(r.err || "error").slice(0, 80), r.email);
+      }
+      return reply({ ok: true });
+    }
+
     if (op === "delete") {
+      this.sql.exec("DELETE FROM daily_emails WHERE email = ?", p.email);
+      this.sql.exec("DELETE FROM events WHERE who = ?", p.email);
       this.sql.exec("DELETE FROM sessions WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM links WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM fails WHERE email = ?", p.email);

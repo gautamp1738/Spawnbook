@@ -87,6 +87,16 @@
       </figure>
       <p data-reveal style="--i:2" id="teaser-cta-row"><a class="button" href="board" id="teaser-cta">Open today's board free</a></p>
       <p class="small muted" data-reveal style="--i:2" id="teaser-free">Free for 24 hours. No sign-up, no card.</p>
+      <form class="mail-mini" data-daily-email action="/api/daily-email" method="post" novalidate id="mail-home">
+        <label for="dm-email-home">Not ready to look? Get the daily top 5 by email</label>
+        <div class="mail-row">
+          <input id="dm-email-home" name="email" type="email" autocomplete="email" inputmode="email" placeholder="you@studio.com" maxlength="200">
+          <button class="button quiet" type="submit">Email me</button>
+        </div>
+        <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <input type="hidden" name="source" value="home page">
+        <p class="small muted" data-status role="status">Free for 7 days: one email each evening, Pacific time. Unsubscribe any time.</p>
+      </form>
     </div>
 
     <div class="c-r" data-reveal style="--i:1">
@@ -297,6 +307,7 @@
     // Account holders don't need the free-pass offer: the signed-in card next to it has their button.
     $("teaser-cta-row").hidden = true;
     $("teaser-free").hidden = true;
+    $("mail-home").hidden = true;
     $("signed-in-who").textContent = "Signed in as " + m.email + ".";
     if (!m.hasPassword) $("signed-in-pw").hidden = false;
     if (m.access === "active") {

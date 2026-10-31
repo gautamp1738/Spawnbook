@@ -792,3 +792,12 @@ th.r, td.r, .mini .r { text-align: right; }
 .g-sig dl { grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem 2rem; }
 .g-sig-more { margin-top: 1.25rem; }
 .g-sig dd { font-size: var(--step-body); line-height: 1.35; }
+
+/* ---------- "email me the daily top 5" ---------- */
+.mail-mini { display: grid; gap: 0.5rem; max-width: 32rem; margin-top: 1.75rem; }
+.mail-mini label { font-weight: 600; font-size: var(--step-small); }
+.mail-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.mail-row input { flex: 1 1 14rem; min-width: 0; min-height: 3rem; padding: 0 0.75rem; border: 2px solid var(--field); background: var(--bg); color: var(--ink); border-radius: 0; font-size: max(1rem, var(--step-body)); }
+.mail-row input:focus-visible { outline: 3px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
+.mail-row input[aria-invalid="true"] { border-color: var(--ink); }
+.mail-mini [data-status] { margin: 0; }

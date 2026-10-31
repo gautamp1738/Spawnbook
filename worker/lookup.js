@@ -544,7 +544,8 @@ function analyse(ctx) {
 }
 
 // ---------- the endpoint ----------
-export async function lookup(env, url) {
+// onFound(game) is called with the game's summary whenever a lookup finds one (for the activity page).
+export async function lookup(env, url, onFound) {
   const origin = url.origin;
   const data = await ourData(env, origin);
   // Today's top three, as examples for the search box.
@@ -589,7 +590,7 @@ export async function lookup(env, url) {
   const key = new Request("https://lookup.spawnbook.internal/v1/" + uid);
   if (cache) {
     const hit = await cache.match(key);
-    if (hit) { const body = await hit.json(); body.others = others; body.kind = kind; return out(body); }
+    if (hit) { const body = await hit.json(); body.others = others; body.kind = kind; if (onFound) onFound(body.game); return out(body); }
   }
 
   const [gj, vj, pass, prod, mat, img] = await Promise.all([
@@ -610,6 +611,7 @@ export async function lookup(env, url) {
   if (cache) await cache.put(key, new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json", "Cache-Control": "max-age=600" } }));
   body.others = others;
   body.kind = kind;
+  if (onFound) onFound(body.game);
   return out(body);
 }
 

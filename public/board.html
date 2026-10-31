@@ -76,6 +76,16 @@
         <ol class="pick-rows" id="picks-list" data-reveal style="--i:1"></ol>
         <p data-reveal style="--i:2">Free trackers show player counts. This report adds an estimated price, red flags and a public way to reach each owner. Prices are estimates from public numbers, so treat them as a starting point.</p>
         <p data-reveal style="--i:3"><a class="button quiet" href="#board" id="see-board">See the full board</a></p>
+        <form class="mail-mini" data-daily-email action="/api/daily-email" method="post" novalidate id="mail-board" hidden>
+        <label for="dm-email-board">Get the daily top 5 by email after your free day</label>
+        <div class="mail-row">
+          <input id="dm-email-board" name="email" type="email" autocomplete="email" inputmode="email" placeholder="you@studio.com" maxlength="200">
+          <button class="button quiet" type="submit">Email me</button>
+        </div>
+        <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <input type="hidden" name="source" value="board">
+        <p class="small muted" data-status role="status">Free for 7 days: one email each evening, Pacific time. Unsubscribe any time.</p>
+      </form>
       </div>
     </div>
   </section>
@@ -629,6 +639,8 @@
       var ca = el("a", "link", "create a free account"); ca.href = "/#signup"; pn.appendChild(ca);
       pn.appendChild(document.createTextNode(" to save games to a watchlist."));
       pn.hidden = false;
+      var mailed = false; try { mailed = localStorage.getItem("sb_daily_email") === "1"; } catch (e) {}
+      if (!mailed) $("mail-board").hidden = false;
       var fromPass = /[?&]from=pass\b/.test(location.search);
       if (fromPass && history.replaceState) history.replaceState(null, "", location.pathname + location.hash);
       if (!fromPass && Date.now() - m.trial.start < 2 * 60e3) {

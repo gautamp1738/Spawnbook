@@ -22,6 +22,27 @@
     } catch (e) { fallback(); }
   }
   window.SB = { copyText: copyText, MAIL: MAIL, $: $ };
+
+  // "Email me the daily top 5" boxes (landing page and board).
+  document.querySelectorAll("form[data-daily-email]").forEach(function (f) {
+    var status = f.querySelector("[data-status]"), input = f.querySelector('input[type="email"]'), btn = f.querySelector('button[type="submit"]');
+    f.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var v = input.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { status.textContent = "Enter your email address."; input.setAttribute("aria-invalid", "true"); input.focus(); return; }
+      input.removeAttribute("aria-invalid"); btn.disabled = true;
+      fetch(f.getAttribute("action"), { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ email: v, source: f.querySelector('[name="source"]').value, website: f.querySelector('[name="website"]').value }) })
+        .then(function (r) { return r.json(); }).then(function (d) {
+          if (d.error) throw new Error(d.error);
+          status.textContent = d.already ? "You're already on the list." : d.sending ? "You're in. Check your inbox for a welcome email; the first top 5 arrives this evening." : "You're in. We'll email you the daily top 5 starting soon.";
+          input.value = "";
+          try { localStorage.setItem("sb_daily_email", "1"); } catch (err) {}
+        }).catch(function (err) {
+          status.textContent = err.message === "email" ? "That email doesn't look right." : err.message === "busy" ? "Too many sign-ups right now. Try again tomorrow." : "That didn't work. Try again.";
+        }).then(function () { btn.disabled = false; });
+    });
+  });
   if ($("foot-copy")) $("foot-copy").addEventListener("click", function () { copyText(MAIL, $("foot-status")); });
   if ($("mail-copy")) $("mail-copy").addEventListener("click", function () { copyText(MAIL, $("mail-status")); });
 

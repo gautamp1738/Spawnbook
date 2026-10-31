@@ -80,6 +80,38 @@
         <p><a class="button" href="leads">Your leads</a></p>
       </section>
 
+      <section class="form" id="daily-mail" aria-labelledby="dm-h" hidden>
+        <h2 class="form-h" id="dm-h">Daily top 5 by email</h2>
+        <p id="dm-text">Get today's top 5 young Roblox games in your inbox every evening, Pacific time.</p>
+        <div class="form-row">
+          <button type="button" class="button" id="dm-btn">Email me the daily top 5</button>
+          <span class="status small" id="dm-status" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <section class="form" id="discord" aria-labelledby="dc-h" hidden>
+        <h2 class="form-h" id="dc-h">Daily top 5 in Discord</h2>
+        <p>Spawnbook can post today's top 5 to a channel in your team's Discord every evening.</p>
+        <div id="dc-set-box" hidden>
+          <p id="dc-state"></p>
+          <div class="form-row">
+            <button type="button" class="button quiet" id="dc-test">Post today's top 5 now</button>
+            <button type="button" class="button quiet" id="dc-remove">Stop posting</button>
+          </div>
+        </div>
+        <div id="dc-new-box">
+          <div class="field">
+            <label for="dc-url">Webhook link</label>
+            <input id="dc-url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/…" aria-describedby="dc-help">
+            <span class="help small muted" id="dc-help">In Discord, open the channel's settings, choose Integrations, then Webhooks, make a new webhook and copy its link. Only people with Manage Webhooks permission can do this.</span>
+          </div>
+          <div class="form-row">
+            <button type="button" class="button" id="dc-save">Connect Discord</button>
+          </div>
+        </div>
+        <span class="status small" id="dc-status" aria-live="polite"></span>
+      </section>
+
       <section class="form refer" id="refer" aria-labelledby="ref-h" hidden>
         <h2 class="form-h" id="ref-h">Refer a buyer, get a month free</h2>
         <p>Share your link with another studio or fund. When someone signs up through it and becomes a paying subscriber, you get a free month. The numbers below count the people who signed up through your link.</p>
@@ -176,6 +208,8 @@
       show("pw-form");
       show("acct-leads");
       show("signout");
+      dailyMail();
+      if (m.access === "active") discord();
       fetch("/api/referrals", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (rf) {
         if (!rf || !rf.link) return;
         $("ref-link").value = rf.link;
@@ -190,6 +224,60 @@
       $("acct-lead").textContent = "Couldn't check your account just now. Reload the page to try again.";
     });
   }
+
+  // ---------- daily top 5 by email ----------
+  var dmOn = false;
+  function dmRender(sending) {
+    $("dm-btn").textContent = dmOn ? "Stop the daily emails" : "Email me the daily top 5";
+    $("dm-btn").className = dmOn ? "button quiet" : "button";
+    $("dm-text").textContent = dmOn ? "You're getting today's top 5 by email every evening, Pacific time." + (sending === false ? " The first one goes out soon." : "") : "Get today's top 5 young Roblox games in your inbox every evening, Pacific time.";
+  }
+  function dailyMail() {
+    fetch("/api/daily-email", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d) return;
+      dmOn = !!d.on; dmRender(d.sending); show("daily-mail");
+    }).catch(function () {});
+  }
+  $("dm-btn").addEventListener("click", function () {
+    var btn = this; btn.disabled = true; $("dm-status").textContent = "";
+    fetch("/api/daily-email", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(dmOn ? { action: "off" } : { source: "account" }) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.error) throw new Error(d.error);
+        dmOn = !!d.on; dmRender(d.sending); $("dm-status").textContent = dmOn ? "Done. Check your inbox for a welcome email." : "Stopped.";
+      }).catch(function () { $("dm-status").textContent = "That didn't save. Try again."; })
+      .then(function () { btn.disabled = false; });
+  });
+
+  // ---------- daily top 5 in Discord ----------
+  var DC_ERR = { url: "That isn't a Discord webhook link. It starts with https://discord.com/api/webhooks/.", gone: "Discord says that webhook doesn't exist anymore. Make a new one and paste its link.", post: "Discord didn't accept the post. Check the link and try again.", none: "Connect a webhook first.", board: "Today's board isn't ready. Try again in a few minutes." };
+  function dcRender(d) {
+    $("dc-set-box").hidden = !d.set; $("dc-new-box").hidden = !!d.set;
+    if (d.set) $("dc-state").textContent = "Posting to the webhook ending in …" + d.tail + ". " + (d.at ? (d.err ? "The last post failed (" + d.err + ")." : "Last posted " + when(d.at) + ".") : "The first daily post goes out this evening.");
+    else if (d.err) $("dc-status").textContent = "We stopped posting: " + d.err + ". Connect a new webhook to start again.";
+  }
+  function discord() {
+    fetch("/api/discord", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d) return; dcRender(d); show("discord");
+    }).catch(function () {});
+  }
+  function dcPost(body, okMsg, btn) {
+    btn.disabled = true; $("dc-status").textContent = "Working…";
+    return fetch("/api/discord", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.error) { $("dc-status").textContent = DC_ERR[d.error] || "That didn't work. Try again."; return; }
+        $("dc-status").textContent = okMsg;
+        return fetch("/api/discord", { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(dcRender);
+      }).catch(function () { $("dc-status").textContent = "That didn't work. Try again."; })
+      .then(function () { btn.disabled = false; });
+  }
+  $("dc-save").addEventListener("click", function () {
+    var v = $("dc-url").value.trim();
+    if (!/^https:\/\/(ptb\.|canary\.)?discord(app)?\.com\/api\/webhooks\//.test(v)) { $("dc-status").textContent = DC_ERR.url; $("dc-url").setAttribute("aria-invalid", "true"); $("dc-url").focus(); return; }
+    $("dc-url").removeAttribute("aria-invalid");
+    dcPost({ action: "save", url: v }, "Connected. Check the channel for a hello from Spawnbook.", this).then(function () { $("dc-url").value = ""; });
+  });
+  $("dc-test").addEventListener("click", function () { dcPost({ action: "test" }, "Posted today's top 5 to your channel.", this); });
+  $("dc-remove").addEventListener("click", function () { dcPost({ action: "remove" }, "Stopped. Nothing more will be posted.", this); });
 
   $("ref-copy").addEventListener("click", function () { window.SB.copyText($("ref-link").value, $("ref-status"), $("ref-link"), "Copied. Paste it into an email or message."); });
 
