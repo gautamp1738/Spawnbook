@@ -87,6 +87,7 @@ export default {
     const path = normalPath(url);
     let res;
     try {
+      if (request.method === "GET" && path !== "/" && path !== "/g" && !path.startsWith("/g/") && isPagePath(path) && viaTag(url)) trackLanding(request, env, url, ctx, path);
       // Forms that change something must come from this site.
       if (request.method === "POST" && !sameOrigin(request, url)) res = new Response("Forbidden", { status: 403 });
       else if (path === "/api/signup") res = await signup(request, env, ctx);
@@ -210,6 +211,14 @@ function referrer(request, url) {
   } catch (e) { /* no usable referrer */ }
   return "";
 }
+// The tag on a link Gautam shares, like spawnbook.com/?via=discord. Discord, X and email apps
+// usually send no Referer, so without a tag those visits can't be told apart from typed addresses.
+function viaTag(url) {
+  const v = String(url.searchParams.get("via") || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 24);
+  return v ? "via " + v : "";
+}
+// Where a visit came from: the link's tag if it has one, otherwise the referring site.
+function sourceOf(request, url) { return viaTag(url) || referrer(request, url); }
 function visitorWho(request) {
   const raw = readCookie(request, TRIAL_COOKIE);
   const m = raw && /^(\d{13})\./.exec(raw);
@@ -217,15 +226,22 @@ function visitorWho(request) {
 }
 function trackVisit(request, env, url, ctx) {
   if (isBot(request)) return;
-  let from = referrer(request, url);
+  let from = sourceOf(request, url);
   if (url.searchParams.get("ref")) from = from ? from + ", referral link" : "referral link";
   track(env, ctx, "visit", visitorWho(request), from);
 }
 // A public game page opened. Accounts aren't looked up here, so these pages stay fast and cacheable.
 function trackPage(request, env, url, ctx, detail) {
   if (isBot(request)) return;
-  track(env, ctx, "page", visitorWho(request), detail, referrer(request, url));
+  track(env, ctx, "page", visitorWho(request), detail, sourceOf(request, url));
 }
+// Any other page opened through a tagged link (/trends?via=email, /board?via=x). Untagged visits to
+// these pages aren't recorded; the home page and public game pages record every visit.
+function trackLanding(request, env, url, ctx, path) {
+  if (isBot(request)) return;
+  track(env, ctx, "land", visitorWho(request), path.replace(/\.html$/, ""), viaTag(url));
+}
+const isPagePath = (path) => !/^\/(api|admin)(\/|$)/.test(path) && !/\.(?!html$)[a-z0-9]+$/.test(path);
 
 // ---------- the daily top 5, by email and in Discord ----------
 // Every evening (the cron in wrangler.jsonc), after the daily pull, today's top 5 goes to everyone on
@@ -1240,7 +1256,7 @@ async function adminActivity(request, env, url, path) {
   for (const r of a.week) wk[r.type] = r;
   const tile = (label, n, sub) => `<div class="tile"><dt>${esc(label)}</dt><dd>${commas(n)}</dd>${sub ? `<p class="tile-sub">${esc(sub)}</p>` : ""}</div>`;
   const tiles = `<dl class="tiles">${[
-    tile("Home page visitors", (wk.visit || {}).u || 0, commas((wk.visit || {}).n || 0) + " visits"),
+    tile("Home page visits", (wk.visit || {}).n || 0, "Not unique people: first-time visitors can't be told apart"),
     tile("Public game pages opened", (wk.page || {}).n || 0, commas((wk.page || {}).u || 0) + " visitors"),
     tile("Free passes started", (wk.pass || {}).u || 0),
     tile("People who opened the board", a.boardWeek),
@@ -1256,12 +1272,25 @@ async function adminActivity(request, env, url, path) {
   for (const r of a.boardDaily) (byDay[r.day] = byDay[r.day] || {}).board = r.u;
   const days = Object.keys(byDay).sort().reverse();
   const cell = (d, t, key) => commas(((byDay[d] || {})[t] || {})[key || "n"] || 0);
-  const dayRows = days.map((d) => `<tr><th scope="row">${esc(day(d))}</th><td>${cell(d, "visit", "u")}</td><td>${cell(d, "page")}</td><td>${cell(d, "pass")}</td><td>${commas(byDay[d].board || 0)}</td><td>${cell(d, "lookup")}</td><td>${cell(d, "signup")}</td><td>${cell(d, "email")}</td></tr>`).join("");
+  const dayRows = days.map((d) => `<tr><th scope="row">${esc(day(d))}</th><td>${cell(d, "visit")}</td><td>${cell(d, "page")}</td><td>${cell(d, "pass")}</td><td>${commas(byDay[d].board || 0)}</td><td>${cell(d, "lookup")}</td><td>${cell(d, "signup")}</td><td>${cell(d, "email")}</td></tr>`).join("");
   const dayTable = days.length
-    ? `<div class="table-box"><table><thead><tr><th scope="col">Day (Pacific)</th><th scope="col">Home page visitors</th><th scope="col">Game pages</th><th scope="col">Free passes</th><th scope="col">Opened the board</th><th scope="col">Lookups</th><th scope="col">Accounts</th><th scope="col">Email sign-ups</th></tr></thead><tbody>${dayRows}</tbody></table></div>`
+    ? `<div class="table-box"><table><thead><tr><th scope="col">Day (Pacific)</th><th scope="col">Home page visits</th><th scope="col">Game pages</th><th scope="col">Free passes</th><th scope="col">Opened the board</th><th scope="col">Lookups</th><th scope="col">Accounts</th><th scope="col">Email sign-ups</th></tr></thead><tbody>${dayRows}</tbody></table></div>`
     : `<p>Nothing yet. Activity starts recording from today.</p>`;
 
-  const fromList = a.from.length ? `<ul class="dlist">${a.from.map((r) => `<li>${esc(r.detail)}: ${commas(r.n)}</li>`).join("")}</ul>` : `<p class="small muted">No visits from other sites in the past week. Visits from a typed address, a bookmark or some apps show no source.</p>`;
+  // "via x" is a tagged link; the rest are referring sites. Visits with neither are counted too, since
+  // that's where clicks from Discord, X and email apps land when the link has no tag.
+  const TAGS = { x: "X", discord: "Discord", email: "email", form: "contact forms", reddit: "Reddit", devforum: "the DevForum", linkedin: "LinkedIn" };
+  const sourceName = (s) => {
+    if (!s) return "No source (typed in, a bookmark, or an untagged link opened in an app like Discord, X or Gmail)";
+    const m = /^via ([a-z0-9_-]+)(.*)$/.exec(s);
+    if (m) return "Your " + (TAGS[m[1]] || m[1]) + " links (?via=" + m[1] + ")" + m[2];
+    return s === "t.co" ? "t.co (links on X)" : s;
+  };
+  const fromList = a.from.length ? `<ul class="dlist">${a.from.map((r) => `<li>${esc(sourceName(r.detail))}: ${commas(r.n)}</li>`).join("")}</ul>` : `<p class="small muted">No visits in the past week.</p>`;
+  const taggedList = a.tagged.length
+    ? `<ul class="dlist">${a.tagged.map((r) => `<li>${esc(sourceName(r.tag))}: ${commas(r.n)} ${r.n === 1 ? "visit" : "visits"}<span class="sub">Landed on ${esc(String(r.pages || "").split(",").join(", "))}</span></li>`).join("")}</ul>`
+    : `<p class="small muted">No visits from tagged links yet.</p>`;
+  const tagHelp = `<p class="small">Add <strong>?via=</strong> and a word to every link you share, so visits from apps that hide where they came from still show up here: spawnbook.com/?via=x on X, https://spawnbook.com/?via=discord on Discord (Discord only makes links clickable with https://), spawnbook.com/?via=email in emails. It works on any page, like spawnbook.com/trends?via=reddit. The tag only labels the visit; it doesn't identify anyone.</p>`;
   const gameList = a.games.length ? `<ul class="dlist">${a.games.map((r) => `<li>${esc(gameName(r.detail.replace(/^game /, "game ")))}: ${commas(r.n)} ${r.n === 1 ? "time" : "times"}${r.u > 1 ? " by " + r.u + " people" : ""}</li>`).join("")}</ul>` : `<p class="small muted">No game pages opened or lookups in the past week.</p>`;
 
   // The daily top 5.
@@ -1282,12 +1311,15 @@ async function adminActivity(request, env, url, path) {
 <h3>Email list</h3>${emailTable}
 <h3>Discord</h3>${a.discord.length ? `<ul class="dlist">${hookRows}</ul>` : "<p>No member has connected Discord yet.</p>"}</section>`;
 
+  // " from x.com", or " through a ?via=discord link" for a tagged one.
+  const fromText = (s) => { const m = /^via ([a-z0-9_-]+)(.*)$/.exec(s || ""); return m ? " through a ?via=" + m[1] + " link" + m[2] : s ? " from " + s : ""; };
   const label = (r) => {
-    if (r.type === "visit") return "Opened the home page" + (r.detail ? " from " + r.detail : "");
+    if (r.type === "visit") return "Opened the home page" + fromText(r.detail);
     if (r.type === "pass") return "Started a free pass on the " + (r.detail.startsWith("game") ? "page for " + gameName(r.detail) : r.detail + " page");
     if (r.type === "view") return "Opened " + (r.detail.startsWith("game") ? "the page for " + gameName(r.detail) : "the " + r.detail + " page");
     if (r.type === "lookup") return "Looked up " + gameName(r.detail) + (r.src === "free plan" ? " (free plan)" : "");
-    if (r.type === "page") return "Opened the public page for " + gameName(r.detail) + (r.src ? " from " + r.src : "");
+    if (r.type === "page") return "Opened the public page for " + gameName(r.detail) + fromText(r.src);
+    if (r.type === "land") return "Opened " + r.detail + fromText(r.src);
     if (r.type === "signup") return "Made an account" + (r.detail ? " (" + r.detail + ")" : "");
     if (r.type === "email") return "Signed up for the daily email" + (r.detail ? " on the " + r.detail : "");
     if (r.type === "discord") return "Connected Discord";
@@ -1298,10 +1330,11 @@ async function adminActivity(request, env, url, path) {
     : `<p>Nothing yet.</p>`;
 
   return page("Activity", `${adminNav("activity")}<h1 class="head">Activity</h1>
-<p>What people do on Spawnbook, so you can tell whether outreach and posts bring anyone in. "Where visitors came from" counts the home page and public game pages. "pass" and a number is one visitor without an account; accounts show their email. Bots and link previews are left out. Records are kept 120 days.</p>
+<p>What people do on Spawnbook, so you can tell whether outreach and posts bring anyone in. "Where visitors came from" counts the home page, public game pages and any page opened through a tagged link (?via=). "pass" and a number is one visitor without an account; accounts show their email. Bots and link previews are left out. Records are kept 120 days.</p>
 <h2>Last 7 days</h2>${tiles}
 <h2>Day by day</h2>${dayTable}
-<div class="two"><section><h2>Where visitors came from</h2>${fromList}</section><section><h2>Games people looked at</h2>${gameList}</section></div>
+<div class="two"><section><h2>Where visitors came from</h2><p class="small muted">Last 7 days: home page and public game page visits, plus any page opened through a tagged link.</p>${fromList}</section><section><h2>Games people looked at</h2>${gameList}</section></div>
+<h2>Your tagged links, last 30 days</h2>${taggedList}${tagHelp}
 ${picks}
 <h2>Latest activity</h2>${recent}`);
 }
@@ -2123,7 +2156,8 @@ export class Store {
         boardDaily: this.sql.exec("SELECT day, COUNT(DISTINCT who) AS u FROM events WHERE day >= ? AND type IN ('pass', 'view') AND detail = 'board' GROUP BY day", since).toArray(),
         week: this.sql.exec("SELECT type, COUNT(*) AS n, COUNT(DISTINCT who) AS u FROM events WHERE at > ? GROUP BY type", week).toArray(),
         boardWeek: (this.sql.exec("SELECT COUNT(DISTINCT who) AS u FROM events WHERE at > ? AND type IN ('pass', 'view') AND detail = 'board'", week).toArray()[0] || {}).u || 0,
-        from: this.sql.exec("SELECT detail, COUNT(*) AS n FROM (SELECT detail FROM events WHERE at > ? AND type = 'visit' AND detail != '' UNION ALL SELECT src AS detail FROM events WHERE at > ? AND type = 'page' AND src != '') GROUP BY detail ORDER BY n DESC LIMIT 12", week, week).toArray(),
+        from: this.sql.exec("SELECT detail, COUNT(*) AS n FROM (SELECT detail FROM events WHERE at > ? AND type = 'visit' UNION ALL SELECT src AS detail FROM events WHERE at > ? AND type IN ('page', 'land')) GROUP BY detail ORDER BY n DESC LIMIT 15", week, week).toArray(),
+        tagged: this.sql.exec("SELECT tag, COUNT(*) AS n, GROUP_CONCAT(DISTINCT page) AS pages FROM (SELECT detail AS tag, 'home page' AS page FROM events WHERE at > ? AND type = 'visit' AND detail LIKE 'via %' UNION ALL SELECT src AS tag, CASE WHEN type = 'page' THEN 'game pages' ELSE detail END AS page FROM events WHERE at > ? AND type IN ('page', 'land') AND src LIKE 'via %') GROUP BY tag ORDER BY n DESC", now - 30 * DAY_MS, now - 30 * DAY_MS).toArray(),
         games: this.sql.exec("SELECT detail, COUNT(*) AS n, COUNT(DISTINCT who) AS u FROM events WHERE at > ? AND (type IN ('lookup', 'page') OR (type IN ('view', 'pass') AND detail LIKE 'game %')) GROUP BY detail ORDER BY n DESC LIMIT 15", week).toArray(),
         recent: this.sql.exec("SELECT at, type, who, detail, src FROM events ORDER BY id DESC LIMIT 120").toArray(),
         emails: this.sql.exec("SELECT d.email, d.created_at, d.until, d.source, d.state, d.last_sent, d.sends, s.access_until FROM daily_emails d LEFT JOIN signups s ON s.email = d.email ORDER BY d.created_at DESC LIMIT 200").toArray(),
