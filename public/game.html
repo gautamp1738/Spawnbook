@@ -123,6 +123,7 @@
 <script src="site.js"></script>
 <script src="history.js"></script>
 <script src="data.js"></script>
+<script src="valuation.js"></script>
 <script src="tools.js"></script>
 <script>
 (function () {
@@ -156,7 +157,7 @@
   // ---------- today's board row, if any ----------
   var BR = window.BR, row = null;
   if (BR && BR.BOARD) BR.BOARD.forEach(function (r) { if (r[0] === g.pid) row = r; });
-  var MULT = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6] }, PER_VISIT = [0.004, 0.008, 0.012];
+  var EARN = (BR && BR.META && BR.META.earn) || null; // prices: public/valuation.js
 
   // ---------- numbers now ----------
   var players = T.playersByDay(g), visits = T.visitsByDay(g), rating = T.ratingByDay(g);
@@ -179,10 +180,11 @@
     tile("Rating", up + down ? (Math.round(up / (up + down) * 1000) / 10) + "%" : "–", up + down ? T.commas(up + down) + " votes" : null);
     if (live && live.favorites != null) tile("Favorites", T.short(live.favorites), null);
     if (row) {
-      var rev = (row[8] * 30) * PER_VISIT[1], mult = row[25] || MULT[row[21]];
-      tile("On today's board", "#" + ((row[26] && row[26].rank) || "?") + ", score " + row[24], "Estimated price about " + T.money(rev * mult[1]));
+      var v = SBV.value(SBV.boardInput(row, EARN), EARN);
+      tile("On today's board", "#" + ((row[26] && row[26].rank) || "?") + ", score " + row[24], "Estimated price about " + T.money(v.mid) + ", likely " + T.money(v.lo) + "–" + T.money(v.hi));
     } else {
-      tile("On today's board", "No", vLast ? "Estimated revenue about " + T.money(vLast * 30 * PER_VISIT[1]) + " a month" : null);
+      var rv = SBV.revenue({ rank: SBV.rankOf(EARN, g.uid), players: latest[1] }, EARN);
+      tile("On today's board", "No", "Estimated revenue about " + T.money(rv.mid) + " a month" + (rv.rank ? ", from Top Earning #" + rv.rank : rv.basis === "offchart" ? ". Not on Top Earning" : ""));
     }
     $("g-asof").textContent = live ? "Players, rating and favorites are live from Roblox. Visits a day come from our daily readings, the last on " + T.dayLabel(lastD) + "." : "From our daily reading on " + T.dayLabel(lastD) + ".";
   }

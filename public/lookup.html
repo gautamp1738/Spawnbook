@@ -316,7 +316,7 @@
     tile(tiles, "Players right now", commas(g.players), pw ? (pw.change >= 0 ? "+" : "") + pw.change + "% over " + pw.days + " days at our daily readings" : null, sparkline(n.record && n.record.series));
     tile(tiles, "Visits a day", short(n.perDay), n.basis === "week" ? "Average over the past " + n.basisDays + " days" : n.basis === "day" ? "Since our last daily reading" : "Lifetime average. We haven't tracked it");
     tile(tiles, "Rating", g.rating != null ? g.rating + "%" : "–", commas(g.up + g.down) + " votes");
-    tile(tiles, "Estimated price", "About " + money(m.fair[1]), money(m.fair[0]) + " to " + money(m.fair[2]) + ". Low confidence");
+    tile(tiles, "Estimated price", "About " + money(m.fair[1]), "Likely " + money(m.fair[0]) + " to " + money(m.fair[2]) + ". " + m.confLabel);
     var ni = (d.signals || {}).niche;
     if (d.free) tile(tiles, "Rank in its genre", ni ? "#" + ni.rank + " of " + ni.of : "–", ni ? "Young " + ni.genre + " games on Roblox's charts today" : b.tracked ? "In our daily record" : "Not in our daily record");
     else tile(tiles, "Spawnbook board", b.rank ? "#" + b.rank + ", score " + b.score : "Not on it today", b.rank ? (b.days > 1 ? b.days + " days running" : "New today") : b.tracked ? "In our daily record" : "Not in our daily record");
@@ -352,8 +352,8 @@
       group("Money", [
         ["Game passes", pr ? commas(pr.n) + (pr.more ? "+" : "") : "Couldn't read", range(pr)],
         ["Developer products", pd ? commas(pd.n) + (pd.more ? "+" : "") : "Couldn't read", range(pd)],
-        ["Revenue a month", money(m.revenue[0]) + " to " + money(m.revenue[2]), "Estimate: " + short(n.perDay) + " visits a day at $0.004 to $0.012 a visit"],
-        ["Estimated price", money(m.fair[0]) + " to " + money(m.fair[2]), m.months + " months of revenue. " + (m.shape === "staircase" ? "Its genre usually holds players for months" : "Trend and simulator games tend to fade faster")]
+        ["Revenue a month", "About " + money(m.revenue[1]), m.why.revenue],
+        ["Estimated price", "About " + money(m.fair[1]), "Likely " + money(m.fair[0]) + " to " + money(m.fair[2]) + ". " + m.why.months + " If it holds its players for a year, about " + money(m.year) + "."]
       ]),
       group("Owner", [
         ["Owned by", o.type === "Group" ? "A group: " + o.name : o.type === "User" ? "A personal account: " + o.name : "–", o.verified ? "Has Roblox's verified badge" : null],

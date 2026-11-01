@@ -462,7 +462,7 @@ window.BRC = (function () {
       var e = extra[r.uid] || {};
       return { name: r.name, pid: r.pid, rank: i + 1, was: prev ? (prevRank[r.uid] || 0) : null, score: r.score, players: r.playing, pace: Math.round(r.pace),
         age: Math.round(r.age), genre: r.genre2 || r.genre, shape: r.shape, mult: r.mult, own: r.own, creator: r.creator, ctype: r.ctype, cid: r.cid,
-        members: e.members || null, discord: /discord/i.test(r.g.description || "") ? 1 : 0, growth: growthOf(r) };
+        members: e.members || null, discord: /discord/i.test(r.g.description || "") ? 1 : 0, growth: growthOf(r), val: r.val || null };
     });
     var movers = rows.filter(function (r) { return growthOf(r) != null && r.playing >= 500 && r.age <= 120; })
       .sort(function (a, b) { return growthOf(b) - growthOf(a); }).slice(0, 8)
@@ -571,14 +571,36 @@ window.BRC = (function () {
     // Save today's snapshot
     var hist = loadJSON(KEY, { v: 1, snaps: [] });
     var snap = { t: now.toISOString(), d: pDate(now), g: {} };
-    // Readings are [visits, players, favorites, up votes, down votes, last update in minutes since 1970].
-    // The update time builds each game's update record, since Roblox only ever shows the latest one.
-    young.forEach(function (g) { var v = V[g.id] || {}; snap.g[g.id] = [g.visits, g.playing, g.favoritedCount, v.upVotes || 0, v.downVotes || 0, upMin(g)]; });
+    // Readings are [visits, players, favorites, up votes, down votes, last update in minutes since 1970,
+    // Top Earning rank or 0]. The update time builds each game's update record, since Roblox only ever
+    // shows the latest one. The Top Earning rank prices the game (public/valuation.js). Readings from
+    // before Nov 1, 2026 stop at the update time.
+    var teRank = function (u) { return (sorts[u] && sorts[u]["top-earning"]) || 0; };
+    young.forEach(function (g) { var v = V[g.id] || {}; snap.g[g.id] = [g.visits, g.playing, g.favoritedCount, v.upVotes || 0, v.downVotes || 0, upMin(g), teRank(g.id)]; });
     hist.snaps = hist.snaps.filter(function (s) { return s.d !== snap.d; });
     hist.snaps.push(snap);
     hist.snaps.sort(function (a, b) { return a.t < b.t ? -1 : 1; });
     if (hist.snaps.length > 120) hist.snaps = hist.snaps.slice(-120);
     try { saveJSON(KEY, hist); } catch (e) { hist.snaps = hist.snaps.slice(-60); saveJSON(KEY, hist); }
+
+    // Today's earnings curve from the whole Top Earning chart, which public/valuation.js turns into
+    // prices. Young games are priced on the middle of their last three daily ranks, so one odd day
+    // doesn't swing the price; every other game on the chart on today's rank. Without valuation.js
+    // (runner.mjs loads it) the board still goes out, and the pages fall back to rough prices.
+    var SBV = window.SBV || null, EARN = null;
+    if (SBV) {
+      var onChart = data.uids.filter(function (u) { return teRank(u); });
+      var curve = SBV.curveFrom(onChart.map(function (u) { return [teRank(u), (G[u] && G[u].playing) || 0]; }));
+      if (curve) {
+        var ranks = {}, recent = hist.snaps.slice(-3);
+        onChart.forEach(function (u) { ranks[u] = teRank(u); });
+        young.forEach(function (g) {
+          var hits = recent.map(function (s) { var a = s.g[g.id]; return a && a.length >= 7 ? a[6] : 0; }).filter(function (x) { return x > 0; });
+          if (teRank(g.id) || hits.length >= 2) ranks[g.id] = Math.round(SBV.median(hits));
+        });
+        EARN = { rate: SBV.RATE, depth: curve.length, curve: curve, ranks: ranks, date: snap.d };
+      }
+    }
 
     var prior = hist.snaps.filter(function (s) { return s.t < snap.t; });
     var daysAgo = function (s) { return (now - new Date(s.t)) / 864e5; };
@@ -725,17 +747,20 @@ window.BRC = (function () {
           rank: i + 1, uid: r.uid, trend: trendOf(r), deep: DEEP.byUid[r.uid] || null,
           niche: nicheOf(r), where: sortCodes(r.sorts), upd: updRecord(r.uid, hist.snaps, idx0[r.uid] && idx0[r.uid].nh) }];
     });
+    // Each board game's price [low, middle, high], kept with the weekly report so past issues show
+    // what they said at the time. The pages work prices out from META.earn themselves.
+    if (EARN) BOARD.forEach(function (row, i) { var v = SBV.value(SBV.boardInput(row, EARN), EARN); board[i].val = [Math.round(v.lo), Math.round(v.mid), Math.round(v.hi)]; });
     var big = rows.slice().sort(function (a, b) { return b.playing - a.playing; }).slice(0, 25);
     var abbr = { "up-and-coming": "U", "top-trending": "T", "top-earning": "E", "top-revisited": "R" };
     var BIG = big.map(function (r) {
       var ranks = Object.keys(r.sorts).filter(function (k) { return abbr[k]; }).map(function (k) { return abbr[k] + r.sorts[k]; }).join(" ");
-      return [r.pid, r.name, r.creator, r.ctype === "User" ? "U" : r.ver ? "Gv" : "G", r.genre, r.genre2, Math.round(r.age), r.playing, r.visits, Math.round(r.pace), r.fresh, r1(r.like * 100), ranks];
+      return [r.pid, r.name, r.creator, r.ctype === "User" ? "U" : r.ver ? "Gv" : "G", r.genre, r.genre2, Math.round(r.age), r.playing, r.visits, Math.round(r.pace), r.fresh, r1(r.like * 100), ranks, r.uid];
     });
     var BIG_NOTES = {};
     big.forEach(function (r) {
       var n = {};
       if (r.ip) n.ip = "Name may reference " + r.ip;
-      if (r.mult) { n.mult = r.mult; n.note = "Down about " + Math.round(r.decay * 100) + "% a month"; }
+      if (r.mult) { n.mult = r.mult; n.decay = Math.round(r.decay * 100); n.note = "Down about " + n.decay + "% a month"; }
       if (Object.keys(n).length) BIG_NOTES[r.pid] = n;
     });
     var IP_OFF = pool.filter(function (r) { return r.ip && r.score >= 45; }).sort(function (a, b) { return b.score - a.score; }).slice(0, 12)
@@ -787,7 +812,9 @@ window.BRC = (function () {
       issues: pickDates.length,
       ranksKnown: !!(prevSnap && prevSnap.b),
       prevDate: prevSnap ? prevSnap.d : null,
-      deepSkipped: DEEP.skipped
+      deepSkipped: DEEP.skipped,
+      // Top Earning curve and ranks for pricing (public/valuation.js). Null if the chart didn't load.
+      earn: EARN
     };
     var BR = { META: META, BOARD: BOARD, BIG: BIG, BIG_NOTES: BIG_NOTES, IP_OFF: IP_OFF, FLAG_OFF: FLAG_OFF };
     var dataJs = "/* Spawnbook data, built " + now.toISOString() + ". The page reads window.BR. */\nwindow.BR = " + JSON.stringify(BR, null, 1) + ";\n";
@@ -800,7 +827,8 @@ window.BRC = (function () {
       picksLogged: picks.length, dataJsLength: dataJs.length, deepSkipped: DEEP.skipped,
       trackBatches: tr.batches.length, trackShown: TR.batches.filter(function (b) { return b.shown; }).length,
       reportIssues: reportsAll.length, newIssue: issue ? issue.no : null, trackError: trackError,
-      historyGames: Object.keys(HX.games).length, historyJsLength: historyJs.length, carriedReadings: carried
+      historyGames: Object.keys(HX.games).length, historyJsLength: historyJs.length, carriedReadings: carried,
+      topEarningRead: EARN ? EARN.depth : null
     };
   }
 

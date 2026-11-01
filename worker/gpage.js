@@ -266,8 +266,9 @@ export function renderGame(d, image) {
     <div class="lk-verdict v-go gp-value">
       <p class="lk-call-lbl">Estimated value</p>
       <p class="lk-call">${esc(value)}</p>
-      <p class="lk-why">${esc(money(m.fair[0]) + " to " + money(m.fair[2]) + ": " + m.months + " months of estimated revenue at about " + short(n.perDay) + " visits a day.")}</p>
-      <p class="small">Low confidence. It's worked out from public numbers the same way as our board; real earnings decide a real price.</p>
+      <p class="lk-why">${esc("Likely " + money(m.fair[0]) + " to " + money(m.fair[2]) + ": about " + money(m.revenue[1]) + " a month in revenue × " + m.months + " months.")}</p>
+      <p class="small">${esc(m.why.revenue + " " + m.why.months)}</p>
+      <p class="small">${esc(m.confLabel + ". It's worked out from public numbers the same way as our board; real earnings decide a real price.")}</p>
     </div>
 
     <dl class="tiles lk-tiles">${tiles}</dl>

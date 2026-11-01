@@ -58,6 +58,7 @@
 // PBKDF2 hashes, worked out inside the Durable Object, which has a much larger CPU allowance
 // than the Worker itself.
 
+import "../public/valuation.js";
 import { lookup } from "./lookup.js";
 import { publicGame, sitemap } from "./gpage.js";
 
@@ -248,9 +249,10 @@ async function todaysPicks(env, origin) {
   if (at < 0) return null;
   const BR = JSON.parse(text.slice(at + 11).trim().replace(/;\s*$/, ""));
   const board = BR.BOARD || [];
+  const earn = BR.META && BR.META.earn;
   const picks = board.slice().sort((a, b) => b[24] - a[24] || b[7] - a[7]).slice(0, 5).map((r) => {
-    const mult = (r[25] && r[25][1]) || (r[21] === "staircase" ? 4.5 : 1.5);
-    return { name: cleanName(r[1]), pid: r[0], uid: (r[26] && r[26].uid) || null, score: r[24], players: r[7], perDay: r[8], price: r[8] * 30 * 0.008 * mult, genre: r[5] || r[4] || "", age: r[6] };
+    const v = globalThis.SBV.value(globalThis.SBV.boardInput(r, earn), earn);
+    return { name: cleanName(r[1]), pid: r[0], uid: (r[26] && r[26].uid) || null, score: r[24], players: r[7], perDay: r[8], price: v.mid, genre: r[5] || r[4] || "", age: r[6] };
   });
   return { date: (BR.META && BR.META.snapshot) || "", picks, total: board.length };
 }

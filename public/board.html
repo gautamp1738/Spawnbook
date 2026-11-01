@@ -180,7 +180,7 @@
     <div class="ledger-head c-l6 stick">
       <h2 id="pricing-h" class="head" data-reveal><span class="soft l1">How fast it fades</span> sets the price</h2>
       <p data-reveal style="--i:1">If a game loses a share of its players every month, its future revenue adds up to about one month's revenue divided by that share. Analyst David Taylor says short-lived games sell for one to two months of revenue and durable ones for about 12, so we cap it at 12. These past games line up with the few deal prices that have been reported.</p>
-      <p class="small muted" data-reveal style="--i:2">The decline rates are our estimates from reported player counts, and the fast-fade rows start from event peaks, so they overstate the drop. A game under six weeks old, or still rising, has no fade to measure yet. We price fast-rise games at 1 to 2 months and slow-build games at 3 to 6. Upside is better bought with a stake or revenue share than with a bigger upfront price.</p>
+      <p class="small muted" data-reveal style="--i:2">The decline rates are our estimates from reported player counts, and the fast-fade rows start from event peaks, so they overstate the drop. A game under six weeks old, or still rising, has no fade to measure yet. We price fast-rise games at 1 to 2 months and slow-build games at 3 to 6, starting in the middle and going lower when a game is falling. Upside is better bought with a stake or revenue share than with a bigger upfront price.</p>
     </div>
     <div class="c-r" data-reveal style="--i:1">
       <table class="ledger" data-ui>
@@ -307,7 +307,7 @@
           <li>Kids and Select audiences already unlocked</li>
           <li>Most traffic comes from Roblox recommendations, not ads</li>
         </ul>
-        <p class="small muted">A starting range, not an appraisal. Everything stays in your browser. Robux convert at the DevEx rate, $0.0038 each. Visits convert at $0.004 to $0.012 of developer revenue each. We cap the price at 12 months of revenue even for durable games, because buyers discount for risk.</p>
+        <p class="small muted">A starting range, not an appraisal. Everything stays in your browser. Robux convert at the DevEx rate, $0.0038 each. Visits use a rule of thumb, about $0.008 of developer revenue each, so they give a wide range. We cap the price at 12 months of revenue even for durable games, because buyers discount for risk.</p>
         <p><a class="link" href="#requests" data-tab="tab-sell">Want a real valuation? Send us your game</a></p>
       </div>
     </div>
@@ -469,8 +469,10 @@
         <p class="small muted" data-reveal>For the games that make the board, we also read their developer products, live servers, the creator's other games, the content maturity rating and badges, all from Roblox's public data. Rank changes and days on the board compare each day's board with the one before.</p>
         <p data-reveal>Minutes per visit is players × 1,440 ÷ visits a day.</p>
         <p data-reveal>Momentum and stickiness are ranked against the rest of today's pool. Each unusual-number flag takes off 5 points and moves the game to the check-first list. The weights are our judgment, not a tested model.</p>
-        <p class="formula" data-reveal>Revenue a month = visits a month × 1–3% who pay × 150 Robux × 70% creator share × $0.0038 per Robux, or about $0.004 to $0.012 per visit</p>
-        <p data-reveal>The price we show is middle revenue × middle months, marked low confidence. The full range in each game's details runs from low revenue × low months to high revenue × high months, a 6× spread that reflects how little you can see from outside a game. Once we've tracked a game for 4 weeks, the months come from its measured decline instead of its genre. Rebuild the price on real revenue once the seller shares it. A 2026 game probably earns less per player than the 2025 hits did.</p>
+        <p class="formula" data-reveal>Revenue a month = players typical of its Top Earning rank × 720 hours × $0.02 a player-hour</p>
+        <p data-reveal>Roblox's Top Earning chart ranks about 460 games by what they earn. It's the one public ranking Roblox gives of earnings. Every day we read the whole chart and every game's players, and work out how many players the typical game at each rank has. A game earns about what the games ranked near it earn. Young games use the middle of their last three daily ranks, so one odd day doesn't swing the price.</p>
+        <p data-reveal>$0.02 a player-hour sets the scale. It puts the whole chart at roughly two-thirds of what Roblox pays developers (it paid $1.5 billion through DevEx in 2025), which fits how concentrated earnings are, and it keeps the typical board game near where our old visits-based estimate put it. It's the same for every game, so it never changes which of two games is worth more. A game that isn't on the chart earns less than the last game on it, so that's its ceiling and we price it at half. A small game ranked high counts at no more than 3× typical earnings per player.</p>
+        <p data-reveal>The price is that revenue × months of revenue. We show the middle and a likely range, about 2× from low to high for a game on the chart, wider when it isn't. The two uncertainties are combined the way independent errors are, not by multiplying both worst cases. Months start in the middle of the genre's range and go lower when a game is falling or well off its peak. Once we've tracked a game for 4 weeks, they come from its measured decline instead. Rebuild the price on real revenue once the seller shares it.</p>
       </div>
     </div>
     <div class="sources">
@@ -489,7 +491,8 @@
         <li><a class="link" href="https://investgame.net/news/voldex-becomes-the-1-developer-on-the-roblox-platform/" target="_blank" rel="noopener">InvestGame: Brookhaven price estimate<span class="sr-only"> (opens in a new tab)</span></a> and <a class="link" href="https://rowatcher.com/news/the-10-highest-earning-roblox-games-in-2026-and-what-they-mean-for-the-platform" target="_blank" rel="noopener">RoWatcher: revenue estimates<span class="sr-only"> (opens in a new tab)</span></a></li>
         <li><a class="link" href="https://www.gameanalytics.com/cn/reports/2025-roblox-report" target="_blank" rel="noopener">GameAnalytics 2025 Roblox report<span class="sr-only"> (opens in a new tab)</span></a></li>
         <li><a class="link" href="https://create.roblox.com/docs/en-us/discovery.md" target="_blank" rel="noopener">Roblox: how discovery ranks games<span class="sr-only"> (opens in a new tab)</span></a> and <a class="link" href="https://create.roblox.com/docs/production/promotion/ads-manager" target="_blank" rel="noopener">look-alike games<span class="sr-only"> (opens in a new tab)</span></a></li>
-        <li><a class="link" href="https://profitable.app/tools/roblox-revenue-calculator" target="_blank" rel="noopener">Profitable: revenue formula<span class="sr-only"> (opens in a new tab)</span></a> and <a class="link" href="https://create.roblox.com/docs/production/monetization/developer-exchange" target="_blank" rel="noopener">Roblox: DevEx rates<span class="sr-only"> (opens in a new tab)</span></a></li>
+        <li><a class="link" href="https://www.roblox.com/charts" target="_blank" rel="noopener">Roblox: Top Earning chart<span class="sr-only"> (opens in a new tab)</span></a> and <a class="link" href="https://www.sec.gov/Archives/edgar/data/1315098/000110465926044380/rblx-20251231xars.pdf" target="_blank" rel="noopener">Roblox 2025 annual report: $1.5 billion in DevEx<span class="sr-only"> (opens in a new tab)</span></a></li>
+        <li><a class="link" href="https://profitable.app/tools/roblox-revenue-calculator" target="_blank" rel="noopener">Profitable: visits rule of thumb<span class="sr-only"> (opens in a new tab)</span></a> and <a class="link" href="https://create.roblox.com/docs/production/monetization/developer-exchange" target="_blank" rel="noopener">Roblox: DevEx rates<span class="sr-only"> (opens in a new tab)</span></a></li>
         <li><a class="link" href="https://create.roblox.com/docs/projects/experience-ownership-transfer" target="_blank" rel="noopener">Roblox: ownership transfer<span class="sr-only"> (opens in a new tab)</span></a></li>
         <li><a class="link" href="https://www.hcrlaw.com/news-and-insights/buying-or-selling-a-roblox-game/" target="_blank" rel="noopener">HCR Law: buying or selling a Roblox game<span class="sr-only"> (opens in a new tab)</span></a></li>
       </ul>
@@ -541,6 +544,7 @@
 </footer>
 
 <script src="data.js"></script>
+<script src="valuation.js"></script>
 <dialog class="pass" id="pass" aria-labelledby="pass-h">
   <div class="pass-in">
     <h2 id="pass-h" class="pass-h">Your free 24 hours have started</h2>
@@ -704,9 +708,8 @@
 
   var W = [25, 25, 15, 15, 10, 10];
   var WN = ["Momentum", "Stickiness", "Updates", "Originality", "Earnings", "Ease of buying"];
-  var MULT = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6] };
-  var PER_VISIT = [0.004, 0.008, 0.012];
-  var DEVEX = 0.0038;
+  // Prices come from public/valuation.js: Top Earning rank × months of revenue.
+  var EARN = META.earn || null;
   var NEWTAB = " (opens in a new tab)";
 
   // Game names on Roblox often carry emoji and tags like [🎃]; show the words only.
@@ -738,11 +741,7 @@
     a.appendChild(el("span", "sr-only", NEWTAB));
     return a;
   }
-  function valueOf(pace, mult) {
-    var monthly = pace * 30;
-    var rev = PER_VISIT.map(function (k) { return monthly * k; });
-    return { rev: rev, fair: [rev[0] * mult[0], rev[1] * mult[1], rev[2] * mult[2]], lasts: rev[1] * 12 };
-  }
+  function likely(v) { return "likely " + money(v.lo) + "–" + money(v.hi); }
   function tierOf(p) { return p < 3000 ? "seed" : p < 10000 ? "break" : "chart"; }
   var TIER_NAME = { seed: "Under 3K players", "break": "3K–10K players", chart: "10K+ players" };
   function sessBand(s) { return s < 6.62 ? "below the Roblox median" : s < 14.53 ? "above the Roblox median" : s < 26.38 ? "in Roblox's top quarter" : "in Roblox's top tenth"; }
@@ -800,7 +799,7 @@
       accel: r[10], sess: r[11], like: r[12], favk: r[13], vk: r[14], hrs: r[15], U: r[16], T: r[17], E: r[18], R: r[19], G: r[20],
       shape: r[21], wave: r[22], comp: r[23].split("/").map(Number), score: r[24], mult: r[25] || null, x: r[26] || {} };
     o.tier = tierOf(o.playing);
-    o.val = valueOf(o.pace, o.mult || MULT[o.shape]);
+    o.val = SBV.value(SBV.boardInput(r, EARN), EARN);
     o.brand = brandOf(o);
     return o;
   });
@@ -873,10 +872,7 @@
     }
     return frag;
   }
-  function monthsText(p) {
-    if (p.mult) return "Measured decline of about " + p.x.decay + "% a month, so we price it at " + p.mult[0] + " to " + p.mult[2] + " months of revenue.";
-    return (p.shape === "rocket" ? "Fast-rise genre, so we price it at 1 to 2 months of revenue." : "Slow-build genre, so we price it at 3 to 6 months of revenue.") + " If it holds its players, it could be worth up to 12.";
-  }
+  function monthsText(p) { return SBV.monthsWhy(p.val) + (p.val.months.basis === "measured" ? "" : " If it holds its players, it could be worth up to 12."); }
   function band(p) { return el("span", "band-chip" + (p.score >= 75 ? " hot" : ""), p.score >= 75 ? "Contact this week" : "Watch"); }
 
   // ---------- extra data: trends, money, creator, audience ----------
@@ -966,12 +962,12 @@
         ["Days we've tracked it", t.tracked ? String(t.tracked) : null]
       ]),
       mdGroup("Money", [
-        ["Estimated revenue a month", "About " + money(p.val.rev[1]) + " (" + money(p.val.rev[0]) + " to " + money(p.val.rev[2]) + ")"],
+        ["Estimated revenue a month", "About " + money(p.val.rev.mid)],
         ["Game passes", passesText(x)],
         ["Developer products", d.products ? (d.products.n ? d.products.n + (d.products.more ? "+" : "") + " for sale" + (d.products.range ? ", " + commas(d.products.range[0]) + (d.products.range[1] !== d.products.range[0] ? " to " + commas(d.products.range[1]) : "") + " Robux" : "") : "None for sale") : null],
         ["Cost to play", gm.paid ? commas(gm.paid) + " Robux to join" : d.game ? "Free to play" : null],
         ["Private servers", d.game ? (gm.vip ? "Sells private servers" : "Doesn't sell private servers") : null],
-        ["Top Earning rank", p.E ? "#" + p.E : "Not on the list"]
+        ["Top Earning rank", p.val.rev.rank ? "#" + p.val.rev.rank + (p.E && p.E !== p.val.rev.rank ? " (#" + p.E + " today)" : "") : p.E ? "#" + p.E : "Not on the list"]
       ]),
       mdGroup("Creator", [
         ["Owned by", c.type === "Group" ? (c.owner ? "A group owned by " + c.owner : "A group") : c.type === "User" ? "A solo account" : null],
@@ -1007,7 +1003,7 @@
       var mvp = moveOf(p);
       mid.appendChild(el("span", "pk-sub", commas(p.playing) + " players. " + p.age + " days old. " + (p.score >= 75 ? "Contact this week." : "Watch.") + (mvp ? " " + mvp.label + "." : "")));
       a.appendChild(mid);
-      a.appendChild(el("span", "pk-price", "About " + money(p.val.fair[1])));
+      a.appendChild(el("span", "pk-price", "About " + money(p.val.mid)));
       li.appendChild(a);
       box.appendChild(li);
     });
@@ -1029,7 +1025,7 @@
     var st = el("dl", "c-stats");
     [["Players", commas(top.playing)], ["Visits a day", short(top.pace)], ["Rating", top.like + "%"]].forEach(function (s) { var d = el("div"); d.appendChild(el("dt", null, s[0])); d.appendChild(el("dd", null, s[1])); st.appendChild(d); });
     card.appendChild(st);
-    var pr = el("div", "c-price"); pr.appendChild(el("span", "small muted", "Estimated price, low confidence")); pr.appendChild(el("strong", null, "About " + money(top.val.fair[1]))); card.appendChild(pr);
+    var pr = el("div", "c-price"); pr.appendChild(el("span", "small muted", "Estimated price, " + SBV.confLabel(top.val).toLowerCase())); pr.appendChild(el("strong", null, "About " + money(top.val.mid))); pr.appendChild(el("span", "small muted", likely(top.val))); card.appendChild(pr);
   })();
 
   // ---------- board ----------
@@ -1047,7 +1043,7 @@
     });
     shown = list;
     list.sort(function (a, b) {
-      if (bstate.sort === "price") return b.val.fair[1] - a.val.fair[1];
+      if (bstate.sort === "price") return b.val.mid - a.val.mid;
       if (bstate.sort === "playing") return b.playing - a.playing;
       if (bstate.sort === "age") return a.age - b.age;
       if (bstate.sort === "rising") {
@@ -1087,8 +1083,8 @@
       });
       line.appendChild(st);
       var v = el("div", "r-price");
-      v.appendChild(el("span", "v", "About " + money(p.val.fair[1])));
-      v.appendChild(el("span", "conf", "est. price, low confidence"));
+      v.appendChild(el("span", "v", "About " + money(p.val.mid)));
+      v.appendChild(el("span", "conf", likely(p.val)));
       line.appendChild(v);
       var btn = el("button", "more", "Why this score"); btn.type = "button";
       btn.setAttribute("aria-label", "Why " + p.name + " scored " + p.score);
@@ -1146,8 +1142,8 @@
         var d = el("div"); d.appendChild(el("dt", null, s[0])); d.appendChild(el("dd", null, s[1])); kv.appendChild(d);
       });
       mm.appendChild(kv);
-      mm.appendChild(el("p", null, "Price range: " + money(p.val.fair[0]) + " to " + money(p.val.fair[2]) + ". If it holds its players for a year: about " + money(p.val.lasts) + "."));
-      mm.appendChild(el("p", null, "Estimated revenue comes from about " + short(p.pace * 30) + " visits a month at $0.004 to $0.012 of developer revenue per visit."));
+      mm.appendChild(el("p", null, "Price: about " + money(p.val.mid) + ", " + likely(p.val) + ". " + SBV.confLabel(p.val) + ". If it holds its players for a year: about " + money(p.val.year) + "."));
+      mm.appendChild(el("p", null, "Revenue: about " + money(p.val.rev.mid) + " a month. " + SBV.revenueWhy(p.val)));
       mm.appendChild(el("p", null, monthsText(p)));
       var cp = el("p"); cp.appendChild(el("strong", null, "Public contact: ")); cp.appendChild(contactNodes(p)); mm.appendChild(cp);
       mm.appendChild(el("p", null, "Owner's age is unknown. Ask before any offer, since a minor can generally cancel a contract in California."));
@@ -1198,13 +1194,13 @@
   // Download what's shown as a spreadsheet (CSV).
   $("csv").addEventListener("click", function () {
     var cell = function (v) { v = v == null ? "" : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-    var head = ["Rank", "Game", "Roblox link", "Creator", "Owner", "Genre", "Days old", "Players", "Visits a day", "Rating %", "Score", "Est. revenue a month", "Est. price low", "Est. price mid", "Est. price high", "Group or profile", "Rank in genre", "Brand deals", "Chart lists today", "Share of peak %"];
+    var head = ["Rank", "Game", "Roblox link", "Creator", "Owner", "Genre", "Days old", "Players", "Visits a day", "Rating %", "Score", "Est. revenue a month", "Est. price low", "Est. price mid", "Est. price high", "Group or profile", "Rank in genre", "Brand deals", "Chart lists today", "Share of peak %", "Top Earning rank priced on", "Price confidence"];
     var lines = [head.join(",")].concat(shown.map(function (p) {
       var cid = p.x.cid, owner = p.x.ctype === "Group" ? "Group" : "Solo account";
       return [p.x.rank || p.rank, p.name, "https://www.roblox.com/games/" + p.pid, p.creator, owner, p.g2 || p.genre, p.age, p.playing, Math.round(p.pace), p.like, p.score,
-        Math.round(p.val.rev[1]), Math.round(p.val.fair[0]), Math.round(p.val.fair[1]), Math.round(p.val.fair[2]),
+        Math.round(p.val.rev.mid), Math.round(p.val.lo), Math.round(p.val.mid), Math.round(p.val.hi),
         cid ? (p.x.ctype === "Group" ? "https://www.roblox.com/communities/" + cid : "https://www.roblox.com/users/" + cid + "/profile") : "",
-        p.x.niche ? p.x.niche[0] + " of " + p.x.niche[1] + " " + p.x.niche[2] : "", { ready: "Ready", most: "Most brands", some: "Some brands", no: "Unlikely" }[p.brand] || "", whereList(p).join("; "), peakHold(p)].map(cell).join(",");
+        p.x.niche ? p.x.niche[0] + " of " + p.x.niche[1] + " " + p.x.niche[2] : "", { ready: "Ready", most: "Most brands", some: "Some brands", no: "Unlikely" }[p.brand] || "", whereList(p).join("; "), peakHold(p), p.val.rev.rank || "", p.val.conf].map(cell).join(",");
     }));
     var blob = new Blob([lines.join("\n") + "\n"], { type: "text/csv;charset=utf-8" });
     var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
@@ -1255,9 +1251,11 @@
     o.shape = (/fish/i.test(o.name) || (STAIR[r[4]] && !o.wave)) ? "staircase" : "rocket";
     var extra = BIG_NOTES[String(o.pid)] || {};
     o.ip = extra.ip; o.note = extra.note;
-    var v = valueOf(o.pace, extra.mult || MULT[o.shape]);
-    o.rev = v.rev[1]; o.revLo = v.rev[0]; o.revHi = v.rev[2]; o.fairLo = v.fair[0]; o.fairHi = v.fair[2]; o.fair = v.fair[1]; o.lasts = v.lasts;
-    o.multTxt = extra.mult ? "1–1.5 months, measured fade" : (o.shape === "rocket" ? "1–2 months" : "3–6 months");
+    var em = /(?:^| )E(\d+)/.exec(o.ranks || "");
+    // r[13] is the universe ID (data from Nov 1, 2026 on); before that, today's rank from the chart list.
+    var v = SBV.value({ rank: EARN && r[13] ? SBV.rankOf(EARN, r[13]) : em ? Number(em[1]) : 0, players: o.playing, shape: o.shape, decay: extra.decay ? extra.decay / 100 : null }, EARN);
+    o.v = v; o.rev = v.rev.mid; o.fair = v.mid; o.fairLo = v.lo; o.fairHi = v.hi; o.lasts = v.year;
+    o.multTxt = "About " + money(v.mid) + ". " + (Math.round(v.months.mid * 10) / 10) + (v.months.basis === "measured" ? " months, measured fade" : " months");
     return o;
   });
   G.slice().sort(function (a, b) { return b.playing - a.playing; }).forEach(function (g, i) { g.r = i + 1; });
@@ -1292,7 +1290,7 @@
       tr.appendChild(el("td", "r", commas(g.playing)));
       tr.appendChild(el("td", "r", short(g.pace)));
       tr.appendChild(el("td", "r", g.like + "%"));
-      var tdr = el("td", "r", money(g.rev)); tdr.appendChild(el("span", "sub", money(g.revLo) + "–" + money(g.revHi))); tr.appendChild(tdr);
+      var tdr = el("td", "r", money(g.rev)); tdr.appendChild(el("span", "sub", g.v.rev.rank ? "Top Earning #" + g.v.rev.rank : "Not on Top Earning")); tr.appendChild(tdr);
       var tdf = el("td", "r val", money(g.fairLo) + "–" + money(g.fairHi)); tdf.appendChild(el("span", "sub", g.multTxt)); tr.appendChild(tdf);
       tr.appendChild(el("td", "r", money(g.lasts)));
       tb.appendChild(tr);
@@ -1462,26 +1460,21 @@
     var q = parseQuery($("vq").value);
     $("wrap-decline").hidden = fade !== "measured";
     if (!q) { $("v-range").textContent = "Type a number"; $("v-line").textContent = "Try 2,500,000 Robux, 40 million visits or $9,500."; $("v-lasts").textContent = ""; return; }
-    var rev;
-    if (q.kind === "robux") { var r = q.n * DEVEX; rev = [r, r, r]; }
-    else if (q.kind === "usd") rev = [q.n, q.n, q.n];
-    else rev = PER_VISIT.map(function (k) { return q.n * k; });
-    var mult, multTxt;
-    if (fade === "rocket") { mult = MULT.rocket; multTxt = "1–2 months"; }
-    else if (fade === "stair") { mult = MULT.staircase; multTxt = "3–6 months"; }
-    else {
+    // Same model as the board (public/valuation.js), on the revenue typed in.
+    var o = { shape: fade === "rocket" ? "rocket" : "staircase" };
+    if (q.kind === "robux") o.seller = q.n * SBV.DEVEX;
+    else if (q.kind === "usd") o.seller = q.n;
+    else o.visitsMonth = q.n;
+    if (fade === "measured") {
       var d = parseNum($("decline").value) / 100;
       if (!(d > 0)) { $("v-range").textContent = "Enter a decline"; $("v-line").textContent = "Type the share of players it loses in a month, like 15%."; $("v-lasts").textContent = ""; return; }
-      var cl = function (x) { return Math.max(1, Math.min(12, x)); };
-      mult = [cl(1 / (d * 4 / 3)), cl(1 / d), cl(1 / (d * 2 / 3))];
-      multTxt = trim(mult[0]) + "–" + trim(mult[2]) + " months";
+      o.decay = d;
     }
-    var fair = [rev[0] * mult[0], rev[1] * mult[1], rev[2] * mult[2]];
-    $("v-range").textContent = money(fair[0]) + "–" + money(fair[2]);
-    var basis = q.kind === "robux" ? commas(q.n) + " Robux is about " + money(rev[1]) + " at the DevEx rate. " : q.kind === "visits" ? short(q.n) + " visits is about " + money(rev[0]) + "–" + money(rev[2]) + " of revenue. " : "";
-    var revTxt = rev[0] === rev[2] ? money(rev[1]) + " a month" : money(rev[0]) + "–" + money(rev[2]) + " a month";
-    $("v-line").textContent = basis + "Middle about " + money(fair[1]) + ": " + revTxt + " × " + multTxt + ".";
-    $("v-lasts").textContent = "If it holds its players for a year: " + money(rev[1] * 12);
+    var v = SBV.value(o, null), mo = Math.round(v.months.mid * 10) / 10;
+    $("v-range").textContent = money(v.lo) + "–" + money(v.hi);
+    var basis = q.kind === "robux" ? commas(q.n) + " Robux is about " + money(v.rev.mid) + " at the DevEx rate. " : q.kind === "visits" ? short(q.n) + " visits is roughly " + money(v.rev.mid) + " of revenue, a rule of thumb, so the range is wide. Robux earned gives a much tighter one. " : "";
+    $("v-line").textContent = basis + "Middle about " + money(v.mid) + ": " + money(v.rev.mid) + " a month × " + mo + " months" + (fade === "measured" ? ", from its decline" : fade === "rocket" ? " (fast-rise games sell for 1 to 2)" : " (slow-build games sell for 3 to 6)") + ".";
+    $("v-lasts").textContent = "If it holds its players for a year: " + money(v.year);
   }
   function placeCaret() {
     var inp = $("vq"), meas = document.querySelector(".vq-measure"), caret = document.querySelector(".vq-line .caret");

@@ -92,10 +92,12 @@
     s = s.replace(/\[\s*\]|\(\s*\)/g, "").replace(/\[\s+/g, "[").replace(/\s+\]/g, "]").replace(/\s{2,}/g, " ").trim();
     return s || String(name || "");
   }
-  // Same price model as the board: revenue from visits, times months of revenue for the genre.
+  // Each issue keeps the prices the board showed that day (public/valuation.js since Nov 1, 2026).
+  // Issues from before then were priced on visits, and are worked out the old way here.
   var MULT = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6] };
   var PER_VISIT = [0.004, 0.008, 0.012];
   function price(g) {
+    if (g.val) return { low: g.val[0], mid: g.val[1], high: g.val[2] };
     var m = g.mult || MULT[g.shape] || MULT.rocket, monthly = g.pace * 30;
     return { low: monthly * PER_VISIT[0] * m[0], mid: monthly * PER_VISIT[1] * m[1], high: monthly * PER_VISIT[2] * m[2] };
   }

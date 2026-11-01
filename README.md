@@ -22,6 +22,7 @@ Everything the site serves is in `public/`:
 | `market.html` | Genre trends among young games: players, like-for-like change, share, new launches and the fastest riser per genre, plus the fastest-rising and newest games. |
 | `history.js` | The daily readings behind those three pages (60 days), rebuilt every day. Gated like the board. |
 | `tools.js` | Shared code for those pages, including the charts. |
+| `valuation.js` | The price model, one copy for everything that shows a price: the board, game pages, the value calculator, the weekly report, lookups, public game pages, the daily top 5 and the collector. Revenue comes from a game's rank on Roblox's Top Earning chart (what the typical game at that rank earns, from a curve the collector builds from the whole chart every day, kept in `data.js` as `META.earn`), times months of revenue. Prices show the middle and a likely range. The comment at the top explains the numbers. |
 | `track.html`, `track.js` | The public track record: every Monday's picks at 1, 2, 4 and 8 weeks, next to the games that made the cut but weren't picked. `track.js` only names a week's picks once they're a week old. |
 | `value.html` | The free valuation tool and request form for developers. Public. |
 | `subscribe.html` | Pricing ($500 a month during the pilot), shown when someone's free day is over. |

@@ -84,7 +84,7 @@
           <li>Kids and Select audiences already unlocked</li>
           <li>Most traffic comes from Roblox recommendations, not ads</li>
         </ul>
-        <p class="small muted">A starting range, not an appraisal. Everything stays in your browser. Robux convert at the DevEx rate, $0.0038 each. Visits convert at $0.004 to $0.012 of developer revenue each. We cap the price at 12 months of revenue even for durable games, because buyers discount for risk.</p>
+        <p class="small muted">A starting range, not an appraisal. Everything stays in your browser. Robux convert at the DevEx rate, $0.0038 each. Visits use a rule of thumb, about $0.008 of developer revenue each, so they give a wide range. We cap the price at 12 months of revenue even for durable games, because buyers discount for risk.</p>
         <p><a class="link" href="#request">Want a real valuation? Send us your game</a></p>
         <p><a class="link" href="sell">Open to selling? Tell buyers about your game</a></p>
       </div>
@@ -200,12 +200,10 @@
 </footer>
 
 <script src="site.js"></script>
+<script src="valuation.js"></script>
 <script>
 (function () {
   var $ = SB.$;
-  var MULT = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6] };
-  var PER_VISIT = [0.004, 0.008, 0.012];
-  var DEVEX = 0.0038;
   function trim(v) { var s = v >= 100 ? v.toFixed(0) : v.toFixed(1); return s.indexOf(".") >= 0 ? s.replace(/0+$/, "").replace(/\.$/, "") : s; }
   function money(x) {
     if (!isFinite(x) || x <= 0) return "$0";
@@ -242,26 +240,21 @@
     var q = parseQuery($("vq").value);
     $("wrap-decline").hidden = fade !== "measured";
     if (!q) { $("v-range").textContent = "Type a number"; $("v-line").textContent = "Try 2,500,000 Robux, 40 million visits or $9,500."; $("v-lasts").textContent = ""; return; }
-    var rev;
-    if (q.kind === "robux") { var r = q.n * DEVEX; rev = [r, r, r]; }
-    else if (q.kind === "usd") rev = [q.n, q.n, q.n];
-    else rev = PER_VISIT.map(function (k) { return q.n * k; });
-    var mult, multTxt;
-    if (fade === "rocket") { mult = MULT.rocket; multTxt = "1–2 months"; }
-    else if (fade === "stair") { mult = MULT.staircase; multTxt = "3–6 months"; }
-    else {
+    // Same model as the board (public/valuation.js), on the revenue typed in.
+    var o = { shape: fade === "rocket" ? "rocket" : "staircase" };
+    if (q.kind === "robux") o.seller = q.n * SBV.DEVEX;
+    else if (q.kind === "usd") o.seller = q.n;
+    else o.visitsMonth = q.n;
+    if (fade === "measured") {
       var d = parseNum($("decline").value) / 100;
       if (!(d > 0)) { $("v-range").textContent = "Enter a decline"; $("v-line").textContent = "Type the share of players it loses in a month, like 15%."; $("v-lasts").textContent = ""; return; }
-      var cl = function (x) { return Math.max(1, Math.min(12, x)); };
-      mult = [cl(1 / (d * 4 / 3)), cl(1 / d), cl(1 / (d * 2 / 3))];
-      multTxt = trim(mult[0]) + "–" + trim(mult[2]) + " months";
+      o.decay = d;
     }
-    var fair = [rev[0] * mult[0], rev[1] * mult[1], rev[2] * mult[2]];
-    $("v-range").textContent = money(fair[0]) + "–" + money(fair[2]);
-    var basis = q.kind === "robux" ? commas(q.n) + " Robux is about " + money(rev[1]) + " at the DevEx rate. " : q.kind === "visits" ? short(q.n) + " visits is about " + money(rev[0]) + "–" + money(rev[2]) + " of revenue. " : "";
-    var revTxt = rev[0] === rev[2] ? money(rev[1]) + " a month" : money(rev[0]) + "–" + money(rev[2]) + " a month";
-    $("v-line").textContent = basis + "Middle about " + money(fair[1]) + ": " + revTxt + " × " + multTxt + ".";
-    $("v-lasts").textContent = "If it holds its players for a year: " + money(rev[1] * 12);
+    var v = SBV.value(o, null), mo = Math.round(v.months.mid * 10) / 10;
+    $("v-range").textContent = money(v.lo) + "–" + money(v.hi);
+    var basis = q.kind === "robux" ? commas(q.n) + " Robux is about " + money(v.rev.mid) + " at the DevEx rate. " : q.kind === "visits" ? short(q.n) + " visits is roughly " + money(v.rev.mid) + " of revenue, a rule of thumb, so the range is wide. Robux earned gives a much tighter one. " : "";
+    $("v-line").textContent = basis + "Middle about " + money(v.mid) + ": " + money(v.rev.mid) + " a month × " + mo + " months" + (fade === "measured" ? ", from its decline" : fade === "rocket" ? " (fast-rise games sell for 1 to 2)" : " (slow-build games sell for 3 to 6)") + ".";
+    $("v-lasts").textContent = "If it holds its players for a year: " + money(v.year);
   }
   function placeCaret() {
     var inp = $("vq"), meas = document.querySelector(".vq-measure"), caret = document.querySelector(".vq-line .caret");

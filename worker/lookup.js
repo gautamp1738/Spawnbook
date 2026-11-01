@@ -1,15 +1,16 @@
 // Game lookup: paste a Roblox link, a place ID or a game's name and get its public numbers with a
 // plain-English read of what looks good and what to check first. Everything comes from Roblox's
 // public APIs plus Spawnbook's own daily record (history.js) and today's board (data.js). Prices
-// use the same math as the board, so they're estimates with low confidence.
+// come from public/valuation.js, the same model as the board: Top Earning rank × months of revenue.
 //
 // GET /api/lookup?q=<link, place ID or name>   or   /api/lookup?u=<universe ID>
 // The caller (worker/index.js) checks access first.
 
+import "../public/valuation.js";
+
 const DAY = 864e5;
-const PER_VISIT = [0.004, 0.008, 0.012];
-const MULT = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6] };
-const DEVEX = 0.0038;
+// The price model, shared with the board and the other pages (public/valuation.js).
+const SBV = globalThis.SBV;
 
 // Kept in step with pipeline/collector.js.
 const STAIR = ["RPG", "Shooter", "Action", "Sports & Racing", "Strategy", "Roleplay & Avatar Sim", "Adventure", "Puzzle", "Party & Casual", "Survival", "Obby & Platformer"];
@@ -324,9 +325,6 @@ function analyse(ctx) {
   const licensed = g.isOfficiallyLicensed ? "official" : g.isCommunityLicensed ? "community" : null;
   const wave = WAVE.test(g.name);
   const shape = (STAIR.includes(g.genre_l1) && !wave) || /fish/i.test(g.name) ? "staircase" : "rocket";
-  const mult = MULT[shape];
-  const rev = PER_VISIT.map((k) => perDay * 30 * k);
-  const fair = [rev[0] * mult[0], rev[1] * mult[1], rev[2] * mult[2]];
 
   const good = [], check = [], know = [];
   // board: true marks points about today's board, which free and public views leave out.
@@ -519,6 +517,21 @@ function analyse(ctx) {
     line = (goodNb.length ? "In its favor: " + top(good) + ". " : "") + (checkNb.length ? "Against it: " + top(check) + "." : "Nothing stands out either way.");
   }
 
+  // The price: revenue from its Top Earning rank, times months of revenue. Players come from today's
+  // reading when it's in it, so they match the chart the curve was built from.
+  const earn = br && br.META && br.META.earn;
+  const x26 = (row && row[26]) || {};
+  const val = SBV.value({
+    // Without today's chart, a young game in today's reading still has its rank in our record.
+    rank: earn && earn.ranks ? SBV.rankOf(earn, uid) : inToday ? (ex.s && ex.s.te) || 0 : null,
+    players: lastRow && hx && lastRow.d === hx.dates[hx.dates.length - 1] ? lastRow.players : g.playing,
+    shape,
+    decay: row && row[25] && x26.decay != null ? x26.decay / 100 : null,
+    week: playersWeek ? playersWeek.change : null,
+    peak: peakHold,
+  }, earn);
+  const rv = val.rev;
+
   return {
     game: {
       uid, pid, name: g.name, url: "https://www.roblox.com/games/" + pid, created: g.created, updated: g.updated, age: ageD, hoursSinceUpdate: Math.round(hrs),
@@ -532,7 +545,13 @@ function analyse(ctx) {
       boardMedian: { favPer1k: bmed.favk, minutesPerVisit: bmed.sess, rating: bmed.like },
       record: rows.length ? { since: rows[0].d, readings: rows.length, peak: peak ? { players: peak.players, date: peak.d } : null, series: rows.map((r) => [r.d, r.players]) } : null,
     },
-    money: { passes: pass, products: prod, revenue: rev.map(Math.round), robuxMonth: Math.round(rev[1] / DEVEX), fair: fair.map(Math.round), shape, months: shape === "staircase" ? "3 to 6" : "1 to 2" },
+    money: {
+      passes: pass, products: prod,
+      revenue: [rv.mid / rv.k, rv.mid, rv.mid * rv.k].map(Math.round), robuxMonth: Math.round(rv.mid / SBV.DEVEX),
+      fair: [val.lo, val.mid, val.hi].map(Math.round), year: Math.round(val.year), shape, months: Math.round(val.months.mid * 10) / 10,
+      basis: rv.basis, earnRank: rv.rank || null, conf: val.conf, confLabel: SBV.confLabel(val),
+      why: { revenue: SBV.revenueWhy(val), months: SBV.monthsWhy(val) },
+    },
     owner: cr,
     servers: srv,
     maturity: mat,

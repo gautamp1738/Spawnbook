@@ -67,6 +67,10 @@ globalThis.localStorage = {
   removeItem: (k) => { store.delete(k); },
 };
 
+// The price model (window.SBV), which the collector uses to build today's earnings curve.
+const valuation = new URL("../public/valuation.js", import.meta.url);
+if (fs.existsSync(valuation)) (0, eval)(fs.readFileSync(valuation, "utf8"));
+
 const src = JSON.parse(fs.readFileSync(path.join(STATE, "code", "collector.json"), "utf8")).src;
 (0, eval)(src);
 
