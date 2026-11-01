@@ -17,7 +17,7 @@
   <nav class="topbar" aria-label="Main">
     <a class="wordmark" href="/">Spawnbook</a>
     <ul class="navlinks">
-      <li class="m-hide"><a href="market">Market</a></li>
+      <li class="m-hide"><a href="g">Game pages</a></li>
       <li class="s-hide"><a href="watchlist">Watchlist</a></li>
       <li><a class="keep" href="board">Today's board</a></li>
     </ul>
@@ -41,6 +41,50 @@
 
   <p class="wrap lk-status" id="lk-status" role="status" aria-live="polite"></p>
   <div id="lk-out"></div>
+
+  <section class="wrap lk-free" id="free" hidden aria-labelledby="free-h">
+    <form class="form" id="free-form" method="post" action="/api/signup" novalidate>
+      <h2 class="form-h" id="free-h">Make a free account</h2>
+      <p class="hint">Get 5 full lookups a day, free for as long as you like. Every game also has a public page anyone can open without an account. The full daily board is $500 a month.</p>
+      <input type="hidden" name="plan" value="dev">
+      <input type="hidden" name="next" id="free-next" value="/lookup">
+      <div class="fields">
+        <div class="field">
+          <label for="fr-name">Your name <span class="opt">(required)</span></label>
+          <input id="fr-name" name="name" autocomplete="name" maxlength="120" aria-required="true">
+        </div>
+        <div class="field">
+          <label for="fr-email">Email <span class="opt">(required)</span></label>
+          <input id="fr-email" name="email" type="email" autocomplete="email" maxlength="200" aria-required="true">
+        </div>
+        <div class="field">
+          <label for="fr-pw">Password <span class="opt">(required)</span></label>
+          <div class="pw">
+            <input id="fr-pw" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="200" aria-required="true" aria-describedby="fr-pw-help">
+            <button type="button" class="button quiet" data-show-pw="fr-pw" aria-pressed="false">Show</button>
+          </div>
+          <span class="help small muted" id="fr-pw-help">At least 8 characters.</span>
+        </div>
+        <div class="field">
+          <label for="fr-co">Your studio or game <span class="opt">(optional)</span></label>
+          <input id="fr-co" name="company" autocomplete="organization" maxlength="160">
+        </div>
+        <div class="field full" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">
+          <label for="fr-site">Leave this empty</label>
+          <input id="fr-site" name="website" tabindex="-1" autocomplete="off">
+        </div>
+        <label class="consent full" for="fr-agree">
+          <input type="checkbox" id="fr-agree" name="agree" value="yes" aria-required="true">
+          <span>I'm 18 or older. I agree that Spawnbook can store these details to give me access and contact me about subscribing, as described in the <a class="link" href="privacy.html">Privacy Policy</a>, and I accept the <a class="link" href="terms.html">Terms</a>.</span>
+        </label>
+      </div>
+      <div class="form-row">
+        <button class="button" type="submit">Make my free account</button>
+        <span class="err" id="fr-err" role="alert"></span>
+      </div>
+      <p class="note">Already have an account? <a class="link" id="free-signin" href="signin">Sign in</a>.</p>
+    </form>
+  </section>
 </main>
 
 <footer class="foot wrap">
@@ -100,6 +144,7 @@
     form.setAttribute("aria-busy", "true");
     $("lk-go").disabled = true;
     out.textContent = "";
+    $("free").hidden = true;
     status.classList.remove("sr-only");
     status.textContent = "Reading Roblox. This takes a few seconds…";
     fetch("/api/lookup?" + qs, { credentials: "same-origin" })
@@ -148,21 +193,29 @@
       notfound: d.kind === "name" ? "Nothing on Roblox matched “" + q + "”. Check the spelling, or paste the game's link instead." : "Roblox doesn't have a public game at that " + (d.kind === "link" ? "link" : "ID") + ". It may be private or deleted.",
       roblox: "Roblox didn't answer just now. Try again in a minute.",
       network: "We couldn't reach Spawnbook. Check your connection and try again.",
-      signin: "Looking up games is part of the board. Open today's board to start your free 24 hours, or sign in.",
-      subscribe: "Your access has ended, so lookups are off. Subscribe to keep the board and lookups.",
+      account: "Your free day is over. Make a free account to keep looking up games: 5 full lookups a day, free.",
+      limit: "You've used today's " + (d.max || 5) + " free lookups. They reset at midnight UTC (5 PM Pacific), and games you've already looked up today still open. Public game pages have no limit.",
+      subscribe: "Your access has ended. Subscribe to keep the board and unlimited lookups.",
       choose: d.kind === "both" ? "That number is the ID of two different games: one as a place ID (the number in a game's link) and one as a universe ID. Which one?" : "No game is called exactly “" + q + "”. Here's what Roblox found. Pick one:"
     };
     status.textContent = "";
     var box = el("div", "wrap lk-msg");
     if (d.error === "choose") { box.appendChild(pickList(d.others || [], msgs.choose)); }
     else {
+      if (d.error === "signin") d.error = "account";
       box.appendChild(el("p", "lead", msgs[d.error] || msgs.roblox));
-      if (d.error === "signin" || d.error === "subscribe") {
-        var a = el("a", "button", d.error === "signin" ? "Open today's board" : "See pricing"); a.href = d.error === "signin" ? "board" : "subscribe";
-        var p = el("p"); p.appendChild(a); box.appendChild(p);
+      if (d.error === "limit") {
+        var p = el("p", "form-row");
+        var pg = el("a", "button", "Open its public page"); pg.href = params.u ? "g/find?u=" + encodeURIComponent(params.u) : "g/find?q=" + encodeURIComponent(q);
+        var a = el("a", "button quiet", "See pricing"); a.href = "subscribe";
+        p.appendChild(pg); p.appendChild(a); box.appendChild(p);
+      } else if (d.error === "subscribe") {
+        var a2 = el("a", "button", "See pricing"); a2.href = "subscribe";
+        var p2 = el("p"); p2.appendChild(a2); box.appendChild(p2);
       }
     }
     out.appendChild(box);
+    if (d.error === "account") showFree();
     status.classList.add("sr-only");
     status.textContent = d.error === "choose" ? (d.kind === "both" ? "Two games match that number." : "No exact match. " + (d.others || []).length + " possible games listed.") : (msgs[d.error] || msgs.roblox);
   }
@@ -244,7 +297,8 @@
     links.appendChild(extLink("Open on Roblox", g.url));
     if (o.type === "Group") links.appendChild(extLink("Group page", "https://www.roblox.com/communities/" + o.id));
     else if (o.type === "User") links.appendChild(extLink("Owner's profile", "https://www.roblox.com/users/" + o.id + "/profile"));
-    if (b.tracked) { var ga = el("a", "link", "Charts on Spawnbook"); ga.href = "game?u=" + g.uid; links.appendChild(ga); }
+    var pub = el("a", "link", "Public page to share"); pub.href = "g/" + g.pid; links.appendChild(pub);
+    if (b.tracked && !d.free) { var ga = el("a", "link", "Charts on Spawnbook"); ga.href = "game?u=" + g.uid; links.appendChild(ga); }
     hb.appendChild(links);
     head.appendChild(hb);
     sec.appendChild(head);
@@ -263,7 +317,9 @@
     tile(tiles, "Visits a day", short(n.perDay), n.basis === "week" ? "Average over the past " + n.basisDays + " days" : n.basis === "day" ? "Since our last daily reading" : "Lifetime average. We haven't tracked it");
     tile(tiles, "Rating", g.rating != null ? g.rating + "%" : "–", commas(g.up + g.down) + " votes");
     tile(tiles, "Estimated price", "About " + money(m.fair[1]), money(m.fair[0]) + " to " + money(m.fair[2]) + ". Low confidence");
-    tile(tiles, "Spawnbook board", b.rank ? "#" + b.rank + ", score " + b.score : "Not on it today", b.rank ? (b.days > 1 ? b.days + " days running" : "New today") : b.tracked ? "In our daily record" : "Not in our daily record");
+    var ni = (d.signals || {}).niche;
+    if (d.free) tile(tiles, "Rank in its genre", ni ? "#" + ni.rank + " of " + ni.of : "–", ni ? "Young " + ni.genre + " games on Roblox's charts today" : b.tracked ? "In our daily record" : "Not in our daily record");
+    else tile(tiles, "Spawnbook board", b.rank ? "#" + b.rank + ", score " + b.score : "Not on it today", b.rank ? (b.days > 1 ? b.days + " days running" : "New today") : b.tracked ? "In our daily record" : "Not in our daily record");
     sec.appendChild(tiles);
 
     // The read.
@@ -337,11 +393,57 @@
     }
 
     out.appendChild(sec);
+    if (d.free) freeNote(d.free.left, d.free.max);
     status.classList.add("sr-only");
-    status.textContent = "Found " + g.name + ". Our read: " + d.verdict.call + ".";
+    status.textContent = "Found " + g.name + ". Our read: " + d.verdict.call + "." + (d.free ? " " + d.free.left + " free " + (d.free.left === 1 ? "lookup" : "lookups") + " left today." : "");
     h2.focus({ preventScroll: true });
     var top = sec.getBoundingClientRect().top + window.scrollY - 90;
     if (window.scrollY < top - 200 || window.scrollY > top + 200) window.scrollTo({ top: Math.max(0, top), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+
+  // ---------- the free plan ----------
+  var FREE_ERR = {
+    missing: "Fill in your name and email.",
+    email: "That email doesn't look right. Check it and try again.",
+    "password-short": "Choose a password with at least 8 characters.",
+    "password-long": "Choose a password with 200 characters or fewer.",
+    agree: "Check the box to agree before signing up."
+  };
+  // Where to come back to after signing up or in: this lookup, without the error code.
+  function herePath() {
+    var p = new URLSearchParams(location.search); p.delete("se");
+    var qs = p.toString();
+    return "/lookup" + (qs ? "?" + qs : "");
+  }
+  function showFree() {
+    var f = $("free");
+    $("free-next").value = herePath();
+    $("free-signin").href = "signin?next=" + encodeURIComponent(herePath());
+    f.hidden = false;
+    var se = new URLSearchParams(location.search).get("se");
+    if (se && FREE_ERR[se]) { $("fr-err").textContent = FREE_ERR[se]; }
+  }
+  $("free-form").addEventListener("submit", function (e) {
+    var name = $("fr-name").value.trim(), email = $("fr-email").value.trim(), pw = $("fr-pw").value;
+    var msg = "", field = null;
+    if (!name) { msg = FREE_ERR.missing; field = "fr-name"; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg = FREE_ERR.email; field = "fr-email"; }
+    else if (pw.length < 8) { msg = FREE_ERR["password-short"]; field = "fr-pw"; }
+    else if (pw.length > 200) { msg = FREE_ERR["password-long"]; field = "fr-pw"; }
+    else if (!$("fr-agree").checked) { msg = FREE_ERR.agree; field = "fr-agree"; }
+    this.querySelectorAll("[aria-invalid]").forEach(function (x) { x.removeAttribute("aria-invalid"); });
+    $("free-next").value = herePath();
+    if (msg) { e.preventDefault(); $("fr-err").textContent = msg; $(field).setAttribute("aria-invalid", "true"); $(field).focus(); }
+  });
+
+  function freeNote(left, max) {
+    var pn = $("access-note");
+    pn.textContent = "";
+    pn.appendChild(el("strong", null, "Free plan: "));
+    pn.appendChild(document.createTextNode(left == null ? max + " lookups a day. " : left + " of " + max + " lookups left today. "));
+    var sa = el("a", "link", "Subscribe for $500 a month"); sa.href = "subscribe"; pn.appendChild(sa);
+    pn.appendChild(document.createTextNode(" for unlimited lookups and the daily board."));
+    pn.hidden = false;
   }
 
   // ---------- examples and access ----------
@@ -357,6 +459,7 @@
   }).catch(function () {});
 
   fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+    if (m && m.access === "expired") { if ($("access-note").hidden) freeNote(null, 5); return; }
     if (!m || m.access !== "none" || !m.trial || !m.trial.active) return;
     var until = new Date(m.trial.until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
     var pn = $("access-note");

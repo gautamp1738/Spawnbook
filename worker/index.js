@@ -5,7 +5,8 @@
 // Routes
 //   POST /api/signup        the landing page's form: makes an account with a password and signs the
 //                           visitor in. The account runs on the browser's free pass (below), or
-//                           starts one: one free day either way
+//                           starts one: one free day either way. plan=dev (the free-plan form on
+//                           /lookup) doesn't need a studio, and next= sends them back to the lookup
 //   (no route)              the free pass: opening a board page without an account starts 24 hours
 //                           of free access, kept in the signed sb_trial cookie
 //   POST /api/signin        email and password, from /signin
@@ -26,7 +27,11 @@
 //   GET  /api/watch         the signed-in member's watched games, with status and notes
 //   POST /api/watch         { action: "add" | "update" | "remove" | "seen", ... } as JSON
 //   GET  /api/live?u=1,2    current Roblox numbers for up to 100 games, cached for 5 minutes
-//   GET  /lookup            look up any Roblox game, same access as the board
+//   GET  /lookup            look up any Roblox game: the full read, same access as the board, and
+//                           FREE_LOOKUPS a day for any account whose access has ended (the free plan)
+//   GET  /g, /g/find, /g/<place ID>/<name>
+//                           public game pages, for anyone and for Google (worker/gpage.js)
+//   GET  /sitemap.xml       the public pages and a page for every game in our daily record
 //   POST /api/daily-email   { email, source } signs up for the daily top 5 by email (free for 7 days
 //                           without an account); signed in, { action: "off" } stops it. GET: status
 //   GET|POST /unsubscribe?t= the link in every daily email
@@ -54,6 +59,7 @@
 // than the Worker itself.
 
 import { lookup } from "./lookup.js";
+import { publicGame, sitemap } from "./gpage.js";
 
 const FREE_MS = 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -98,6 +104,8 @@ export default {
       else if (path === "/api/daily-email") res = await dailyEmailApi(request, env, url, ctx);
       else if (path === "/api/discord") res = await discordApi(request, env, url, ctx);
       else if (path === "/unsubscribe") res = await unsubscribe(request, env, url);
+      else if (path === "/g" || path.startsWith("/g/")) res = await publicGame(request, env, url, (detail) => trackPage(request, env, url, ctx, detail));
+      else if (path === "/sitemap.xml") res = await sitemap(env, url);
       else if (signedInPage(path)) res = await signedIn(request, env, url, signedInPage(path));
       else if (GATED_DATA.includes(path)) res = await gated(request, env, url, path, ctx);
       else if (gatedPage(path)) res = await gated(request, env, url, gatedPage(path), ctx);
@@ -188,22 +196,34 @@ function digestText(d, origin) {
 // without naming them. Bots and link previews are left out.
 const BOT_UA = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|curl|wget|python|httpclient|headless|lighthouse|monitor|uptime|scan/i;
 function isBot(request) { return BOT_UA.test(request.headers.get("User-Agent") || ""); }
-function track(env, ctx, type, who, detail) {
-  const p = call(env, "track", { type, who: String(who || "").slice(0, 120), detail: String(detail || "").slice(0, 200) }).catch(() => {});
+function track(env, ctx, type, who, detail, src) {
+  const p = call(env, "track", { type, who: String(who || "").slice(0, 120), detail: String(detail || "").slice(0, 200), src: String(src || "").slice(0, 80) }).catch(() => {});
   if (ctx && ctx.waitUntil) ctx.waitUntil(p);
 }
 const passWho = (start) => "pass " + String(start || "").slice(-7);
-function trackVisit(request, env, url, ctx) {
-  if (isBot(request)) return;
-  const raw = readCookie(request, TRIAL_COOKIE);
-  const m = raw && /^(\d{13})\./.exec(raw);
-  let from = "";
+// The other site a visitor came from, if any ("reddit.com"), from the Referer header.
+function referrer(request, url) {
   try {
     const ref = request.headers.get("Referer");
-    if (ref) { const h = new URL(ref).hostname.replace(/^www\./, ""); if (h && h !== url.hostname) from = h; }
+    if (ref) { const h = new URL(ref).hostname.replace(/^www\./, ""); if (h && h !== url.hostname) return h; }
   } catch (e) { /* no usable referrer */ }
+  return "";
+}
+function visitorWho(request) {
+  const raw = readCookie(request, TRIAL_COOKIE);
+  const m = raw && /^(\d{13})\./.exec(raw);
+  return m ? passWho(m[1]) : "new visitor";
+}
+function trackVisit(request, env, url, ctx) {
+  if (isBot(request)) return;
+  let from = referrer(request, url);
   if (url.searchParams.get("ref")) from = from ? from + ", referral link" : "referral link";
-  track(env, ctx, "visit", m ? passWho(m[1]) : "new visitor", from);
+  track(env, ctx, "visit", visitorWho(request), from);
+}
+// A public game page opened. Accounts aren't looked up here, so these pages stay fast and cacheable.
+function trackPage(request, env, url, ctx, detail) {
+  if (isBot(request)) return;
+  track(env, ctx, "page", visitorWho(request), detail, referrer(request, url));
 }
 
 // ---------- the daily top 5, by email and in Discord ----------
@@ -493,6 +513,8 @@ const passwordProblem = (p) => (p.length < MIN_PASSWORD ? "short" : p.length > M
 
 // Where to send someone after they sign in: only our own pages, never another site.
 function nextPath(value, until) {
+  // The free plan's lookup and the public game pages work whatever the account's access.
+  if (/^\/(?:lookup|g\/\d{3,19})(?:[/?][\w\-.~%=&/]*)?$/.test(value) && !value.includes("..")) return value;
   if (GATED_PAGES.includes(value)) return until <= Date.now() ? "/subscribe" : value;
   if (value === "/subscribe" || value === "/account" || SIGNED_IN_PAGES.includes(value)) return value;
   return until > Date.now() ? "/board" : "/subscribe";
@@ -573,7 +595,11 @@ async function signup(request, env, ctx) {
   if (request.method !== "POST") return redirect("/#signup");
   const form = await request.formData();
   const get = (k) => String(form.get(k) || "").trim();
-  const back = (code) => redirect("/?e=" + code + "#signup");
+  // The free-plan form on /lookup: no studio needed, and errors go back to the lookup.
+  const dev = get("plan") === "dev";
+  const next = get("next").slice(0, 300);
+  const nextOk = nextPath(next, Date.now()) === next;
+  const back = (code) => (dev && nextOk ? redirect(next + (next.includes("?") ? "&" : "?") + "se=" + code + "#free") : redirect("/?e=" + code + "#signup"));
 
   // Bots fill in every field, including the hidden one people never see.
   if (get("website")) return redirect("/");
@@ -581,10 +607,10 @@ async function signup(request, env, ctx) {
   const name = get("name").slice(0, 120);
   const email = get("email").toLowerCase().slice(0, 200);
   const company = get("company").slice(0, 160);
-  const role = get("role").slice(0, 60);
+  const role = (get("role") || (dev ? "I make Roblox games" : "")).slice(0, 60);
   const pw = String(form.get("password") || "");
   const ref = get("ref").toLowerCase();
-  if (!name || !email || !company) return back("missing");
+  if (!name || !email || (!company && !dev)) return back("missing");
   if (!validEmail(email)) return back("email");
   const bad = passwordProblem(pw);
   if (bad) return back("password-" + bad);
@@ -596,9 +622,9 @@ async function signup(request, env, ctx) {
   const until = t ? t.until : now + FREE_MS;
   const token = randomToken();
   const r = await call(env, "signup", { email, name, company, role, password: pw, token, until, ref: /^[a-z0-9]{6,16}$/.test(ref) ? ref : null });
-  if (r.exists) return redirect("/signin?e=exists");
-  track(env, ctx, "signup", email, company);
-  const headers = new Headers({ Location: nextPath("", r.until), "Cache-Control": "no-store" });
+  if (r.exists) return redirect("/signin?e=exists" + (dev && nextOk ? "&next=" + encodeURIComponent(next) : ""));
+  track(env, ctx, "signup", email, company || (dev ? "free plan" : ""));
+  const headers = new Headers({ Location: dev && nextOk ? next : nextPath("", r.until), "Cache-Control": "no-store" });
   headers.append("Set-Cookie", sessionCookie(token));
   if (!t) headers.append("Set-Cookie", await trialCookie(env, now));
   return new Response(null, { status: 303, headers });
@@ -742,21 +768,36 @@ async function live(request, env, url) {
   return res;
 }
 
-// Look up any Roblox game: same access as the board (an active account, or a free pass that's still
-// running). The work is in worker/lookup.js.
+// Look up any Roblox game: as many as they like with the board's access (an active account, or a
+// free pass that's still running), or FREE_LOOKUPS different games a day (UTC) on the free plan, for
+// any account whose access has ended. Opening a game again the same day doesn't count twice. Free
+// lookups don't show board ranks or today's top games. The work is in worker/lookup.js.
+const FREE_LOOKUPS = 5;
 async function lookupApi(request, env, url, ctx) {
   const s = await session(request, env);
-  let who;
+  let who, free = false;
   if (s) {
-    if (s.until <= Date.now()) return json({ error: "subscribe" }, 403);
     who = s.email;
+    free = s.until <= Date.now();
   } else {
     const t = await readTrial(request, env);
-    if (!t) return json({ error: "signin" }, 401);
-    if (!t.active) return json({ error: "subscribe" }, 403);
+    if (!t || !t.active) return json({ error: "account", max: FREE_LOOKUPS }, 401);
     who = passWho(t.start);
   }
-  return lookup(env, url, (g) => { if (!url.searchParams.has("examples")) track(env, ctx, "lookup", who, String(g.name || "").slice(0, 120) + " u " + g.uid); });
+  const examples = url.searchParams.has("examples");
+  if (!free) return lookup(env, url, (g) => { if (!examples) track(env, ctx, "lookup", who, String(g.name || "").slice(0, 120) + " u " + g.uid); });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const used = examples ? [] : (await call(env, "free-used", { who, day: today })).uids || [];
+  return lookup(env, url, (g, body) => {
+    if (!used.includes(g.uid)) {
+      used.push(g.uid);
+      const p = call(env, "free-add", { who, day: today, uid: g.uid }).catch(() => {});
+      if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+    }
+    body.free = { left: Math.max(0, FREE_LOOKUPS - used.length), max: FREE_LOOKUPS };
+    track(env, ctx, "lookup", who, String(g.name || "").slice(0, 120) + " u " + g.uid, "free plan");
+  }, { free: true, max: FREE_LOOKUPS, allow: (uid) => used.length < FREE_LOOKUPS || used.includes(uid) });
 }
 
 // ---------- verified leads ----------
@@ -951,12 +992,14 @@ async function gated(request, env, url, assetPath, ctx) {
     ? new Response("/* Open spawnbook.com to see today's board. */\n", { status: 401, headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-store" } })
     : redirect(to));
   let setCookie = null;
+  // The lookup page stays open after access ends: it offers the free plan instead.
+  const freeOk = assetPath === "/lookup";
   if (s) {
     // An account decides on its own: a used-up account doesn't get a new free pass.
-    if (s.until <= Date.now()) return shut("/subscribe");
+    if (s.until <= Date.now() && !freeOk) return shut("/subscribe");
   } else {
     const t = await readTrial(request, env);
-    if (t && !t.active) return shut("/subscribe?over=1");
+    if (t && !t.active && !freeOk) return shut("/subscribe?over=1");
     if (t) passStart = t.start;
     else {
       // No account and no pass yet: opening a board page starts the free 24 hours.
@@ -1162,7 +1205,7 @@ async function admin(request, env, url, path) {
 }
 
 // ---------- admin: activity ----------
-const ACT_TYPES = ["visit", "pass", "view", "lookup", "signup", "email", "discord"];
+const ACT_TYPES = ["visit", "page", "pass", "view", "lookup", "signup", "email", "discord"];
 async function adminActivity(request, env, url, path) {
   if (path === "/admin/picks/send" && request.method === "POST") {
     const r = await sendDailyPicks(env, url.origin);
@@ -1196,6 +1239,7 @@ async function adminActivity(request, env, url, path) {
   const tile = (label, n, sub) => `<div class="tile"><dt>${esc(label)}</dt><dd>${commas(n)}</dd>${sub ? `<p class="tile-sub">${esc(sub)}</p>` : ""}</div>`;
   const tiles = `<dl class="tiles">${[
     tile("Home page visitors", (wk.visit || {}).u || 0, commas((wk.visit || {}).n || 0) + " visits"),
+    tile("Public game pages opened", (wk.page || {}).n || 0, commas((wk.page || {}).u || 0) + " visitors"),
     tile("Free passes started", (wk.pass || {}).u || 0),
     tile("People who opened the board", a.boardWeek),
     tile("Lookups", (wk.lookup || {}).n || 0, commas((wk.lookup || {}).u || 0) + " people"),
@@ -1210,9 +1254,9 @@ async function adminActivity(request, env, url, path) {
   for (const r of a.boardDaily) (byDay[r.day] = byDay[r.day] || {}).board = r.u;
   const days = Object.keys(byDay).sort().reverse();
   const cell = (d, t, key) => commas(((byDay[d] || {})[t] || {})[key || "n"] || 0);
-  const dayRows = days.map((d) => `<tr><th scope="row">${esc(day(d))}</th><td>${cell(d, "visit", "u")}</td><td>${cell(d, "pass")}</td><td>${commas(byDay[d].board || 0)}</td><td>${cell(d, "lookup")}</td><td>${cell(d, "signup")}</td><td>${cell(d, "email")}</td></tr>`).join("");
+  const dayRows = days.map((d) => `<tr><th scope="row">${esc(day(d))}</th><td>${cell(d, "visit", "u")}</td><td>${cell(d, "page")}</td><td>${cell(d, "pass")}</td><td>${commas(byDay[d].board || 0)}</td><td>${cell(d, "lookup")}</td><td>${cell(d, "signup")}</td><td>${cell(d, "email")}</td></tr>`).join("");
   const dayTable = days.length
-    ? `<div class="table-box"><table><thead><tr><th scope="col">Day (Pacific)</th><th scope="col">Home page visitors</th><th scope="col">Free passes</th><th scope="col">Opened the board</th><th scope="col">Lookups</th><th scope="col">Accounts</th><th scope="col">Email sign-ups</th></tr></thead><tbody>${dayRows}</tbody></table></div>`
+    ? `<div class="table-box"><table><thead><tr><th scope="col">Day (Pacific)</th><th scope="col">Home page visitors</th><th scope="col">Game pages</th><th scope="col">Free passes</th><th scope="col">Opened the board</th><th scope="col">Lookups</th><th scope="col">Accounts</th><th scope="col">Email sign-ups</th></tr></thead><tbody>${dayRows}</tbody></table></div>`
     : `<p>Nothing yet. Activity starts recording from today.</p>`;
 
   const fromList = a.from.length ? `<ul class="dlist">${a.from.map((r) => `<li>${esc(r.detail)}: ${commas(r.n)}</li>`).join("")}</ul>` : `<p class="small muted">No visits from other sites in the past week. Visits from a typed address, a bookmark or some apps show no source.</p>`;
@@ -1240,7 +1284,8 @@ async function adminActivity(request, env, url, path) {
     if (r.type === "visit") return "Opened the home page" + (r.detail ? " from " + r.detail : "");
     if (r.type === "pass") return "Started a free pass on the " + (r.detail.startsWith("game") ? "page for " + gameName(r.detail) : r.detail + " page");
     if (r.type === "view") return "Opened " + (r.detail.startsWith("game") ? "the page for " + gameName(r.detail) : "the " + r.detail + " page");
-    if (r.type === "lookup") return "Looked up " + gameName(r.detail);
+    if (r.type === "lookup") return "Looked up " + gameName(r.detail) + (r.src === "free plan" ? " (free plan)" : "");
+    if (r.type === "page") return "Opened the public page for " + gameName(r.detail) + (r.src ? " from " + r.src : "");
     if (r.type === "signup") return "Made an account" + (r.detail ? " (" + r.detail + ")" : "");
     if (r.type === "email") return "Signed up for the daily email" + (r.detail ? " on the " + r.detail : "");
     if (r.type === "discord") return "Connected Discord";
@@ -1251,7 +1296,7 @@ async function adminActivity(request, env, url, path) {
     : `<p>Nothing yet.</p>`;
 
   return page("Activity", `${adminNav("activity")}<h1 class="head">Activity</h1>
-<p>What people do on Spawnbook, so you can tell whether outreach brings anyone in. "pass" and a number is one visitor without an account; accounts show their email. Bots and link previews are left out. Records are kept 120 days.</p>
+<p>What people do on Spawnbook, so you can tell whether outreach and posts bring anyone in. "Where visitors came from" counts the home page and public game pages. "pass" and a number is one visitor without an account; accounts show their email. Bots and link previews are left out. Records are kept 120 days.</p>
 <h2>Last 7 days</h2>${tiles}
 <h2>Day by day</h2>${dayTable}
 <div class="two"><section><h2>Where visitors came from</h2>${fromList}</section><section><h2>Games people looked at</h2>${gameList}</section></div>
@@ -1675,6 +1720,10 @@ export class Store {
     // and a number for a visitor without an account.
     this.sql.exec("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, at INTEGER NOT NULL, day TEXT NOT NULL, type TEXT NOT NULL, who TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '')");
     this.sql.exec("CREATE INDEX IF NOT EXISTS events_day ON events (day)");
+    // src: the other site a visitor came from, for public game pages.
+    try { this.sql.exec("ALTER TABLE events ADD COLUMN src TEXT NOT NULL DEFAULT ''"); } catch (e) { /* already there */ }
+    // The free plan: which games each account looked up on each day (UTC), kept a week.
+    this.sql.exec("CREATE TABLE IF NOT EXISTS free_lookups (who TEXT NOT NULL, day TEXT NOT NULL, uid INTEGER NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (who, day, uid))");
     // The daily top 5 by email. state: on, ended (a non-member's free week ran out) or off
     // (unsubscribed). Members with access get it for as long as they're members.
     this.sql.exec("CREATE TABLE IF NOT EXISTS daily_emails (email TEXT PRIMARY KEY, created_at INTEGER NOT NULL, until INTEGER NOT NULL, token TEXT NOT NULL UNIQUE, source TEXT NOT NULL DEFAULT '', state TEXT NOT NULL DEFAULT 'on', last_sent TEXT, sends INTEGER NOT NULL DEFAULT 0)");
@@ -2059,7 +2108,7 @@ export class Store {
     // ---------- activity ----------
     if (op === "track") {
       const day = new Date(now).toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-      this.sql.exec("INSERT INTO events (at, day, type, who, detail) VALUES (?, ?, ?, ?, ?)", now, day, String(p.type || "").slice(0, 20), String(p.who || "").slice(0, 120), String(p.detail || "").slice(0, 200));
+      this.sql.exec("INSERT INTO events (at, day, type, who, detail, src) VALUES (?, ?, ?, ?, ?, ?)", now, day, String(p.type || "").slice(0, 20), String(p.who || "").slice(0, 120), String(p.detail || "").slice(0, 200), String(p.src || "").slice(0, 80));
       if (Math.random() < 0.02) this.sql.exec("DELETE FROM events WHERE at < ?", now - 120 * DAY_MS);
       return reply({ ok: true });
     }
@@ -2072,13 +2121,23 @@ export class Store {
         boardDaily: this.sql.exec("SELECT day, COUNT(DISTINCT who) AS u FROM events WHERE day >= ? AND type IN ('pass', 'view') AND detail = 'board' GROUP BY day", since).toArray(),
         week: this.sql.exec("SELECT type, COUNT(*) AS n, COUNT(DISTINCT who) AS u FROM events WHERE at > ? GROUP BY type", week).toArray(),
         boardWeek: (this.sql.exec("SELECT COUNT(DISTINCT who) AS u FROM events WHERE at > ? AND type IN ('pass', 'view') AND detail = 'board'", week).toArray()[0] || {}).u || 0,
-        from: this.sql.exec("SELECT detail, COUNT(*) AS n FROM events WHERE at > ? AND type = 'visit' AND detail != '' GROUP BY detail ORDER BY n DESC LIMIT 12", week).toArray(),
-        games: this.sql.exec("SELECT detail, COUNT(*) AS n, COUNT(DISTINCT who) AS u FROM events WHERE at > ? AND (type = 'lookup' OR (type IN ('view', 'pass') AND detail LIKE 'game %')) GROUP BY detail ORDER BY n DESC LIMIT 15", week).toArray(),
-        recent: this.sql.exec("SELECT at, type, who, detail FROM events ORDER BY id DESC LIMIT 120").toArray(),
+        from: this.sql.exec("SELECT detail, COUNT(*) AS n FROM (SELECT detail FROM events WHERE at > ? AND type = 'visit' AND detail != '' UNION ALL SELECT src AS detail FROM events WHERE at > ? AND type = 'page' AND src != '') GROUP BY detail ORDER BY n DESC LIMIT 12", week, week).toArray(),
+        games: this.sql.exec("SELECT detail, COUNT(*) AS n, COUNT(DISTINCT who) AS u FROM events WHERE at > ? AND (type IN ('lookup', 'page') OR (type IN ('view', 'pass') AND detail LIKE 'game %')) GROUP BY detail ORDER BY n DESC LIMIT 15", week).toArray(),
+        recent: this.sql.exec("SELECT at, type, who, detail, src FROM events ORDER BY id DESC LIMIT 120").toArray(),
         emails: this.sql.exec("SELECT d.email, d.created_at, d.until, d.source, d.state, d.last_sent, d.sends, s.access_until FROM daily_emails d LEFT JOIN signups s ON s.email = d.email ORDER BY d.created_at DESC LIMIT 200").toArray(),
         discord: this.sql.exec("SELECT email, discord_at, discord_err, access_until FROM signups WHERE discord IS NOT NULL ORDER BY email").toArray(),
         lastPicks: (this.sql.exec("SELECT v FROM kv WHERE k = 'picks_last'").toArray()[0] || {}).v || null,
       });
+    }
+
+    // ---------- the free plan ----------
+    if (op === "free-used") {
+      return reply({ uids: this.sql.exec("SELECT uid FROM free_lookups WHERE who = ? AND day = ?", String(p.who), String(p.day)).toArray().map((r) => Number(r.uid)) });
+    }
+    if (op === "free-add") {
+      this.sql.exec("INSERT OR IGNORE INTO free_lookups (who, day, uid, at) VALUES (?, ?, ?, ?)", String(p.who), String(p.day), Number(p.uid), now);
+      if (Math.random() < 0.05) this.sql.exec("DELETE FROM free_lookups WHERE at < ?", now - 7 * DAY_MS);
+      return reply({ ok: true });
     }
 
     if (op === "kv-get") {
@@ -2151,6 +2210,7 @@ export class Store {
     if (op === "delete") {
       this.sql.exec("DELETE FROM daily_emails WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM events WHERE who = ?", p.email);
+      this.sql.exec("DELETE FROM free_lookups WHERE who = ?", p.email);
       this.sql.exec("DELETE FROM sessions WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM links WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM fails WHERE email = ?", p.email);

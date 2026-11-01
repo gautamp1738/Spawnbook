@@ -329,7 +329,8 @@ function analyse(ctx) {
   const fair = [rev[0] * mult[0], rev[1] * mult[1], rev[2] * mult[2]];
 
   const good = [], check = [], know = [];
-  const add = (list, w, title, text) => list.push({ w, title, text });
+  // board: true marks points about today's board, which free and public views leave out.
+  const add = (list, w, title, text, extra) => list.push(Object.assign({ w, title, text }, extra || {}));
 
   // Red flags first: these decide the verdict on their own.
   const hard = [];
@@ -479,9 +480,9 @@ function analyse(ctx) {
   // Our board.
   if (row) {
     const x = row[26] || {};
-    add(good, 80, "On today's Spawnbook board", "Ranked #" + (x.rank || "?") + " with a score of " + row[24] + " out of 100" + (streak > 1 ? ", " + streak + " days running" : "") + ".");
+    add(good, 80, "On today's Spawnbook board", "Ranked #" + (x.rank || "?") + " with a score of " + row[24] + " out of 100" + (streak > 1 ? ", " + streak + " days running" : "") + ".", { board: true });
   } else if (flaggedOff) {
-    add(check, 65, "Made our cut, then got flagged", flaggedOff[4] + ".");
+    add(check, 65, "Made our cut, then got flagged", flaggedOff[4] + ".", { board: true });
   } else {
     const why = [];
     if (age > 120) why.push("it's older than 120 days");
@@ -489,7 +490,7 @@ function analyse(ctx) {
     if (g.playing > 15000) why.push("it has more than 15,000 players");
     if (like != null && like < 0.85) why.push("its rating is under 85%");
     const seenToday = lastRow && hx && lastRow.d === hx.dates[hx.dates.length - 1];
-    add(know, 15, "Not on today's board", why.length ? "It's outside our board's filters: " + why.join(", ") + "." : seenToday ? "It was in today's reading but didn't score 55 or more." : "It wasn't on Roblox's chart lists when we read them today.");
+    add(know, 15, "Not on today's board", why.length ? "It's outside our board's filters: " + why.join(", ") + "." : seenToday ? "It was in today's reading but didn't score 55 or more." : "It wasn't on Roblox's chart lists when we read them today.", { board: true });
   }
   if (mat && mat.minAge >= 17) add(know, 25, "Rated for 17 and over", "Roblox recommends it for players 17 and older, which limits who can find it.");
 
@@ -498,22 +499,24 @@ function analyse(ctx) {
   // The verdict: plain rules, so it can be explained.
   const score = good.reduce((a, p) => a + p.w, 0) - check.reduce((a, p) => a + p.w, 0);
   let call, line;
-  const top = (l) => l[0] && l[0].title.charAt(0).toLowerCase() + l[0].title.slice(1);
+  // The line never names a board point, so it reads the same on the free plan.
+  const top = (l) => { l = l.filter((p) => !p.board); return l[0] && l[0].title.charAt(0).toLowerCase() + l[0].title.slice(1); };
+  const goodNb = good.filter((p) => !p.board), checkNb = check.filter((p) => !p.board);
   if (hard.length) {
     call = "Check first";
-    line = "Before anything else: " + top(check) + ". " + (good.length ? "On the plus side: " + top(good) + "." : "");
+    line = "Before anything else: " + top(check) + ". " + (goodNb.length ? "On the plus side: " + top(good) + "." : "");
   } else if (age > 183) {
     call = "Not what we look for";
-    line = "It's past six months, so price it on steady earnings, not growth." + (good.length ? " On the plus side: " + top(good) + "." : "");
+    line = "It's past six months, so price it on steady earnings, not growth." + (goodNb.length ? " On the plus side: " + top(good) + "." : "");
   } else if (score >= 120 && good.length >= 3) {
     call = "Worth a closer look";
-    line = "The best signs: " + good.slice(0, 2).map((p) => p.title.charAt(0).toLowerCase() + p.title.slice(1)).join(" and ") + "." + (check.length ? " Ask about this first: " + top(check) + "." : "");
+    line = "The best signs: " + goodNb.slice(0, 2).map((p) => p.title.charAt(0).toLowerCase() + p.title.slice(1)).join(" and ") + "." + (checkNb.length ? " Ask about this first: " + top(check) + "." : "");
   } else if (score <= -60) {
     call = "Probably a pass";
-    line = "More against it than for it. Biggest worry: " + top(check) + "." + (good.length ? " On the plus side: " + top(good) + "." : "");
+    line = "More against it than for it." + (checkNb.length ? " Biggest worry: " + top(check) + "." : "") + (goodNb.length ? " On the plus side: " + top(good) + "." : "");
   } else {
     call = "Mixed";
-    line = (good.length ? "In its favor: " + top(good) + ". " : "") + (check.length ? "Against it: " + top(check) + "." : "Nothing stands out either way.");
+    line = (goodNb.length ? "In its favor: " + top(good) + ". " : "") + (checkNb.length ? "Against it: " + top(check) + "." : "Nothing stands out either way.");
   }
 
   return {
@@ -544,75 +547,113 @@ function analyse(ctx) {
 }
 
 // ---------- the endpoint ----------
-// onFound(game) is called with the game's summary whenever a lookup finds one (for the activity page).
-export async function lookup(env, url, onFound) {
-  const origin = url.origin;
-  const data = await ourData(env, origin);
-  // Today's top three, as examples for the search box.
-  if (url.searchParams.has("examples")) {
-    const B = (data.br && data.br.BOARD) || [];
-    return out({ examples: B.slice(0, 3).map((r) => r[1]) }, 200, "private, max-age=600");
-  }
-  let uid = Number(url.searchParams.get("u")) || 0, others = [], kind = "uid";
-  const q = url.searchParams.get("q");
-  if (!uid) {
-    const p = parseQuery(q);
-    if (!p) return out({ error: "empty" }, 400);
-    kind = p.kind;
-    if (p.kind === "share") return out({ error: "share" }, 400);
-    if (p.kind === "badlink") return out({ error: "badlink" }, 400);
-    if (p.kind === "link") uid = await placeToUniverse(p.pid);
-    else if (p.kind === "id") {
-      // Place IDs and universe IDs share one range of numbers, so a bare number can be either.
-      const asPlace = await placeToUniverse(p.id);
-      const ids = Array.from(new Set([asPlace, p.id].filter(Boolean)));
-      const gj = await getJSON("https://games.roblox.com/v1/games?universeIds=" + ids.join(","));
-      if (!gj) return out({ error: "roblox" }, 502);
-      const by = {};
-      for (const x of gj.data || []) by[x.id] = x;
-      const a = asPlace && by[asPlace], u = by[p.id];
-      if (a && u && a.id !== u.id) {
-        const row = (x, as) => ({ uid: x.id, name: x.name, players: x.playing || 0, creator: (x.creator && x.creator.name) || "", as });
-        return out({ error: "choose", kind: "both", others: [row(a, "As a place ID"), row(u, "As a universe ID")].sort((x, y) => y.players - x.players) });
-      }
-      uid = a ? a.id : u ? u.id : 0;
-    } else {
-      const s = await searchByName(p.name, data.hx);
-      uid = s.uid; others = s.others;
-      if (!uid && others.length) return out({ error: "choose", kind, others });
-    }
-    if (!uid) return out({ error: "notfound", kind }, 404);
-  }
-  if (!Number.isSafeInteger(uid) || uid <= 0) return out({ error: "notfound", kind }, 404);
 
-  // The same game looked up twice within 10 minutes gets the saved answer.
+// A visitor's query, turned into a universe ID: { uid, others, kind }, or { error, status, ... }
+// when there's nothing to look up yet (an empty box, a share link, a choice to make).
+export async function findGame(env, origin, q) {
+  const data = await ourData(env, origin);
+  const p = parseQuery(q);
+  if (!p) return { error: "empty", status: 400 };
+  const kind = p.kind;
+  let uid = 0, others = [];
+  if (kind === "share") return { error: "share", status: 400 };
+  if (kind === "badlink") return { error: "badlink", status: 400 };
+  if (kind === "link") uid = await placeToUniverse(p.pid);
+  else if (kind === "id") {
+    // Place IDs and universe IDs share one range of numbers, so a bare number can be either.
+    const asPlace = await placeToUniverse(p.id);
+    const ids = Array.from(new Set([asPlace, p.id].filter(Boolean)));
+    const gj = await getJSON("https://games.roblox.com/v1/games?universeIds=" + ids.join(","));
+    if (!gj) return { error: "roblox", status: 502 };
+    const by = {};
+    for (const x of gj.data || []) by[x.id] = x;
+    const a = asPlace && by[asPlace], u = by[p.id];
+    if (a && u && a.id !== u.id) {
+      const row = (x, as) => ({ uid: x.id, name: x.name, players: x.playing || 0, creator: (x.creator && x.creator.name) || "", as });
+      return { error: "choose", status: 200, kind: "both", others: [row(a, "As a place ID"), row(u, "As a universe ID")].sort((x, y) => y.players - x.players) };
+    }
+    uid = a ? a.id : u ? u.id : 0;
+  } else {
+    const s = await searchByName(p.name, data.hx);
+    uid = s.uid; others = s.others;
+    if (!uid && others.length) return { error: "choose", status: 200, kind, others };
+  }
+  if (!uid) return { error: "notfound", status: 404, kind };
+  return { uid, others, kind };
+}
+
+// A place ID (the number in a game's Roblox link) to its universe ID: from our record when we have
+// the game, otherwise from Roblox. 0 when there's no such game.
+export async function universeOf(env, origin, pid) {
+  const data = await ourData(env, origin);
+  if (data.hx && data.hx.games) for (const u of Object.keys(data.hx.games)) if (data.hx.games[u][1] === pid) return Number(u);
+  return placeToUniverse(pid);
+}
+
+// Everything about one game: { body } or { error, status }. The same game asked for twice within
+// 10 minutes gets the saved answer, so the lookup page and the public game page share the work.
+export async function gameData(env, origin, uid) {
+  if (!Number.isSafeInteger(uid) || uid <= 0) return { error: "notfound", status: 404 };
   const cache = typeof caches !== "undefined" ? caches.default : null;
   const key = new Request("https://lookup.spawnbook.internal/v1/" + uid);
   if (cache) {
     const hit = await cache.match(key);
-    if (hit) { const body = await hit.json(); body.others = others; body.kind = kind; if (onFound) onFound(body.game); return out(body); }
+    if (hit) return { body: await hit.json() };
   }
-
+  const data = await ourData(env, origin);
   const [gj, vj, pass, prod, mat, img] = await Promise.all([
     getJSON("https://games.roblox.com/v1/games?universeIds=" + uid),
     getJSON("https://games.roblox.com/v1/games/votes?universeIds=" + uid),
     passes(uid), products(uid), maturity(uid), icon(uid),
   ]);
-  if (!gj) return out({ error: "roblox" }, 502);
+  if (!gj) return { error: "roblox", status: 502 };
   const g = gj.data && gj.data[0];
-  if (!g) return out({ error: "notfound", kind }, 404);
+  if (!g) return { error: "notfound", status: 404 };
   const v = vj && vj.data && vj.data[0];
   const [cr, srv] = await Promise.all([creatorInfo(g.creator || {}, g.rootPlaceId, g.id), servers(g.rootPlaceId, g.playing)]);
-
   const body = analyse({ g, v, hx: data.hx, br: data.br, pass, prod, mat, cr, srv });
   body.icon = img;
   body.at = Date.now();
   body.dataDate = data.hx && data.hx.dates ? data.hx.dates[data.hx.dates.length - 1] : null;
   if (cache) await cache.put(key, new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json", "Cache-Control": "max-age=600" } }));
+  return { body };
+}
+
+// Well-known games to try, for people who can't see today's board.
+const FREE_EXAMPLES = ["Grow a Garden", "Dress to Impress", "99 Nights in the Forest"];
+
+// GET /api/lookup. onFound(game, body) is called whenever a lookup finds a game (for the activity
+// page) and may add to the answer. opts.free: a free account, which sees well-known examples instead
+// of today's top three and no board ranks. opts.allow(uid): false stops a lookup over today's limit.
+export async function lookup(env, url, onFound, opts) {
+  opts = opts || {};
+  const origin = url.origin;
+  if (url.searchParams.has("examples")) {
+    if (opts.free) return out({ examples: FREE_EXAMPLES }, 200, "private, max-age=600");
+    const data = await ourData(env, origin);
+    const B = (data.br && data.br.BOARD) || [];
+    return out({ examples: B.slice(0, 3).map((r) => r[1]) }, 200, "private, max-age=600");
+  }
+  let uid = Number(url.searchParams.get("u")) || 0, others = [], kind = "uid";
+  if (!uid) {
+    const f = await findGame(env, origin, url.searchParams.get("q"));
+    if (f.error) { const e = Object.assign({}, f); delete e.status; return out(e, f.status); }
+    uid = f.uid; others = f.others; kind = f.kind;
+  }
+  if (!Number.isSafeInteger(uid) || uid <= 0) return out({ error: "notfound", kind }, 404);
+  if (opts.allow && !opts.allow(uid)) return out({ error: "limit", max: opts.max || null }, 429);
+  const r = await gameData(env, origin, uid);
+  if (r.error) return out({ error: r.error, kind }, r.status);
+  const body = r.body;
   body.others = others;
   body.kind = kind;
-  if (onFound) onFound(body.game);
+  if (opts.free) {
+    body.board = { tracked: !!(body.board && body.board.tracked) };
+    for (const k of ["good", "check", "know"]) body.points[k] = body.points[k].filter((p) => !p.board);
+  }
+  if (onFound) onFound(body.game, body);
   return out(body);
 }
 
 export const _test = { parseQuery, norm, analyse };
+export { ourData, short, money, commas };

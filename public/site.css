@@ -801,3 +801,22 @@ th.r, td.r, .mini .r { text-align: right; }
 .mail-row input:focus-visible { outline: 3px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
 .mail-row input[aria-invalid="true"] { border-color: var(--ink); }
 .mail-mini [data-status] { margin: 0; }
+
+/* ---------- public game pages (/g) and the free plan ---------- */
+a.lk-pick-b { text-decoration: none; color: inherit; }
+.gp .gp-value { max-width: 44rem; }
+.gp-value .small { max-width: 56ch; }
+.gp-more { background: var(--surface); padding: clamp(1.25rem, 3vw, 2rem); display: grid; gap: 0.9rem; max-width: 52rem; justify-items: start; }
+.gp-more p { max-width: 62ch; }
+.gp-share { display: grid; gap: 0.75rem; max-width: 52rem; }
+.gp-share-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.gp-url { flex: 1 1 18rem; min-width: 0; min-height: 3rem; padding: 0 0.75rem; border: 2px solid var(--field); background: var(--bg); color: var(--ink); border-radius: 0; font-size: max(1rem, var(--step-small)); }
+.gp-url:focus-visible { outline: 3px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
+.gp-status:empty { display: none; }
+.sec.gp-again { padding-top: 0; display: grid; gap: 0.25rem; }
+.gp-again .lk-line input { font-size: clamp(1.75rem, 1rem + 3vw, 3rem); }
+.gp-again .lk-form { margin-top: 0.75rem; }
+.sec.gp-list { padding-top: 1rem; display: grid; gap: 0.75rem; }
+.lk-free { padding-bottom: 4rem; max-width: 52rem; }
+.lk-free .form { margin-top: 0; }
+.lk-cols .lk-know .lk-pts { grid-template-columns: minmax(0, 1fr); }

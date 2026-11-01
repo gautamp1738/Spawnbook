@@ -194,10 +194,13 @@
         show("acct-out");
         return;
       }
-      var access = m.access === "active" ? "Your access runs until " + when(m.until) + "." : "Your access has ended. ";
+      var access = m.access === "active" ? "Your access runs until " + when(m.until) + "." : "You're on the free plan: 5 game lookups a day. ";
       $("acct-lead").textContent = "Signed in as " + m.email + ". " + access;
       if (m.access !== "active") {
-        var a = document.createElement("a"); a.className = "link"; a.href = "subscribe"; a.textContent = "See pricing";
+        var lk = document.createElement("a"); lk.className = "link"; lk.href = "lookup"; lk.textContent = "Look up a game";
+        $("acct-lead").appendChild(lk);
+        $("acct-lead").appendChild(document.createTextNode(", or "));
+        var a = document.createElement("a"); a.className = "link"; a.href = "subscribe"; a.textContent = "subscribe for the full board";
         $("acct-lead").appendChild(a);
         $("acct-lead").appendChild(document.createTextNode("."));
       }
