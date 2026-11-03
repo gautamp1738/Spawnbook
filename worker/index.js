@@ -546,7 +546,7 @@ function signedInPage(path) {
 }
 
 // Pages and data files that need a signed-in visitor whose access hasn't run out.
-const GATED_PAGES = ["/board", "/report", "/game", "/market", "/watchlist", "/lookup"];
+const GATED_PAGES = ["/finder", "/board", "/report", "/game", "/market", "/watchlist", "/lookup"];
 const GATED_DATA = ["/data.js", "/report.js", "/history.js"];
 // "/board", "/board.html", "/board/anything" all mean the board page.
 function gatedPage(path) {

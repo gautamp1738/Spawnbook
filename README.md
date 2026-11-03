@@ -93,3 +93,23 @@ To start a run by hand, open the **Actions** tab, pick **Daily data pull** and c
 | `apply-batch.mjs` | Saves each run's changes to the record in `state/`. |
 
 A Claude scheduled task copies the day's `public/data.js` to the Claude-hosted version of the site after the run.
+
+## Game Finder V1
+
+Open `/finder` from the board, watchlist, account or verified leads navigation. It uses the same active-access/free-pass gate as the board. The three-step questionnaire loads `/api/buybox` preferences; answers are saved back only when the buyer explicitly checks the save option. Existing human-review notes are preserved. Watchlist additions use `/api/watch` and require an active signed-in account.
+
+The candidate pool is the scored daily board, not every Roblox game or a list of games confirmed for sale. `public/finder-match.js` applies genre, player, age, estimated revenue, budget and lifetime-visit limits, then ranks deterministically: 70% board score plus 30% selected priority. Balanced uses board score; growth uses measured weekly player change clamped to 0–100 (missing history gets zero); established uses age scaled to 180 days. Ties use universe ID. Prices and revenue use `public/valuation.js`; a budget requires the upper estimated price to fit. Lifetime-visit limits exclude candidates without a reading on the latest history date. Keyword exclusions inspect names, creators and genres. Freeform notes, owner willingness and deal structure need human verification and do not affect scoring.
+
+Results show up to 20 matches, the source date, stale-data warnings, model confidence, measured evidence and missing-history caveats, with links to game history and current lookup. Prices are estimates rather than asking prices; scores do not predict investment returns.
+
+### Local verification
+
+There is no application build. With Node 22+ and Wrangler installed outside the checkout, run:
+
+```sh
+wrangler dev --local --ip 127.0.0.1 --port 8787 --persist-to /tmp/spawnbook-local-state
+node tests/finder.test.cjs
+python -u tests/finder-browser.py
+```
+
+The browser test requires Python Playwright and Chromium at `/usr/bin/chromium`. It exercises the real local Worker, Durable Object, preferences and watchlist, creates local-only test accounts, and adapts production Secure cookies to local HTTP only inside the test context. Matching tests use the checked-in board/history and require no network. Do not run the deployment command to test this feature.
