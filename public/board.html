@@ -17,8 +17,9 @@
   <nav class="topbar" aria-label="Main">
     <a class="wordmark" href="#top">Spawnbook</a>
     <ul class="navlinks">
-      <li><a href="#picks">Picks</a></li>
-      <li class="s-hide"><a href="#board">Board</a></li>
+      <li><a href="#find">Find a game</a></li>
+      <li class="s-hide"><a href="#picks">Picks</a></li>
+      <li class="m-hide"><a href="#board">Board</a></li>
       <li><a href="report">Weekly report</a></li>
       <li class="m-hide"><a href="lookup">Look up</a></li>
       <li class="m-hide"><a href="market">Market</a></li>
@@ -53,8 +54,8 @@
     <p class="lead" data-load style="--d:420ms">Grow a Garden had about 500 to 1,000 players when a studio bought into it. Spawnbook finds the next ones every day: small Roblox games growing fast, scored on public data and priced against past hits.</p>
     <p class="small hero-data" data-load style="--d:520ms"><span id="issue-date">Data as of Oct 23, 2026</span>. <span id="issue-note">Players counted at 1:29 AM Pacific.</span></p>
     <div class="hero-act" data-load style="--d:480ms">
-      <a class="button" href="#picks">See today's picks</a>
-      <a class="plainlink" href="#requests" data-tab="tab-weekly">Get your first issue free</a>
+      <a class="button" href="#find">Find a game to buy</a>
+      <a class="plainlink" href="#picks">See today's top five</a>
     </div>
     <form class="lk-mini" action="lookup" method="get" role="search" data-load style="--d:560ms">
       <div class="field">
@@ -67,6 +68,53 @@
 </header>
 
 <main id="main" tabindex="-1">
+
+  <section id="find" class="sec wrap find" aria-labelledby="find-h">
+    <div class="grid sec-head">
+      <div class="c-l stack">
+        <h2 id="find-h" class="head" data-reveal>Find a game to buy</h2>
+      </div>
+      <p class="c-r lead" data-reveal style="--i:1">Answer three questions. We'll pick the games on today's board that fit, explain each one in plain English and write your first message to the owner.</p>
+    </div>
+    <form class="finder" id="finder" data-ui novalidate>
+      <fieldset class="q">
+        <legend><span class="q-n" aria-hidden="true">1</span>What kind of game?</legend>
+        <p class="small muted" id="f-genres-help">Pick as many as you like, or none for any genre. The number is how many are on today's board.</p>
+        <div class="pick-chips" id="f-genres" role="group" aria-label="Genres" aria-describedby="f-genres-help"></div>
+        <label class="check" for="f-wave"><input type="checkbox" id="f-wave"> Skip trend games, like brainrot, steal, egg and RNG games</label>
+      </fieldset>
+      <fieldset class="q">
+        <legend><span class="q-n" aria-hidden="true">2</span>How many players?</legend>
+        <div class="seg" role="group" aria-label="How many players">
+          <button type="button" data-size="any" aria-pressed="true">Any size</button>
+          <button type="button" data-size="seed" aria-pressed="false">Under 3,000</button>
+          <button type="button" data-size="break" aria-pressed="false">3,000 to 10,000</button>
+          <button type="button" data-size="chart" aria-pressed="false">10,000+</button>
+        </div>
+      </fieldset>
+      <fieldset class="q">
+        <legend><span class="q-n" aria-hidden="true">3</span>How much could you spend?</legend>
+        <div class="seg" role="group" aria-label="How much could you spend">
+          <button type="button" data-budget="25000" aria-pressed="false">Up to $25K</button>
+          <button type="button" data-budget="75000" aria-pressed="false">Up to $75K</button>
+          <button type="button" data-budget="200000" aria-pressed="false">Up to $200K</button>
+          <button type="button" data-budget="0" aria-pressed="true">No limit</button>
+        </div>
+        <p class="small muted">Prices are our estimates for the whole game. A stake or a revenue share costs less.</p>
+      </fieldset>
+      <div class="form-row"><button class="button" type="submit">Show my matches</button></div>
+    </form>
+    <div class="matches" id="f-results" hidden>
+      <div class="m-head">
+        <h3 class="m-count" id="f-count" tabindex="-1"></h3>
+        <p class="small muted" id="f-asked"></p>
+        <p class="small" id="f-note" hidden></p>
+      </div>
+      <ol class="match-list" id="f-list"></ol>
+      <p><button type="button" class="button quiet" id="f-more" hidden></button></p>
+      <div class="m-save small" id="f-save"></div>
+    </div>
+  </section>
 
   <section id="picks" class="sec wrap picks" aria-labelledby="picks-h">
     <h2 id="picks-h" class="head" data-reveal><span class="l1">Today's</span>top five</h2>
@@ -133,7 +181,7 @@
     <div class="board" id="board-list"><p class="empty">Loading today's games.</p></div>
     <div class="grid board-foot">
       <p class="small muted c-l" data-reveal>Fast-rise genres are trend and sim games that tend to grow fast and fade. Slow-build genres are competitive, social or fishing games that tend to grow over months and last longer. Prices are estimates from public numbers, not reported earnings, and they aren't offers or appraisals.</p>
-      <div class="asks c-r" data-reveal style="--i:1">
+      <div class="asks c-r" id="asks" data-reveal style="--i:1">
         <h3>Before you make an offer, ask the creator for</h3>
         <ul>
           <li>Retention by traffic source from Creator Analytics</li>
@@ -569,13 +617,13 @@
   document.querySelectorAll("[data-reveal]").forEach(watch);
 
   // ---------- copy helpers ----------
-  function copyText(text, statusEl, area) {
+  function copyText(text, statusEl, area, okMsg) {
     function fallback() {
       if (area) { area.focus(); area.select(); statusEl.textContent = "Selected. Press Ctrl+C or Cmd+C to copy."; }
       else statusEl.textContent = "Copy didn't work here. Select the address and copy it.";
     }
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { statusEl.textContent = area ? "Copied. Now paste it into your message to us." : "Copied."; }, fallback);
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { statusEl.textContent = okMsg || (area ? "Copied. Now paste it into your message to us." : "Copied."); }, fallback);
       else fallback();
     } catch (e) { fallback(); }
   }
@@ -632,7 +680,14 @@
   // Visitors without an account are on the free 24-hour pass: say until when, and welcome them
   // with a popup the first time, unless they came from the landing page's popup.
   function closePass(d) { if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); }
+  // A signed-in member's name and studio, for the first messages the game finder writes.
+  var ME = { member: false, name: "", company: "" }, onMe = null;
   fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+    if (m && m.access === "active") {
+      // Keep anything typed into the finder before this answer arrived.
+      ME = { member: true, name: ME.name || String(m.name || ""), company: ME.company || String(m.company || "") };
+      if (onMe) onMe();
+    }
     if (m && m.access === "none" && m.trial && m.trial.active) {
       var until = new Date(m.trial.until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
       var pn = $("access-note");
@@ -641,7 +696,7 @@
       var sa = el("a", "link", "Subscribe for $500 a month"); sa.href = "subscribe"; pn.appendChild(sa);
       pn.appendChild(document.createTextNode(" to keep it, or "));
       var ca = el("a", "link", "create a free account"); ca.href = "/#signup"; pn.appendChild(ca);
-      pn.appendChild(document.createTextNode(" to save games to a watchlist."));
+      pn.appendChild(document.createTextNode(" to keep a watchlist and save what you buy."));
       pn.hidden = false;
       var mailed = false; try { mailed = localStorage.getItem("sb_daily_email") === "1"; } catch (e) {}
       if (!mailed) $("mail-board").hidden = false;
@@ -1210,22 +1265,317 @@
 
   renderBoard();
 
-  // A pick in the top five opens its row on the board.
-  document.querySelectorAll("[data-open]").forEach(function (a) {
-    a.addEventListener("click", function () {
-      var pid = a.getAttribute("data-open");
-      var row = $("pr-" + pid);
-      if (!row) {
-        bstate = { tier: "all", shape: "any", hideWave: false, brandOnly: false, sort: bstate.sort, genre: "" };
-        $("genre").value = "";
-        ["t-all", "s-any"].forEach(function (id) { $(id).click(); });
-        $("hide-wave").checked = false;
-        $("brand-only").checked = false;
-        renderBoard();
-        row = $("pr-" + pid);
-      }
-      if (row && row._open) row._open();
+  // A pick in the top five, or a game finder match, opens its row on the board. If the board's
+  // filters hide that game, they're cleared first. The link's own #pr- address then scrolls to it.
+  function openOnBoard(pid) {
+    var row = $("pr-" + pid);
+    if (!row) {
+      bstate = { tier: "all", shape: "any", hideWave: false, brandOnly: false, sort: bstate.sort, genre: "" };
+      $("genre").value = "";
+      ["t-all", "s-any"].forEach(function (id) { $(id).click(); });
+      $("hide-wave").checked = false;
+      $("brand-only").checked = false;
+      renderBoard();
+      row = $("pr-" + pid);
+    }
+    if (row && row._open) row._open();
+  }
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest ? e.target.closest("[data-open]") : null;
+    if (a) openOnBoard(a.getAttribute("data-open"));
+  });
+
+  // ---------- find a game to buy ----------
+  // Three questions (genre, players, budget) pick the games on today's board that fit, best score
+  // first. Each match gets its numbers in plain English, who to contact and a first message to the
+  // owner. Answers stay on this page; a member can save them to their account's buy box, which
+  // picks their verified leads. Using the finder and opening a message are recorded under the
+  // account or free pass, like every other record. The message itself never leaves the browser.
+  var FIND_GENRES = ["Action", "Adventure", "Entertainment", "Obby & Platformer", "Party & Casual", "Puzzle", "Roleplay & Avatar Sim", "RPG", "Shooter", "Shopping", "Simulation", "Social", "Sports & Racing", "Strategy", "Survival"];
+  var SIZE_TXT = { any: "any size", seed: "under 3,000 players", "break": "3,000 to 10,000 players", chart: "10,000+ players" };
+  var SIZE_RANGE = { any: [null, null], seed: [null, 3000], "break": [3000, 10000], chart: [10000, null] };
+  var fstate = { genres: [], size: "any", budget: 0, skipWave: false };
+  var found = null, foundAll = false, drafts = [], drafted = {};
+
+  (function genreChips() {
+    var counts = {};
+    P.forEach(function (p) { if (p.genre) counts[p.genre] = (counts[p.genre] || 0) + 1; });
+    FIND_GENRES.slice().sort(function (a, b) { return (counts[b] || 0) - (counts[a] || 0) || FIND_GENRES.indexOf(a) - FIND_GENRES.indexOf(b); }).forEach(function (g) {
+      var n = counts[g] || 0;
+      var b = el("button", n ? null : "none"); b.type = "button";
+      b.setAttribute("aria-pressed", "false");
+      b.setAttribute("aria-label", g + ", " + (n || "none") + " on today's board");
+      b.appendChild(document.createTextNode(g));
+      b.appendChild(el("span", "n", String(n)));
+      b.addEventListener("click", function () {
+        var on = b.getAttribute("aria-pressed") !== "true", i = fstate.genres.indexOf(g);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+        if (on && i < 0) fstate.genres.push(g);
+        if (!on && i >= 0) fstate.genres.splice(i, 1);
+      });
+      $("f-genres").appendChild(b);
     });
+  })();
+  function oneOf(attr, key, parse) {
+    var btns = document.querySelectorAll("#finder [data-" + attr + "]");
+    btns.forEach(function (b) {
+      b.addEventListener("click", function () {
+        fstate[key] = parse(b.getAttribute("data-" + attr));
+        btns.forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+      });
+    });
+  }
+  oneOf("size", "size", String);
+  oneOf("budget", "budget", Number);
+  $("f-wave").addEventListener("change", function (e) { fstate.skipWave = e.target.checked; });
+
+  function fits(p, q) {
+    if (q.genres.length && q.genres.indexOf(p.genre) < 0) return false;
+    if (q.skipWave && p.wave) return false;
+    if (q.size !== "any" && p.tier !== q.size) return false;
+    if (q.budget && p.val.mid > q.budget) return false;
+    return true;
+  }
+  // Every fit, best score first. With none, loosen one answer at a time and say which.
+  function findMatches(q) {
+    var steps = [["", q]];
+    if (q.budget) steps.push(["budget", Object.assign({}, q, { budget: 0 })]);
+    if (q.size !== "any" || q.budget) steps.push(["size", Object.assign({}, q, { budget: 0, size: "any" })]);
+    if (q.genres.length) steps.push(["genre", Object.assign({}, q, { genres: [] })]);
+    for (var i = 0; i < steps.length; i++) {
+      var list = byScore.filter(function (p) { return fits(p, steps[i][1]); });
+      if (list.length) return { list: list, loosened: steps[i][0] };
+    }
+    return { list: [], loosened: "all" };
+  }
+  function orList(a) { return a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " or " + a[a.length - 1]; }
+  function askedText(q) {
+    var parts = [q.genres.length ? orList(q.genres) + " games" : "any genre", SIZE_TXT[q.size], q.budget ? "up to " + money(q.budget) : "no price limit"];
+    if (q.skipWave) parts.push("no trend games");
+    return "You asked for " + parts.join(", ") + ".";
+  }
+
+  // Players at our first and latest daily reading, when we've tracked it at least 3 days.
+  function playerMove(p) {
+    var s = p.x.trend && p.x.trend.series;
+    if (!s || s.length < 3 || !s[0][1]) return null;
+    var a = s[0], b = s[s.length - 1];
+    return { from: a[1], to: b[1], since: a[0], days: Math.max(1, Math.round((Date.parse(b[0]) - Date.parse(a[0])) / 864e5)), ratio: b[1] / a[1] };
+  }
+  function plainLines(p) {
+    var out = [], mv = playerMove(p);
+    if (mv && mv.ratio >= 1.15) out.push("It's " + p.age + " days old and grew from " + commas(mv.from) + " to " + commas(mv.to) + " players since " + dayLabel(mv.since) + ".");
+    else if (mv && mv.ratio <= 0.85) out.push("It's " + p.age + " days old, and players fell from " + commas(mv.from) + " to " + commas(mv.to) + " since " + dayLabel(mv.since) + ". Ask the owner what changed.");
+    else if (mv) out.push("It's " + p.age + " days old and has held steady at about " + commas(mv.to) + " players since " + dayLabel(mv.since) + ".");
+    else if (p.x.pgrowth7) {
+      var g = Math.round((p.x.pgrowth7 - 1) * 100);
+      out.push("It's " + p.age + " days old with " + commas(p.playing) + " players, " + (g >= 0 ? "up " + g : "down " + (-g)) + "% over the past week.");
+    } else out.push("It's " + p.age + " days old with " + commas(p.playing) + " players right now.");
+    out.push("Players stay about " + Math.max(1, Math.round(p.sess)) + " minutes a visit, which is " + sessBand(p.sess) + ", and it's rated " + p.like + "% by players.");
+    out.push(p.E ? "It's #" + p.E + " on Roblox's Top Earning chart, so it's already making real money: about " + money(p.val.rev.mid) + " a month by our estimate."
+      : "It isn't on Roblox's Top Earning chart yet, so its revenue is a rough guess: about " + money(p.val.rev.mid) + " a month. Ask for the owner's numbers before you trust the price.");
+    out.push(p.shape === "staircase" ? "It's a slow-build kind of game. These tend to grow over months and last." : "It's a fast-rise kind of game. These grow fast and can fade fast, so pay for what it earns today, not the hype.");
+    return out;
+  }
+  function watchOuts(p) {
+    var w = [];
+    if (p.wave) w.push("It follows a current trend, and Roblox says it no longer prioritizes close look-alikes, so it could fade quickly.");
+    if (p.own === "U") w.push("One person's account owns it. Ask their age and who else helped build it before you talk numbers.");
+    return w;
+  }
+  function contactLine(p) {
+    var x = p.x, c = x.deep && x.deep.creator, f = document.createDocumentFragment();
+    var disc = x.discord ? ", or try the Discord linked in the game's description." : ".";
+    if (x.ctype === "Group" && x.cid) {
+      f.appendChild(document.createTextNode("A group owns it" + (c && c.owner ? ", and " + c.owner + " runs the group" : "") + ". Start from the "));
+      f.appendChild(extLink("group page", "https://www.roblox.com/communities/" + x.cid, "link"));
+      f.appendChild(document.createTextNode(disc));
+    } else if (x.ctype === "User" && c && c.id) {
+      f.appendChild(document.createTextNode("Start from " + p.creator + "'s "));
+      f.appendChild(extLink("Roblox profile", "https://www.roblox.com/users/" + c.id + "/profile", "link"));
+      f.appendChild(document.createTextNode(disc));
+    } else {
+      f.appendChild(document.createTextNode("Open "));
+      f.appendChild(extLink("the game on Roblox", "https://www.roblox.com/games/" + p.pid, "link"));
+      f.appendChild(document.createTextNode(" to find who made it."));
+    }
+    return f;
+  }
+  // The buyer's first message to the owner. Only measured numbers go in it (players and rating),
+  // never our estimates, since the owner can see their real ones.
+  function plainName(n) {
+    var t = String(n || "").replace(/[\[(][^\])]{0,40}[\])]/g, " ").replace(/\s+/g, " ").trim();
+    return t.length >= 3 ? t : String(n || "");
+  }
+  function draftText(p) {
+    var name = ME.name.trim(), co = ME.company.trim(), c = p.x.deep && p.x.deep.creator, mv = playerMove(p);
+    var who = p.x.ctype === "Group" ? (c && c.owner ? c.owner : "") : p.creator;
+    var hook = mv && mv.ratio >= 1.3 ? " Going from " + commas(mv.from) + " to " + commas(mv.to) + " players in " + mv.days + (mv.days === 1 ? " day" : " days") + " is impressive."
+      : p.like >= 93 ? " A " + p.like + "% rating is hard to get." : "";
+    return "Hi" + (who ? " " + who : "") + "! I'm " + (name || "[your name]") + (co ? " from " + co : "") + ". I came across " + plainName(p.name) + " and really like what you've built." + hook + "\n\n" +
+      "I buy and grow Roblox games. Would you be open to a quick chat about selling it, or about a partnership like a stake or a revenue share? Happy to share what I'd bring to it. No pressure either way.\n\n" +
+      "Thanks,\n" + (name || "[your name]");
+  }
+  function refreshDrafts() { drafts.forEach(function (d) { if (!d.edited) d.ta.value = draftText(d.p); }); }
+  function findLog(body) {
+    try { fetch("/api/find", { method: "POST", credentials: "same-origin", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(function () {}); } catch (e) {}
+  }
+
+  function draftPanel(p) {
+    var box = el("div", "draft"); box.id = "fd-" + p.pid; box.hidden = true;
+    var fields = el("div", "fields");
+    [["name", "Your name", "name"], ["company", "Studio or fund", "organization"]].forEach(function (f) {
+      var wrap = el("div", "field"), id = "f" + f[0] + "-" + p.pid;
+      var lab = el("label", null, f[1]); lab.htmlFor = id;
+      if (f[0] === "company") lab.appendChild(el("span", "opt", " (optional)"));
+      var inp = el("input"); inp.id = id; inp.autocomplete = f[2]; inp.maxLength = 120; inp.value = ME[f[0]]; inp.setAttribute("data-me", f[0]);
+      inp.addEventListener("input", function () {
+        ME[f[0]] = inp.value;
+        document.querySelectorAll('#f-list [data-me="' + f[0] + '"]').forEach(function (o) { if (o !== inp) o.value = inp.value; });
+        refreshDrafts();
+      });
+      wrap.appendChild(lab); wrap.appendChild(inp); fields.appendChild(wrap);
+    });
+    box.appendChild(fields);
+    var tw = el("div", "field");
+    var tl = el("label", null, "Your message. Change anything you like."); tl.htmlFor = "ft-" + p.pid;
+    var ta = el("textarea"); ta.id = "ft-" + p.pid; ta.rows = 9; ta.value = draftText(p);
+    var d = { p: p, ta: ta, edited: false };
+    ta.addEventListener("input", function () { d.edited = true; });
+    drafts.push(d);
+    tw.appendChild(tl); tw.appendChild(ta); box.appendChild(tw);
+    var row = el("div", "rowline");
+    var cb = el("button", "button", "Copy message"); cb.type = "button";
+    var st = el("span", "status"); st.setAttribute("aria-live", "polite");
+    cb.addEventListener("click", function () { copyText(ta.value, st, ta, "Copied. Paste it to the owner."); });
+    row.appendChild(cb); row.appendChild(st); box.appendChild(row);
+    var tips = el("ul", "tips");
+    tips.appendChild(el("li", null, "Send it yourself, through the contact above. Spawnbook never messages owners for you."));
+    tips.appendChild(el("li", null, "Ask the owner's age early. If they're under 18, a parent or guardian has to be part of any deal."));
+    var ask = el("li"); ask.appendChild(document.createTextNode("Before you make an offer, ask for "));
+    var al = el("a", "link", "the numbers on this list"); al.href = "#asks"; ask.appendChild(al);
+    ask.appendChild(document.createTextNode(", starting with 3 to 6 months of revenue."));
+    tips.appendChild(ask);
+    box.appendChild(tips);
+    return box;
+  }
+
+  function matchCard(p, i) {
+    var li = el("li", "match"); li.setAttribute("aria-labelledby", "fm-h-" + p.pid);
+    var top = el("div", "m-top");
+    top.appendChild(el("span", "m-rank", String(i + 1)));
+    var nm = el("div");
+    var h = el("h4"); h.id = "fm-h-" + p.pid; h.appendChild(extLink(p.name, "https://www.roblox.com/games/" + p.pid)); nm.appendChild(h);
+    nm.appendChild(el("p", "who", (p.g2 || p.genre || "No genre listed") + ". " + p.age + " days old. Score " + p.score + " of 100."));
+    top.appendChild(nm);
+    top.appendChild(band(p));
+    li.appendChild(top);
+    var st = el("dl", "m-stats");
+    [["Players now", commas(p.playing)], ["Rating", p.like + "%"], ["Revenue, estimated", "About " + money(p.val.rev.mid) + " a month"], ["Price, estimated", "About " + money(p.val.mid), likely(p.val)]].forEach(function (s) {
+      var d = el("div"); d.appendChild(el("dt", null, s[0]));
+      var dd = el("dd", null, s[1]); if (s[2]) dd.appendChild(el("span", "sub", s[2]));
+      d.appendChild(dd); st.appendChild(d);
+    });
+    li.appendChild(st);
+    var pl = el("div", "m-plain");
+    pl.appendChild(el("h5", null, "In plain English"));
+    var ul = el("ul", "plain-list");
+    plainLines(p).forEach(function (t) { ul.appendChild(el("li", null, t)); });
+    pl.appendChild(ul);
+    li.appendChild(pl);
+    var w = watchOuts(p);
+    if (w.length) { var wp = el("p", "m-watch"); wp.appendChild(el("strong", null, "Watch out: ")); wp.appendChild(document.createTextNode(w.join(" "))); li.appendChild(wp); }
+    var cp = el("p", "m-contact"); cp.appendChild(el("strong", null, "Who to contact: ")); cp.appendChild(contactLine(p)); li.appendChild(cp);
+    var acts = el("div", "m-acts");
+    var wb = el("button", "button", "Write my first message"); wb.type = "button";
+    var panel = draftPanel(p);
+    wb.setAttribute("aria-expanded", "false"); wb.setAttribute("aria-controls", panel.id);
+    wb.addEventListener("click", function () {
+      var open = panel.hidden;
+      panel.hidden = !open;
+      wb.setAttribute("aria-expanded", open ? "true" : "false");
+      wb.textContent = open ? "Hide the message" : "Write my first message";
+      if (open) {
+        var first = panel.querySelector("input");
+        if (first && !first.value) first.focus(); else panel.querySelector("textarea").focus();
+        if (!drafted[p.pid]) { drafted[p.pid] = 1; findLog({ kind: "draft", pid: p.pid }); }
+      }
+    });
+    acts.appendChild(wb);
+    var fd = el("a", "button quiet", "All the numbers"); fd.href = "#pr-" + p.pid; fd.setAttribute("data-open", p.pid);
+    fd.setAttribute("aria-label", "All the numbers for " + p.name + ", on the full board");
+    acts.appendChild(fd);
+    li.appendChild(acts);
+    li.appendChild(panel);
+    return li;
+  }
+
+  function renderMatches() {
+    var q = found.q, list = found.list, n = list.length;
+    drafts = [];
+    $("f-asked").textContent = askedText(q);
+    var note = "";
+    if (found.loosened === "budget") note = "These fit the kind of game and size you picked, but our price estimate is over " + money(q.budget) + ". Estimates can be off, and a stake or revenue share costs less.";
+    else if (found.loosened === "size") note = "These are the kind of game you picked, at other sizes and prices.";
+    else if (found.loosened === "genre") note = "No " + orList(q.genres) + " games fit today. These fit your size and budget in other genres. The board changes every day, so check back tomorrow.";
+    $("f-note").textContent = note; $("f-note").hidden = !note;
+    $("f-count").textContent = found.loosened === "all" ? "Nothing on today's board fits" : found.loosened ? "Nothing fits all your answers today, so here are the closest" : n === 1 ? "1 game on today's board fits" : n + " games on today's board fit";
+    var box = $("f-list"); box.textContent = "";
+    if (found.loosened === "all") box.appendChild(el("li", "empty", "Try fewer limits: no price limit or any size will show more."));
+    (foundAll ? list : list.slice(0, 5)).forEach(function (p, i) { box.appendChild(matchCard(p, i)); });
+    var more = $("f-more");
+    more.hidden = n <= 5;
+    more.textContent = foundAll ? "Show the top 5 only" : "Show all " + n;
+    renderSave();
+  }
+  $("f-more").addEventListener("click", function () { foundAll = !foundAll; renderMatches(); });
+
+  // Members can keep these answers in their buy box, which is what picks their verified leads.
+  function renderSave() {
+    var box = $("f-save"); box.textContent = "";
+    if (!found) return;
+    if (!ME.member) {
+      var t = el("p");
+      t.appendChild(document.createTextNode("Want games like these sent to you? "));
+      var a = el("a", "link", "Make a free account"); a.href = "/#signup"; t.appendChild(a);
+      t.appendChild(document.createTextNode(" and tell us what you buy. When an owner tells us they'd sell a game that fits, you'll see it on your Leads page."));
+      box.appendChild(t);
+      return;
+    }
+    var b = el("button", "button quiet", "Save these answers to my account"); b.type = "button";
+    var s = el("span", "status"); s.setAttribute("aria-live", "polite");
+    box.appendChild(el("p", null, "Your account's buy box picks the verified leads we send you. Saving replaces its genres, player range and budget with these answers."));
+    var r = el("div", "rowline"); r.appendChild(b); r.appendChild(s); box.appendChild(r);
+    b.addEventListener("click", function () {
+      var q = found.q;
+      b.disabled = true; s.textContent = "Saving.";
+      fetch("/api/buybox", { credentials: "same-origin" }).then(function (res) { return res.ok ? res.json() : Promise.reject(res.status); }).then(function (j) {
+        var box0 = j.box || {}, rng = SIZE_RANGE[q.size];
+        var next = Object.assign({}, box0, { genres: q.genres.slice(), minPlayers: rng[0], maxPlayers: rng[1], maxPrice: q.budget || null });
+        if (q.skipWave && !/trend/i.test(next.avoid || "")) next.avoid = (next.avoid ? next.avoid + ". " : "") + "Trend games (brainrot, steal, egg, RNG)";
+        return fetch("/api/buybox", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next) });
+      }).then(function (res) {
+        if (!res.ok) return Promise.reject(res.status);
+        s.textContent = "Saved. You can fine-tune it on your Leads page.";
+      }).catch(function (code) {
+        s.textContent = code === 401 ? "You've been signed out. Sign in again, then save." : "That didn't save. Try again in a minute.";
+      }).then(function () { b.disabled = false; });
+    });
+  }
+  onMe = function () {
+    document.querySelectorAll("#f-list [data-me]").forEach(function (inp) { if (!inp.value) inp.value = ME[inp.getAttribute("data-me")]; });
+    refreshDrafts();
+    renderSave();
+  };
+
+  $("finder").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var q = { genres: fstate.genres.slice(), size: fstate.size, budget: fstate.budget, skipWave: fstate.skipWave };
+    found = findMatches(q); found.q = q; foundAll = false;
+    renderMatches();
+    $("f-results").hidden = false;
+    $("f-count").focus();
+    findLog({ kind: "find", genres: q.genres, size: q.size, budget: q.budget, skipWave: q.skipWave, matches: found.loosened ? 0 : found.list.length, loosened: found.loosened });
   });
 
   // ---------- track record ----------

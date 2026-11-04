@@ -820,3 +820,52 @@ a.lk-pick-b { text-decoration: none; color: inherit; }
 .lk-free { padding-bottom: 4rem; max-width: 52rem; }
 .lk-free .form { margin-top: 0; }
 .lk-cols .lk-know .lk-pts { grid-template-columns: minmax(0, 1fr); }
+
+/* ---------- find a game to buy (the board's three questions and its matches) ---------- */
+.finder { margin-top: 3rem; padding: clamp(1.25rem, 3vw, 2.25rem); background: var(--surface); display: grid; gap: 2.25rem; }
+.finder fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 0.75rem; justify-items: start; }
+.finder legend { padding: 0; margin-bottom: 0.25rem; display: flex; gap: 0.75rem; align-items: center; font-weight: 600; font-size: var(--step-lead); line-height: 1.2; }
+.finder .q-n { display: inline-grid; place-items: center; width: 2.1rem; height: 2.1rem; flex: none; background: var(--accent); color: var(--accent-ink); font-family: var(--font-display); font-weight: 800; font-size: var(--step-body); line-height: 1; }
+.finder .seg button { background: var(--bg); }
+.finder .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.pick-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.pick-chips button { display: inline-flex; gap: 0.5rem; align-items: center; min-height: 2.75rem; padding: 0 0.9rem; border: 2px solid var(--ink); background: var(--bg); font-size: var(--step-small); font-weight: 600; transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
+.pick-chips button:active { transform: scale(0.97); }
+.pick-chips button .n { font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pick-chips button.none { border-color: var(--field); color: var(--muted); }
+.pick-chips button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.pick-chips button[aria-pressed="true"] .n { color: inherit; }
+@media (hover: hover) and (pointer: fine) { .pick-chips button[aria-pressed="false"]:hover { background: var(--surface-2); } }
+.matches { margin-top: 3rem; display: grid; gap: 1.25rem; }
+.matches .m-head { display: grid; gap: 0.4rem; max-width: 62ch; }
+.matches .m-count { font-size: var(--step-lead); font-weight: 600; line-height: 1.25; scroll-margin-top: 1.5rem; }
+.matches .m-count:focus { outline: none; }
+.matches .m-count:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+.match-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.match { background: var(--surface); padding: clamp(1.1rem, 2.5vw, 1.75rem); display: grid; gap: 1.1rem; }
+.match .m-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.4rem 1rem; align-items: start; }
+.match .m-top .band-chip { grid-column: 2; justify-self: start; }
+@media (min-width: 40em) { .match .m-top { grid-template-columns: auto minmax(0, 1fr) auto; } .match .m-top .band-chip { grid-column: auto; } }
+.match .m-rank { font-family: var(--font-display); font-weight: 800; font-size: var(--step-lead); line-height: 1.1; color: var(--muted); }
+.match h4 { margin: 0; font-size: var(--step-lead); font-weight: 600; line-height: 1.2; }
+.match h4 a { text-decoration: underline; text-decoration-color: transparent; transition: text-decoration-color var(--t-hover) ease; }
+@media (hover: hover) and (pointer: fine) { .match h4 a:hover { text-decoration-color: currentColor; } }
+.match .who { font-size: var(--step-small); color: var(--muted); }
+.match .m-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem 1rem; padding: 0.9rem 0; border-block: 2px solid var(--surface-2); }
+@media (min-width: 48em) { .match .m-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.match .m-stats dt { font-size: var(--step-small); color: var(--muted); }
+.match .m-stats dd { font-weight: 600; font-variant-numeric: tabular-nums; }
+.match .m-stats .sub { display: block; font-weight: 400; font-size: var(--step-small); color: var(--muted); }
+.match .m-plain { display: grid; gap: 0.5rem; max-width: 72ch; }
+.match h5 { margin: 0; font-size: var(--step-small); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.match .m-watch, .match .m-contact { max-width: 72ch; }
+.match .m-acts { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.match .button.quiet { background: var(--bg); }
+.match .draft { display: grid; gap: 1rem; padding-top: 1.1rem; border-top: 2px solid var(--surface-2); }
+.match .draft .fields { max-width: 40rem; }
+.match .draft textarea { min-height: 13rem; line-height: 1.5; }
+.match .draft .rowline { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: center; }
+.match .draft .tips { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; font-size: var(--step-small); max-width: 72ch; }
+.m-save { display: grid; gap: 0.75rem; max-width: 62ch; }
+.m-save .rowline { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: center; }
+.m-save:empty { display: none; }

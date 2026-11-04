@@ -43,6 +43,9 @@
 //                           free lead still shows
 //   GET  /api/buybox        what the signed-in buyer buys (genres, players, budget...), for matching
 //   POST /api/buybox        saves it, as JSON
+//   POST /api/find          the board's game finder: { kind: "find", genres, size, budget, skipWave,
+//                           matches } when someone asks for matches, { kind: "draft", pid } when they
+//                           open a first message to a game's owner. Recorded for /admin/activity
 //   GET  /api/leads         the verified leads sent to the signed-in buyer
 //   POST /api/leads         { id, status, note } as JSON: the buyer's own progress on a lead
 //   POST /api/sell          the public "Open to selling?" form on /sell, from game owners
@@ -100,6 +103,7 @@ export default {
       else if (path === "/api/watch") res = await watch(request, env);
       else if (path === "/api/live") res = await live(request, env, url);
       else if (path === "/api/buybox") res = await buybox(request, env);
+      else if (path === "/api/find") res = await findApi(request, env, ctx);
       else if (path === "/api/leads") res = await myLeads(request, env);
       else if (path === "/api/sell") res = await sellForm(request, env);
       else if (path === "/api/lookup") res = await lookupApi(request, env, url, ctx);
@@ -704,7 +708,7 @@ async function me(request, env) {
     const t = await readTrial(request, env);
     return json({ access: "none", trial: t ? { active: t.active, start: t.start, until: t.until } : null });
   }
-  return json({ access: s.until > Date.now() ? "active" : "expired", until: s.until, email: s.email, hasPassword: !!s.hasPassword });
+  return json({ access: s.until > Date.now() ? "active" : "expired", until: s.until, email: s.email, hasPassword: !!s.hasPassword, name: s.name || "", company: s.company || "" });
 }
 
 // The visitor's own referral link. Counts only: who signed up through it stays private.
@@ -867,6 +871,37 @@ async function buybox(request, env) {
   let b;
   try { b = await request.json(); } catch (e) { return json({ error: "bad" }, 400); }
   return json(await call(env, "buybox-set", { email: s.email, box: JSON.stringify(cleanBox(b || {})) }));
+}
+
+// The board's game finder: someone asked for matches, or opened a first message to an owner. Only
+// visitors who can see the board (an account with access, or a free pass that's running) are
+// recorded, under the same name as their other activity.
+const FIND_SIZES = { any: "any size", seed: "under 3K players", break: "3K to 10K players", chart: "10K+ players" };
+async function findApi(request, env, ctx) {
+  if (request.method !== "POST") return json({ error: "method" }, 405);
+  if (isBot(request)) return json({ ok: true });
+  let b;
+  try { b = await request.json(); } catch (e) { return json({ error: "bad" }, 400); }
+  b = b || {};
+  const s = await session(request, env);
+  let who = null;
+  if (s && s.until > Date.now()) who = s.email;
+  else if (!s) { const t = await readTrial(request, env); if (t && t.active) who = passWho(t.start); }
+  if (!who) return json({ error: "access" }, 403);
+  if (b.kind === "draft") {
+    const pid = posInt(b.pid, Number.MAX_SAFE_INTEGER);
+    if (!pid) return json({ error: "bad" }, 400);
+    track(env, ctx, "draft", who, "game pid " + pid);
+    return json({ ok: true });
+  }
+  if (b.kind !== "find") return json({ error: "bad" }, 400);
+  const genres = Array.isArray(b.genres) ? Array.from(new Set(b.genres.filter((g) => GENRES.includes(g)))) : [];
+  const budget = posInt(b.budget, 1e9);
+  const parts = [genres.length ? genres.join(", ") : "any genre", FIND_SIZES[b.size] || "any size", budget ? "up to $" + Math.round(budget / 1000) + "K" : "no price limit"];
+  if (b.skipWave === true) parts.push("no trend games");
+  const n = Math.max(0, Math.min(500, Math.round(Number(b.matches) || 0)));
+  track(env, ctx, "find", who, parts.join("; "), n ? n + (n === 1 ? " match" : " matches") : "no exact match");
+  return json({ ok: true });
 }
 
 async function myLeads(request, env) {
@@ -1223,7 +1258,7 @@ async function admin(request, env, url, path) {
 }
 
 // ---------- admin: activity ----------
-const ACT_TYPES = ["visit", "page", "pass", "view", "lookup", "signup", "email", "discord"];
+const ACT_TYPES = ["visit", "page", "pass", "view", "lookup", "find", "draft", "signup", "email", "discord"];
 async function adminActivity(request, env, url, path) {
   if (path === "/admin/picks/send" && request.method === "POST") {
     const r = await sendDailyPicks(env, url.origin);
@@ -1261,6 +1296,8 @@ async function adminActivity(request, env, url, path) {
     tile("Free passes started", (wk.pass || {}).u || 0),
     tile("People who opened the board", a.boardWeek),
     tile("Lookups", (wk.lookup || {}).n || 0, commas((wk.lookup || {}).u || 0) + " people"),
+    tile("Used the game finder", (wk.find || {}).u || 0, commas((wk.find || {}).n || 0) + ((wk.find || {}).n === 1 ? " search" : " searches")),
+    tile("Wrote a message to an owner", (wk.draft || {}).u || 0, commas((wk.draft || {}).n || 0) + ((wk.draft || {}).n === 1 ? " message opened" : " messages opened")),
     tile("Accounts made", (wk.signup || {}).n || 0),
     tile("Email sign-ups", (wk.email || {}).n || 0),
     tile("Discord connected", (wk.discord || {}).n || 0),
@@ -1318,6 +1355,8 @@ async function adminActivity(request, env, url, path) {
     if (r.type === "pass") return "Started a free pass on the " + (r.detail.startsWith("game") ? "page for " + gameName(r.detail) : r.detail + " page");
     if (r.type === "view") return "Opened " + (r.detail.startsWith("game") ? "the page for " + gameName(r.detail) : "the " + r.detail + " page");
     if (r.type === "lookup") return "Looked up " + gameName(r.detail) + (r.src === "free plan" ? " (free plan)" : "");
+    if (r.type === "find") return "Used the game finder: " + r.detail + (r.src ? " (" + r.src + ")" : "");
+    if (r.type === "draft") return "Opened a first message to the owner of " + gameName(r.detail);
     if (r.type === "page") return "Opened the public page for " + gameName(r.detail) + fromText(r.src);
     if (r.type === "land") return "Opened " + r.detail + fromText(r.src);
     if (r.type === "signup") return "Made an account" + (r.detail ? " (" + r.detail + ")" : "");
@@ -1848,10 +1887,10 @@ export class Store {
     }
 
     if (op === "session") {
-      const row = this.sql.exec("SELECT u.email AS email, u.access_until AS until, u.pw AS pw FROM sessions s JOIN signups u ON u.email = s.email WHERE s.token = ?", p.token).toArray()[0];
+      const row = this.sql.exec("SELECT u.email AS email, u.access_until AS until, u.pw AS pw, u.name AS name, u.company AS company FROM sessions s JOIN signups u ON u.email = s.email WHERE s.token = ?", p.token).toArray()[0];
       if (!row) return reply({ email: null });
       this.sql.exec("UPDATE signups SET last_seen = ? WHERE email = ?", now, row.email);
-      return reply({ email: row.email, until: row.until, hasPassword: !!row.pw });
+      return reply({ email: row.email, until: row.until, hasPassword: !!row.pw, name: row.name || "", company: row.company || "" });
     }
 
     if (op === "set-by-link") {
