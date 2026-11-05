@@ -144,8 +144,40 @@ p { max-width: 64ch; text-wrap: pretty; }
   .hero-foot .hero-data { grid-column: 7 / span 3; }
   .hero-foot .hero-act { grid-column: 10 / span 3; justify-content: flex-end; }
 }
-@media (max-width: 47.99em) { .navlinks .m-hide { display: none; } }
-@media (max-width: 22.49em) { .navlinks .s-hide { display: none; } }
+/* ---------- the top menu: the same links on every page of a kind, the current page underlined ---------- */
+.topbar { align-items: center; gap: 0.75rem clamp(1rem, 3vw, 3rem); }
+.topbar .wordmark { margin-right: auto; }
+.navlinks { align-items: center; }
+.navlinks a[aria-current="page"] { text-decoration-color: currentColor; text-decoration-thickness: 2px; text-underline-offset: 0.4em; }
+.navlinks .nav-end { padding-left: clamp(1rem, 3vw, 3rem); border-left: 1px solid var(--surface-2); }
+.nav-cta.button { min-height: 2.5rem; padding: 0 1.1rem; font-size: var(--step-small); }
+.menu-btn { display: none; }
+@media (max-width: 59.99em) {
+  .js .menu-btn { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 1rem; border: 0; background: var(--surface); color: var(--ink); font: inherit; font-size: var(--step-small); font-weight: 600; cursor: pointer; }
+  .js .topbar .navlinks { display: none; order: 3; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 0; padding-top: 0.25rem; }
+  .js .bar.is-open .navlinks { display: flex; }
+  .js .navlinks a { display: block; padding-block: 0.8rem; font-size: 1rem; border-top: 1px solid var(--surface-2); }
+  .js .navlinks .nav-end { padding-left: 0; border-left: 0; }
+}
+
+/* ---------- "On this page": the board's sections, under the top menu ---------- */
+.subnav { position: sticky; top: 0; z-index: 25; background: var(--bg); border-bottom: 1px solid var(--surface-2); transition: top var(--t-ui) var(--ease-out); }
+.bar:not(.is-hidden) ~ .subnav { top: var(--bar-h, 4.5rem); }
+.subnav-in { display: flex; align-items: center; gap: 1.5rem; }
+.subnav-label { flex: none; font-size: var(--step-small); color: var(--muted); }
+.subnav-links { display: flex; gap: 0 1.75rem; overflow-x: auto; scrollbar-width: none; white-space: nowrap; font-size: var(--step-small); font-weight: 600; }
+.subnav-links::-webkit-scrollbar { display: none; }
+.subnav-links a { display: block; padding-block: 0.8rem; text-decoration: underline; text-decoration-color: transparent; text-decoration-thickness: 2px; text-underline-offset: 0.4em; transition: text-decoration-color var(--t-hover) ease; }
+.subnav-links a[aria-current] { text-decoration-color: currentColor; }
+@media (hover: hover) and (pointer: fine) { .subnav-links a:hover { text-decoration-color: var(--muted); } }
+@media (max-width: 47.99em) { .subnav-label { display: none; } }
+@media (prefers-reduced-motion: reduce) { .subnav { transition: none; } }
+.has-subnav main section[id] { scroll-margin-top: 4rem; }
+
+/* ---------- the board's own header: the date and a lookup, not the big name ---------- */
+.board-head { padding-top: clamp(2rem, 5vw, 4rem); padding-bottom: clamp(1.5rem, 3vw, 2.5rem); align-items: start; }
+.board-head .hero-data { margin-top: 0.75rem; }
+.board-head .lead { max-width: 46ch; }
 @media (max-width: 47.99em) {
   .hero { min-height: auto; }
   .hero-name { flex-direction: column; align-items: center; font-size: 25vw; line-height: 0.84; gap: 0; margin-block: 2.5rem 2rem; }

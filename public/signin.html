@@ -18,11 +18,15 @@
 <div class="bar wrap">
   <nav class="topbar" aria-label="Main">
     <a class="wordmark" href="/">Spawnbook</a>
-    <ul class="navlinks">
-      <li class="m-hide"><a href="subscribe">Pricing</a></li>
-      <li class="s-hide"><a href="value">Value your game</a></li>
-      <li><a class="keep" href="board">Today's board</a></li>
+    <ul class="navlinks" id="navlinks">
+      <li><a href="trends">What's working</a></li>
+      <li><a href="track">Track record</a></li>
+      <li><a href="g">Look up a game</a></li>
+      <li><a href="subscribe">Pricing</a></li>
+      <li class="nav-end"><a href="signin" aria-current="page">Sign in</a></li>
     </ul>
+    <a class="button nav-cta" href="board">Today's board</a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="navlinks">Menu</button>
   </nav>
 </div>
 
@@ -133,5 +137,6 @@
   }).catch(function () {});
 })();
 </script>
+<script src="nav.js" defer></script>
 </body>
 </html>

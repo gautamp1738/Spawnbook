@@ -26,12 +26,13 @@
 <div class="bar wrap">
   <nav class="topbar" aria-label="Main">
     <a class="wordmark" href="/">Spawnbook</a>
-    <ul class="navlinks">
-      <li class="m-hide"><a href="#value">Value your game</a></li>
-      <li class="s-hide"><a href="g">Look up a game</a></li>
-      <li class="m-hide"><a href="sell">Open to selling?</a></li>
-      <li><a class="keep" href="/">For buyers</a></li>
+    <ul class="navlinks" id="navlinks">
+      <li><a href="value" aria-current="page">Value your game</a></li>
+      <li><a href="sell">Sell your game</a></li>
+      <li><a href="value#sale">How a sale works</a></li>
+      <li class="nav-end"><a href="/">For buyers</a></li>
     </ul>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="navlinks">Menu</button>
   </nav>
 </div>
 
@@ -314,5 +315,6 @@
   });
 })();
 </script>
+<script src="nav.js" defer></script>
 </body>
 </html>

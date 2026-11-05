@@ -29,6 +29,7 @@ Everything the site serves is in `public/`:
 | `signin.html` | Sign in with email and password. Visitors who open the board signed out land here. |
 | `account.html` | Who's signed in, when their access ends, change or set a password, and sign out. Also where one-time password links open (`/account#t=...`). |
 | `site.css`, `site.js` | Shared styles and page behaviour. |
+| `nav.js` | The top menu on every page: the Menu button on narrow screens, and on the board the "On this page" bar that marks the section you're reading. Every page uses one of three menus: the members' menu (Board, Look up, Watchlist, Leads, Market, Weekly report, Account), the public one (What's working, Track record, Look up a game, Pricing, Sign in, and a Today's board button) or the sellers' one (Value your game, Sell your game, How a sale works, For buyers). Change a menu in every page of its kind at once. |
 | `privacy.html`, `terms.html`, `cookies.html`, `refunds.html`, `legal.css` | The policy pages. |
 | `fonts/` | Big Shoulders and Public Sans, served from the site itself. Both are under the SIL Open Font License (see the `OFL-*.txt` files). |
 | `favicon.svg` | The browser-tab icon. |

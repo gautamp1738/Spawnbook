@@ -9,55 +9,36 @@
 <script>document.documentElement.classList.add('js')</script>
 <link rel="stylesheet" href="site.css">
 </head>
-<body>
+<body class="has-subnav">
 
-<a class="skip" href="#main">Skip to the report</a>
+<a class="skip" href="#main">Skip to the board</a>
 
 <div class="bar wrap">
   <nav class="topbar" aria-label="Main">
-    <a class="wordmark" href="#top">Spawnbook</a>
-    <ul class="navlinks">
-      <li><a href="#find">Find a game</a></li>
-      <li class="s-hide"><a href="#picks">Picks</a></li>
-      <li class="m-hide"><a href="#board">Board</a></li>
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks" id="navlinks">
+      <li><a href="board" aria-current="page">Board</a></li>
+      <li><a href="lookup">Look up</a></li>
+      <li><a href="watchlist">Watchlist</a></li>
+      <li><a href="leads">Leads</a></li>
+      <li><a href="market">Market</a></li>
       <li><a href="report">Weekly report</a></li>
-      <li class="m-hide"><a href="lookup">Look up</a></li>
-      <li class="m-hide"><a href="market">Market</a></li>
-      <li class="m-hide"><a href="watchlist">Watchlist</a></li>
-      <li class="m-hide"><a href="leads">Leads</a></li>
-      <li class="m-hide"><a href="account">Account</a></li>
-      <li><a class="keep" href="#requests">Free issue</a></li>
+      <li class="nav-end"><a href="account">Account</a></li>
     </ul>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="navlinks">Menu</button>
   </nav>
 </div>
 
 <p class="access-note wrap small" id="access-note" role="status" hidden></p>
 
-<header class="hero wrap" id="top">
-
-  <h1 class="hero-name">
-    <span class="mask"><span class="w" style="--i:0">Spawn</span></span>
-    <span class="slot" data-ui aria-hidden="true">
-      <svg viewBox="0 0 380 148" preserveAspectRatio="xMinYMid slice" focusable="false">
-        <rect x="0" y="0" width="380" height="148" fill="var(--slot-bg)"></rect>
-        <line x1="0" x2="380" y1="123" y2="123" stroke="var(--slot-ink)" stroke-opacity="0.2" stroke-width="1"></line>
-        <line x1="0" x2="380" y1="73.4" y2="73.4" stroke="var(--slot-ink)" stroke-opacity="0.2" stroke-width="1"></line>
-        <line x1="0" x2="380" y1="23.8" y2="23.8" stroke="var(--slot-ink)" stroke-opacity="0.2" stroke-width="1"></line>
-        <path class="curve" pathLength="1" d="M58.3 126.1 L88.0 73.4 L122.0 48.6 L132.6 31.3 L149.6 25.1 L160.3 22.1 L190.0 18.5 L204.9 15.7 L338.8 15.2" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"></path>
-        <circle cx="58.3" cy="126.1" r="8" fill="var(--accent)"></circle>
-      </svg>
-    </span>
-    <span class="mask"><span class="w" style="--i:1">Book</span></span>
-  </h1>
-
-  <div class="hero-foot">
-    <p class="lead" data-load style="--d:420ms">Grow a Garden had about 500 to 1,000 players when a studio bought into it. Spawnbook finds the next ones every day: small Roblox games growing fast, scored on public data and priced against past hits.</p>
-    <p class="small hero-data" data-load style="--d:520ms"><span id="issue-date">Data as of Oct 23, 2026</span>. <span id="issue-note">Players counted at 1:29 AM Pacific.</span></p>
-    <div class="hero-act" data-load style="--d:480ms">
-      <a class="button" href="#find">Find a game to buy</a>
-      <a class="plainlink" href="#picks">See today's top five</a>
-    </div>
-    <form class="lk-mini" action="lookup" method="get" role="search" data-load style="--d:560ms">
+<header class="wrap grid page-top board-head" id="top">
+  <div class="c-l">
+    <h1 class="head">Today's board</h1>
+    <p class="small hero-data"><span id="issue-date">Data as of Oct 23, 2026</span>. <span id="issue-note">Players counted at 1:29 AM Pacific.</span></p>
+  </div>
+  <div class="c-r stack">
+    <p class="lead">Grow a Garden had about 500 to 1,000 players when a studio bought into it. Spawnbook finds the next ones every day: small Roblox games growing fast, scored on public data and priced against past hits.</p>
+    <form class="lk-mini" action="lookup" method="get" role="search">
       <div class="field">
         <label for="lk-mini-q">Look up any Roblox game</label>
         <input id="lk-mini-q" name="q" type="search" placeholder="Paste its link or type its name" autocomplete="off" spellcheck="false" maxlength="200" enterkeyhint="search">
@@ -66,6 +47,21 @@
     </form>
   </div>
 </header>
+
+<nav class="subnav" aria-label="On this page">
+  <div class="wrap subnav-in">
+    <span class="subnav-label">On this page</span>
+    <ul class="subnav-links">
+      <li><a href="#find">Find a game</a></li>
+      <li><a href="#picks">Top five</a></li>
+      <li><a href="#board">Full board</a></li>
+      <li><a href="#leftoff">Check these first</a></li>
+      <li><a href="#charted">Already charting</a></li>
+      <li><a href="#comps">How we price</a></li>
+      <li><a href="#sale">How a sale works</a></li>
+    </ul>
+  </div>
+</nav>
 
 <main id="main" tabindex="-1">
 
@@ -738,6 +734,7 @@
   // ---------- fit the name to the measure on wide screens ----------
   var nameEl = document.querySelector(".hero-name");
   function fitName() {
+    if (!nameEl) return;
     nameEl.style.fontSize = "";
     if (window.innerWidth < 768) return;
     var avail = nameEl.clientWidth, used = 0;
@@ -1915,5 +1912,6 @@
 })();
 </script>
 
+<script src="nav.js" defer></script>
 </body>
 </html>

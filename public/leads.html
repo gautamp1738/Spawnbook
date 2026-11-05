@@ -16,11 +16,16 @@
 <div class="bar wrap">
   <nav class="topbar" aria-label="Main">
     <a class="wordmark" href="/">Spawnbook</a>
-    <ul class="navlinks">
-      <li class="m-hide"><a href="watchlist">Watchlist</a></li>
-      <li class="s-hide"><a href="account">Account</a></li>
-      <li><a class="keep" href="board">Today's board</a></li>
+    <ul class="navlinks" id="navlinks">
+      <li><a href="board">Board</a></li>
+      <li><a href="lookup">Look up</a></li>
+      <li><a href="watchlist">Watchlist</a></li>
+      <li><a href="leads" aria-current="page">Leads</a></li>
+      <li><a href="market">Market</a></li>
+      <li><a href="report">Weekly report</a></li>
+      <li class="nav-end"><a href="account">Account</a></li>
     </ul>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="navlinks">Menu</button>
   </nav>
 </div>
 
@@ -278,5 +283,6 @@
   }).catch(function () { $("l-status").textContent = "Your leads didn't load. Refresh the page to try again."; });
 })();
 </script>
+<script src="nav.js" defer></script>
 </body>
 </html>
