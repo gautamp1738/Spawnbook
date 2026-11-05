@@ -53,6 +53,10 @@
       <p class="hint">Get 5 full lookups a day, free for as long as you like. Every game also has a public page anyone can open without an account. The full daily board is $500 a month.</p>
       <input type="hidden" name="plan" value="dev">
       <input type="hidden" name="next" id="free-next" value="/lookup">
+      <div class="oauth" id="fr-oauth" hidden>
+        <a class="button quiet oauth-btn" id="fr-google" href="/auth/google?next=%2Flookup">Continue with Google</a>
+        <p class="oauth-or small muted">or make one with your email</p>
+      </div>
       <div class="fields">
         <div class="field">
           <label for="fr-name">Your name <span class="opt">(required)</span></label>
@@ -463,6 +467,8 @@
     var f = $("free");
     $("free-next").value = herePath();
     $("free-signin").href = "signin?next=" + encodeURIComponent(herePath());
+    $("fr-google").href = "/auth/google?next=" + encodeURIComponent(herePath());
+    fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) { if (m && m.google) $("fr-oauth").hidden = false; }).catch(function () {});
     f.hidden = false;
     var se = new URLSearchParams(location.search).get("se");
     if (se && FREE_ERR[se]) { $("fr-err").textContent = FREE_ERR[se]; }

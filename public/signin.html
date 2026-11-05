@@ -34,9 +34,49 @@
   <section class="sec wrap grid page-top auth" aria-labelledby="signin-h">
     <div class="c-l stack">
       <h1 id="signin-h" class="head">Sign in</h1>
-      <p class="lead">Use the email and password you signed up with.</p>
+      <p class="lead" id="signin-lead">Use Google, or the email and password you signed up with.</p>
     </div>
     <div class="c-r">
+      <div class="oauth" id="oauth" hidden>
+        <a class="button quiet oauth-btn" id="g-btn" href="/auth/google">Continue with Google</a>
+        <p class="oauth-or small muted">or sign in with your email</p>
+      </div>
+      <form class="form" id="g-form" method="post" action="/auth/google/finish" novalidate hidden>
+        <h2 class="form-h" id="g-h">Finish your account</h2>
+        <p class="hint" id="g-hint">Google signed you in. Two more things and you're in.</p>
+        <div class="fields one">
+          <div class="field">
+            <label for="g-name">Your name <span class="opt">(required)</span></label>
+            <input id="g-name" name="name" autocomplete="name" maxlength="120" aria-required="true">
+          </div>
+          <div class="field">
+            <label for="g-role">What do you do?</label>
+            <select id="g-role" name="role">
+              <option>I buy games for a studio</option>
+              <option>I invest in games or studios</option>
+              <option>I make Roblox games</option>
+              <option>Something else</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="g-co">Studio or fund <span class="opt" id="g-co-opt">(required)</span></label>
+            <input id="g-co" name="company" autocomplete="organization" maxlength="160">
+          </div>
+          <div class="field" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">
+            <label for="g-site">Leave this empty</label>
+            <input id="g-site" name="website" tabindex="-1" autocomplete="off">
+          </div>
+          <label class="consent" for="g-agree">
+            <input type="checkbox" id="g-agree" name="agree" value="yes" aria-required="true">
+            <span>I'm 18 or older. I agree that Spawnbook can store these details to give me access and contact me about subscribing, as described in the <a class="link" href="privacy.html">Privacy Policy</a>, and I accept the <a class="link" href="terms.html">Terms</a>.</span>
+          </label>
+        </div>
+        <div class="form-row">
+          <button class="button" type="submit">Create account</button>
+          <span class="err" id="g-err" role="alert"></span>
+        </div>
+        <p class="note">Wrong Google account? <a class="link" href="/auth/google">Choose another</a>.</p>
+      </form>
       <form class="form" id="signin-form" method="post" action="/api/signin" novalidate>
         <div class="fields one">
           <div class="field">
@@ -100,7 +140,13 @@
     missing: "Enter your email and password.",
     bad: "That email and password don't match. Check them and try again.",
     locked: "Too many wrong passwords for this email. Wait 15 minutes, then try again.",
-    nopw: "This account doesn't have a password yet. Email gautamuprasanna@gmail.com and we'll send you a link to set one.",
+    nopw: "This account doesn't have a password. If you signed up with Google, use Continue with Google. Otherwise email gautamuprasanna@gmail.com and we'll send you a link to set one.",
+    "google-off": "Signing in with Google isn't switched on yet. Use your email and password.",
+    "google-cancel": "Google sign-in was cancelled. Try again, or use your email and password.",
+    "google-state": "That Google sign-in took too long or was opened in another browser. Try again.",
+    "google-email": "Google didn't confirm that email address, so we can't use it to sign in. Try another Google account, or use your email and password.",
+    "google-expired": "That Google sign-in timed out before the account was finished. Continue with Google again.",
+    google: "Google sign-in didn't work. Try again, or use your email and password.",
     exists: "There's already an account with that email. Sign in with your password."
   };
   var code = q.get("e");
@@ -108,6 +154,47 @@
   else if (q.get("out")) $("s-err").textContent = "You're signed out.";
   var next = q.get("next");
   if (next) $("s-next").value = next;
+  if (next) $("g-btn").href = "/auth/google?next=" + encodeURIComponent(next);
+
+  // A new email from Google: show the finish form instead of the password form.
+  var FINISH = { missing: "Enter your name, and your studio or fund.", agree: "Tick the box to agree to the Privacy Policy and Terms." };
+  function coRequired() {
+    var dev = $("g-role").value === "I make Roblox games";
+    $("g-co-opt").textContent = dev ? "(optional)" : "(required)";
+    if (dev) $("g-co").removeAttribute("aria-required"); else $("g-co").setAttribute("aria-required", "true");
+  }
+  $("g-role").addEventListener("change", coRequired); coRequired();
+  if (q.get("g") === "new") {
+    $("signin-form").hidden = true;
+    $("g-form").hidden = false;
+    document.getElementById("signin-h").textContent = "Almost done";
+    $("signin-lead").textContent = "Your account is nearly ready. This is a one-time step.";
+    if (FINISH[code]) $("g-err").textContent = FINISH[code];
+    fetch("/api/google-pending", { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (p) {
+      if (!p.pending) {
+        $("g-form").hidden = true; $("signin-form").hidden = false;
+        document.getElementById("signin-h").textContent = "Sign in";
+        $("signin-lead").textContent = "Use Google, or the email and password you signed up with.";
+        $("s-err").textContent = ERRORS["google-expired"];
+        return;
+      }
+      $("g-hint").textContent = "Google signed you in as " + p.email + ". Two more things and you're in.";
+      if (!$("g-name").value) $("g-name").value = p.name || "";
+      if (p.dev) { $("g-role").value = "I make Roblox games"; coRequired(); }
+      ($("g-name").value ? $("g-co") : $("g-name")).focus();
+    }).catch(function () {});
+  }
+  $("g-form").addEventListener("submit", function (e) {
+    var dev = $("g-role").value === "I make Roblox games";
+    var field = !$("g-name").value.trim() ? "g-name" : (!dev && !$("g-co").value.trim()) ? "g-co" : !$("g-agree").checked ? "g-agree" : null;
+    this.querySelectorAll("[aria-invalid]").forEach(function (x) { x.removeAttribute("aria-invalid"); });
+    if (field) {
+      e.preventDefault();
+      $("g-err").textContent = field === "g-agree" ? FINISH.agree : field === "g-name" ? "Enter your name." : "Enter your studio or fund, or pick I make Roblox games.";
+      $(field).setAttribute("aria-invalid", "true");
+      $(field).focus();
+    }
+  });
 
   $("signin-form").addEventListener("submit", function (e) {
     var email = $("s-email").value.trim(), pw = $("s-pw").value;
@@ -125,7 +212,10 @@
 
   // Already signed in? Say so instead of showing the form.
   fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
-    if (!m || m.access === "none") { if (code !== "exists") $("s-email").focus(); return; }
+    if (m && m.google && q.get("g") !== "new") $("oauth").hidden = false;
+    else if (q.get("g") !== "new") $("signin-lead").textContent = "Use the email and password you signed up with.";
+    if (!m || m.access === "none") { if (code !== "exists" && q.get("g") !== "new") $("s-email").focus(); return; }
+    $("oauth").hidden = true;
     $("signin-form").hidden = true;
     $("s-in").hidden = false;
     $("s-in-text").textContent = "You're signed in as " + m.email + ".";

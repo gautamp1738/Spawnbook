@@ -106,6 +106,10 @@
         <p class="hint">The board is free for 24 hours without one. An account lets you keep a watchlist, tell us what you buy and get verified leads. It doesn't add another free day.</p>
         <p class="note" id="f-refnote" hidden>You were invited by a Spawnbook member.</p>
         <input type="hidden" name="ref" id="f-ref" value="">
+        <div class="oauth" id="f-oauth" hidden>
+          <a class="button quiet oauth-btn" id="f-google" href="/auth/google">Continue with Google</a>
+          <p class="oauth-or small muted">or make one with your email</p>
+        </div>
         <div class="fields">
           <div class="field">
             <label for="f-name">Your name <span class="opt">(required)</span></label>
@@ -288,6 +292,11 @@
   fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
     if (!m) return;
     if (m.access === "none") {
+      if (m.google) {
+        var rc = $("f-ref").value;
+        $("f-google").href = "/auth/google" + (rc ? "?ref=" + encodeURIComponent(rc) : "");
+        $("f-oauth").hidden = false;
+      }
       var t = m.trial;
       if (!t) { setTimeout(function () { openPass("pass"); }, 700); return; }
       if (t.active) {
@@ -311,7 +320,7 @@
     $("teaser-free").hidden = true;
     $("mail-home").hidden = true;
     $("signed-in-who").textContent = "Signed in as " + m.email + ".";
-    if (!m.hasPassword) $("signed-in-pw").hidden = false;
+    if (!m.hasPassword && !m.hasGoogle) $("signed-in-pw").hidden = false;
     if (m.access === "active") {
       var when = new Date(m.until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
       $("signed-in-text").textContent = "You're signed in. Your access runs until " + when + ".";

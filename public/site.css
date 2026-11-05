@@ -972,3 +972,12 @@ a.lk-pick-b { text-decoration: none; color: inherit; }
 .m-save { display: grid; gap: 0.75rem; max-width: 62ch; }
 .m-save .rowline { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; align-items: center; }
 .m-save:empty { display: none; }
+
+/* "Continue with Google" above the email forms */
+.oauth { display: grid; gap: 1rem; }
+.oauth-btn { width: 100%; background: var(--bg); box-shadow: inset 0 0 0 2px var(--ink); }
+.oauth-or { display: flex; align-items: center; gap: 0.75rem; margin: 0; }
+.oauth-or::before, .oauth-or::after { content: ""; flex: 1; height: 2px; background: var(--surface-2); }
+.auth .oauth { background: var(--surface); padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1.25rem, 3vw, 2.25rem) 0; }
+.auth .oauth ~ .form { margin-top: 0; }
+.auth .oauth > * { max-width: 30rem; }

@@ -106,6 +106,10 @@ export default {
       else if (path === "/api/signup") res = await signup(request, env, ctx);
       else if (path === "/api/signin") res = await signin(request, env);
       else if (path === "/api/signout") res = await signout(request, env);
+      else if (path === "/auth/google") res = await googleStart(request, env, url);
+      else if (path === "/auth/google/callback") res = await googleBack(request, env, url);
+      else if (path === "/auth/google/finish") res = await googleFinish(request, env, ctx);
+      else if (path === "/api/google-pending") res = await googlePending(request, env);
       else if (path === "/api/password") res = await password(request, env);
       else if (path === "/api/me") res = await me(request, env);
       else if (path === "/api/referrals") res = await referrals(request, env, url);
@@ -810,6 +814,123 @@ async function signin(request, env) {
   return redirect(nextPath(next, r.until), { "Set-Cookie": sessionCookie(token) });
 }
 
+// ---------- Sign in with Google ----------
+// Off until GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set in Cloudflare; until then the
+// buttons stay hidden. Accounts are keyed by email, so Google's verified email is the link: an
+// email that already has an account signs straight in, and a new one gets a short "finish your
+// account" step for the studio name and the terms. Google never sees anything but the sign-in.
+const OAUTH_COOKIE = "sb_oauth";
+const GNEW_COOKIE = "sb_gnew";
+const GOOGLE_PENDING_MS = 15 * 60 * 1000;
+const googleOn = (env) => !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+const b64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const CLEAR_OAUTH = OAUTH_COOKIE + "=; Path=/auth/google; Max-Age=0; HttpOnly; Secure; SameSite=Lax";
+const CLEAR_GNEW = GNEW_COOKIE + "=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax";
+
+function jwtClaims(jwt) {
+  try {
+    const part = String(jwt).split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const bin = atob(part + "===".slice((part.length + 3) % 4));
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))));
+  } catch (e) { return null; }
+}
+
+// /auth/google?next=/board&ref=abc123: off to Google's account picker.
+async function googleStart(request, env, url) {
+  if (!googleOn(env)) return redirect("/signin?e=google-off");
+  const next = String(url.searchParams.get("next") || "").slice(0, 300);
+  const ref = String(url.searchParams.get("ref") || "").toLowerCase();
+  const state = randomToken().slice(0, 32);
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const challenge = b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
+  const keep = [state, verifier, next, /^[a-z0-9]{6,16}$/.test(ref) ? ref : ""].map(encodeURIComponent).join("|");
+  const q = new URLSearchParams({
+    client_id: env.GOOGLE_CLIENT_ID, redirect_uri: url.origin + "/auth/google/callback", response_type: "code",
+    scope: "openid email profile", state, code_challenge: challenge, code_challenge_method: "S256", prompt: "select_account"
+  });
+  return redirect("https://accounts.google.com/o/oauth2/v2/auth?" + q, { "Set-Cookie": OAUTH_COOKIE + "=" + keep + "; Path=/auth/google; Max-Age=600; HttpOnly; Secure; SameSite=Lax" });
+}
+
+// Google sends them back here with a one-time code.
+async function googleBack(request, env, url) {
+  const fail = (code) => redirect("/signin?e=" + code, { "Set-Cookie": CLEAR_OAUTH });
+  if (!googleOn(env)) return fail("google-off");
+  if (url.searchParams.get("error")) return fail("google-cancel");
+  const [state, verifier, next, ref] = String(readCookie(request, OAUTH_COOKIE) || "").split("|").map((s) => { try { return decodeURIComponent(s); } catch (e) { return ""; } });
+  if (!state || !verifier || url.searchParams.get("state") !== state) return fail("google-state");
+  const code = url.searchParams.get("code");
+  if (!code) return fail("google");
+  let tok;
+  try {
+    const r = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: url.origin + "/auth/google/callback", grant_type: "authorization_code", code_verifier: verifier })
+    });
+    tok = await r.json();
+    if (!r.ok || !tok.id_token) return fail("google");
+  } catch (e) { return fail("google"); }
+  // The ID token came straight from Google over HTTPS in exchange for our secret, so its claims
+  // can be trusted without checking the signature (OpenID Connect Core 3.1.3.7). The audience,
+  // issuer and expiry still have to match.
+  const c = jwtClaims(tok.id_token);
+  if (!c || !c.sub || c.aud !== env.GOOGLE_CLIENT_ID || !["accounts.google.com", "https://accounts.google.com"].includes(c.iss) || !(c.exp * 1000 > Date.now())) return fail("google");
+  const email = String(c.email || "").toLowerCase().slice(0, 200);
+  if (c.email_verified !== true || !validEmail(email)) return fail("google-email");
+
+  const headers = new Headers({ "Cache-Control": "no-store" });
+  headers.append("Set-Cookie", CLEAR_OAUTH);
+  const token = randomToken();
+  const r = await call(env, "google-signin", { email, sub: String(c.sub), token });
+  if (r.ok) {
+    headers.set("Location", nextPath(next || "", r.until));
+    headers.append("Set-Cookie", sessionCookie(token));
+    return new Response(null, { status: 303, headers });
+  }
+  // A new email: hold what Google told us for 15 minutes while they finish the account.
+  const pend = randomToken();
+  await call(env, "google-pending", { hash: await sha256(pend), email, sub: String(c.sub), name: String(c.name || "").slice(0, 120), next: (next || "").slice(0, 300), ref: ref || "", expires: Date.now() + GOOGLE_PENDING_MS });
+  headers.set("Location", "/signin?g=new");
+  headers.append("Set-Cookie", GNEW_COOKIE + "=" + pend + "; Path=/; Max-Age=" + GOOGLE_PENDING_MS / 1000 + "; HttpOnly; Secure; SameSite=Lax");
+  return new Response(null, { status: 303, headers });
+}
+
+// The "finish your account" form fills in the name and email Google gave.
+async function googlePending(request, env) {
+  const pend = readCookie(request, GNEW_COOKIE);
+  if (!pend || !/^[0-9a-f]{64}$/.test(pend)) return json({ pending: false });
+  const r = await call(env, "google-pending-get", { hash: await sha256(pend) });
+  return json(r.email ? { pending: true, email: r.email, name: r.name || "", dev: /^\/(lookup|value|sell)\b/.test(r.next || "") } : { pending: false });
+}
+
+async function googleFinish(request, env, ctx) {
+  if (request.method !== "POST") return redirect("/signin?g=new");
+  const pend = readCookie(request, GNEW_COOKIE);
+  if (!pend || !/^[0-9a-f]{64}$/.test(pend)) return redirect("/signin?e=google-expired");
+  const form = await request.formData();
+  const get = (k) => String(form.get(k) || "").trim();
+  if (get("website")) return redirect("/");
+  const back = (code) => redirect("/signin?g=new&e=" + code);
+  const name = get("name").slice(0, 120);
+  const company = get("company").slice(0, 160);
+  const role = get("role").slice(0, 60);
+  const dev = role === "I make Roblox games";
+  if (!name || (!company && !dev)) return back("missing");
+  if (get("agree") !== "yes") return back("agree");
+
+  // Same free day as the browser's pass, the same as signing up with a password.
+  const t = await readTrial(request, env);
+  const now = Date.now();
+  const token = randomToken();
+  const r = await call(env, "google-finish", { hash: await sha256(pend), name, company, role, token, until: t ? t.until : now + FREE_MS });
+  if (!r.ok) return redirect("/signin?e=google-expired", { "Set-Cookie": CLEAR_GNEW });
+  if (r.created) track(env, ctx, "signup", r.email, company || (dev ? "free plan" : ""));
+  const headers = new Headers({ Location: nextPath(r.next || "", r.until), "Cache-Control": "no-store" });
+  headers.append("Set-Cookie", sessionCookie(token));
+  headers.append("Set-Cookie", CLEAR_GNEW);
+  if (!t) headers.append("Set-Cookie", await trialCookie(env, now));
+  return new Response(null, { status: 303, headers });
+}
+
 async function signout(request, env) {
   const token = readCookie(request, SESSION_COOKIE);
   if (token && /^[0-9a-f]{64}$/.test(token)) await call(env, "signout", { token });
@@ -849,9 +970,9 @@ async function me(request, env) {
   if (!s) {
     // No account: say whether they have a free pass, and how long it has left.
     const t = await readTrial(request, env);
-    return json({ access: "none", trial: t ? { active: t.active, start: t.start, until: t.until } : null });
+    return json({ access: "none", trial: t ? { active: t.active, start: t.start, until: t.until } : null, google: googleOn(env) });
   }
-  return json({ access: s.until > Date.now() ? "active" : "expired", until: s.until, email: s.email, hasPassword: !!s.hasPassword, name: s.name || "", company: s.company || "" });
+  return json({ access: s.until > Date.now() ? "active" : "expired", until: s.until, email: s.email, hasPassword: !!s.hasPassword, hasGoogle: !!s.hasGoogle, name: s.name || "", company: s.company || "", google: googleOn(env) });
 }
 
 // The visitor's own referral link. Counts only: who signed up through it stays private.
@@ -2118,6 +2239,8 @@ export class Store {
     try { this.sql.exec("ALTER TABLE signups ADD COLUMN pw TEXT"); } catch (e) { /* already there */ }
     this.sql.exec("CREATE TABLE IF NOT EXISTS links (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS fails (email TEXT PRIMARY KEY, count INTEGER NOT NULL, first_at INTEGER NOT NULL)");
+    try { this.sql.exec("ALTER TABLE signups ADD COLUMN google_sub TEXT"); } catch (e) { /* already there */ }
+    this.sql.exec("CREATE TABLE IF NOT EXISTS google_pending (hash TEXT PRIMARY KEY, email TEXT NOT NULL, sub TEXT NOT NULL, name TEXT, next TEXT, ref TEXT, expires INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS seeds (name TEXT PRIMARY KEY, at INTEGER NOT NULL)");
     // Referrals: each account gets a code; a sign-up through it remembers who referred them, and
     // that person's first payment gives the referrer a free month (one credit row per referral).
@@ -2289,10 +2412,50 @@ export class Store {
     }
 
     if (op === "session") {
-      const row = this.sql.exec("SELECT u.email AS email, u.access_until AS until, u.pw AS pw, u.name AS name, u.company AS company FROM sessions s JOIN signups u ON u.email = s.email WHERE s.token = ?", p.token).toArray()[0];
+      const row = this.sql.exec("SELECT u.email AS email, u.access_until AS until, u.pw AS pw, u.google_sub AS gsub, u.name AS name, u.company AS company FROM sessions s JOIN signups u ON u.email = s.email WHERE s.token = ?", p.token).toArray()[0];
       if (!row) return reply({ email: null });
       this.sql.exec("UPDATE signups SET last_seen = ? WHERE email = ?", now, row.email);
-      return reply({ email: row.email, until: row.until, hasPassword: !!row.pw, name: row.name || "", company: row.company || "" });
+      return reply({ email: row.email, until: row.until, hasPassword: !!row.pw, hasGoogle: !!row.gsub, name: row.name || "", company: row.company || "" });
+    }
+
+    // Sign in with Google. An email that already has an account signs in and remembers its Google
+    // account; a new email waits in google_pending until the finish form is sent.
+    if (op === "google-signin") {
+      const acct = this.account(p.email);
+      if (!acct) return reply({ ok: false });
+      this.sql.exec("UPDATE signups SET google_sub = ? WHERE email = ?", p.sub, p.email);
+      this.sql.exec("DELETE FROM fails WHERE email = ?", p.email);
+      this.newSession(p.token, p.email, now);
+      return reply({ ok: true, until: acct.access_until });
+    }
+
+    if (op === "google-pending") {
+      this.sql.exec("DELETE FROM google_pending WHERE expires <= ?", now);
+      this.sql.exec("INSERT OR REPLACE INTO google_pending (hash, email, sub, name, next, ref, expires) VALUES (?, ?, ?, ?, ?, ?, ?)", p.hash, p.email, p.sub, p.name || "", p.next || "", p.ref || "", p.expires);
+      return reply({ ok: true });
+    }
+
+    if (op === "google-pending-get") {
+      const row = this.sql.exec("SELECT email, name, next FROM google_pending WHERE hash = ? AND expires > ?", p.hash, now).toArray()[0];
+      return reply(row || {});
+    }
+
+    if (op === "google-finish") {
+      const g = this.sql.exec("SELECT email, sub, next, ref FROM google_pending WHERE hash = ? AND expires > ?", p.hash, now).toArray()[0];
+      if (!g) return reply({ ok: false });
+      this.sql.exec("DELETE FROM google_pending WHERE hash = ?", p.hash);
+      const have = this.account(g.email);
+      if (have) {
+        // Made in another tab in the meantime: just sign in.
+        this.sql.exec("UPDATE signups SET google_sub = ? WHERE email = ?", g.sub, g.email);
+        this.newSession(p.token, g.email, now);
+        return reply({ ok: true, created: false, email: g.email, until: have.access_until, next: g.next });
+      }
+      const referrer = g.ref ? this.sql.exec("SELECT email FROM signups WHERE ref_code = ?", g.ref).toArray()[0] : null;
+      const referredBy = referrer && referrer.email !== g.email ? referrer.email : null;
+      this.sql.exec("INSERT INTO signups (email, name, company, role, created_at, access_until, last_seen, pw, referred_by, google_sub) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)", g.email, p.name, p.company, p.role || "", now, p.until, now, referredBy, g.sub);
+      this.newSession(p.token, g.email, now);
+      return reply({ ok: true, created: true, email: g.email, until: p.until, next: g.next });
     }
 
     if (op === "set-by-link") {
