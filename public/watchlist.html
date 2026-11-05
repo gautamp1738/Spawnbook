@@ -36,7 +36,14 @@
       <p class="lead">The games you're following, with live player counts, what changed since you last looked, and where each deal stands.</p>
     </div>
     <div class="c-r stack">
-      <p>Add games with the star on the board or the button on any game page. Your statuses and notes are private to your account.</p>
+      <form class="field w-add" action="lookup" method="get" role="search">
+        <label for="w-q">Add a game</label>
+        <div class="form-row w-add-row">
+          <input id="w-q" name="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="200" enterkeyhint="search" placeholder="Game name or Roblox link" aria-describedby="w-add-help" required>
+          <button class="button" type="submit">Find it</button>
+        </div>
+        <p class="small muted" id="w-add-help">We'll look it up, then you press Add to watchlist. Statuses and notes are private to your account.</p>
+      </form>
       <div class="field w-filter">
         <label for="f-status">Show</label>
         <select id="f-status"><option value="">Every status</option></select>
@@ -64,6 +71,7 @@
     </div>
     <div id="w-empty" hidden>
       <p class="lead">Nothing on your watchlist yet.</p>
+      <p id="w-empty-how">Look up a game above, or press Add to watchlist under any game on today's board.</p>
       <p><a class="button" href="board">Go to today's board</a></p>
     </div>
   </section>
@@ -154,6 +162,7 @@
     $("w-asof").textContent = "";
     var p = $("w-empty").querySelector(".lead");
     p.textContent = "A watchlist needs a free account.";
+    $("w-empty-how").hidden = true;
     var b = $("w-empty").querySelector("a.button"); b.textContent = "Create a free account"; b.href = "/#signup";
   }).catch(function () {});
   T.watchList().then(function (r) {

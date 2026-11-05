@@ -137,6 +137,44 @@
   var NEWTAB = " (opens in a new tab)";
   function extLink(text, href) { var a = el("a", "link", text); a.href = href; a.target = "_blank"; a.rel = "noopener"; a.dir = "auto"; a.appendChild(el("span", "sr-only", NEWTAB)); return a; }
 
+  // "Add to watchlist" for any looked-up game, not only ones that have been on the board.
+  function watchRow(g) {
+    var row = el("div", "form-row lk-watch");
+    var b = el("button", "button quiet", "Add to watchlist"); b.type = "button"; b.setAttribute("aria-pressed", "false");
+    var m = el("span", "status small"); m.setAttribute("aria-live", "polite");
+    row.appendChild(b); row.appendChild(m);
+    var on = false;
+    function paint() {
+      b.textContent = on ? "On your watchlist" : "Add to watchlist";
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.className = on ? "button watch-on" : "button quiet";
+    }
+    function linkMsg(lead, text, href, tail) {
+      m.textContent = lead;
+      var a = el("a", "link", text); a.href = href; m.appendChild(a);
+      if (tail) m.appendChild(document.createTextNode(tail));
+    }
+    fetch("/api/watch", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : { rows: [] }; }).then(function (j) {
+      (j.rows || []).forEach(function (w) { if (Number(w.uid) === Number(g.uid)) on = true; });
+      paint();
+    }).catch(function () {});
+    b.addEventListener("click", function () {
+      var body = on ? { action: "remove", uid: g.uid } : { action: "add", uid: g.uid, pid: g.pid, name: g.name };
+      m.textContent = "";
+      fetch("/api/watch", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok || j.error) throw new Error(j.error || "save"); return j; }); })
+        .then(function () {
+          on = !on; paint();
+          if (on) linkMsg("Added. ", "Open your watchlist", "watchlist"); else m.textContent = "Removed.";
+        }).catch(function (e) {
+          if (e.message === "signin") linkMsg("", "Create a free account", "/#signup", " to keep a watchlist.");
+          else if (e.message === "expired") linkMsg("Your access has ended. ", "Subscribe", "subscribe", " to keep using your watchlist.");
+          else m.textContent = e.message === "full" ? "Your watchlist is full. Remove a game first." : "Couldn't save. Try again.";
+        });
+    });
+    return row;
+  }
+
   var form = $("lk-form"), input = $("lk-q"), out = $("lk-out"), status = $("lk-status");
   var busy = false;
 
@@ -305,6 +343,7 @@
     var pub = el("a", "link", "Public page to share"); pub.href = "g/" + g.pid; links.appendChild(pub);
     if (b.tracked && !d.free) { var ga = el("a", "link", "Charts on Spawnbook"); ga.href = "game?u=" + g.uid; links.appendChild(ga); }
     hb.appendChild(links);
+    hb.appendChild(watchRow(g));
     head.appendChild(hb);
     sec.appendChild(head);
 

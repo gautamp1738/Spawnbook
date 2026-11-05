@@ -874,8 +874,10 @@ async function member(request, env) {
 }
 
 async function watch(request, env) {
-  const s = await member(request, env);
+  // An account whose access ended hears that, not "create a free account".
+  const s = await session(request, env);
   if (!s) return json({ error: "signin" }, 401);
+  if (!(s.until > Date.now())) return json({ error: "expired" }, 403);
   if (request.method === "GET") return json(await call(env, "watch-list", { email: s.email }));
   if (request.method !== "POST") return json({ error: "method" }, 405);
   let b;

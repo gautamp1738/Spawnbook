@@ -929,6 +929,11 @@
       var nm = el("div", "r-name");
       var h = el("h3"); h.id = "pr-h-" + p.pid; h.appendChild(extLink(p.name, "https://www.roblox.com/games/" + p.pid)); nm.appendChild(h);
       nm.appendChild(el("p", "who", "by " + p.creator + ". " + p.age + " days old. " + (p.g2 || p.genre || "No genre listed") + "."));
+      var wt = el("div", "w-line");
+      var wtm = el("span", "status small"); wtm.setAttribute("aria-live", "polite");
+      var wtb = watchToggle(p);
+      wtb.addEventListener("click", function () { toggleWatch(p, wtm); });
+      wt.appendChild(wtb); wt.appendChild(wtm); nm.appendChild(wt);
       line.appendChild(nm);
       var bd = el("div", "r-band"); bd.appendChild(band(p)); line.appendChild(bd);
       var st = el("dl", "r-stats");
@@ -975,22 +980,9 @@
       var gp = el("a", "button quiet", "Open game page"); gp.href = "game?pid=" + p.pid; acts.appendChild(gp);
       var wb = el("button", "button quiet", watched[p.pid] ? "On your watchlist" : "Add to watchlist"); wb.type = "button";
       wb.setAttribute("aria-pressed", watched[p.pid] ? "true" : "false");
+      wb.setAttribute("data-watch", p.pid);
       var wm = el("span", "status small"); wm.setAttribute("aria-live", "polite");
-      wb.addEventListener("click", function () {
-        var on = !!watched[p.pid];
-        var body = on ? { action: "remove", uid: watched[p.pid] } : { action: "add", uid: uidOf(p), pid: p.pid, name: p.name };
-        if (!body.uid) { wm.textContent = "Open the game page to add this one."; return; }
-        fetch("/api/watch", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-          .then(function (r) { return r.json().then(function (j) { if (!r.ok || j.error) throw new Error(j.error || "save"); return j; }); })
-          .then(function () {
-            if (on) delete watched[p.pid]; else watched[p.pid] = body.uid;
-            wb.textContent = on ? "Add to watchlist" : "On your watchlist"; wb.setAttribute("aria-pressed", on ? "false" : "true");
-            wm.textContent = on ? "Removed." : "Added to your watchlist.";
-          }).catch(function (e) {
-            wm.textContent = e.message === "full" ? "Your watchlist is full." : e.message === "signin" ? "" : "Couldn't save. Try again.";
-            if (e.message === "signin") { var la = el("a", "link", "Create a free account"); la.href = "/#signup"; wm.appendChild(la); wm.appendChild(document.createTextNode(" to keep a watchlist.")); }
-          });
-      });
+      wb.addEventListener("click", function () { toggleWatch(p, wm); });
       acts.appendChild(wb); acts.appendChild(wm);
       det.appendChild(acts);
       var mm = el("div", "money-math");
@@ -1040,6 +1032,59 @@
   // history file maps from place ids).
   var watched = {}, UID = {};
   function uidOf(p) { return p.x.uid || UID[p.pid] || null; }
+  // The bookmark button under each game's name. It and the one inside "Why this score" share
+  // data-watch, so both flip together.
+  function watchToggle(p) {
+    var on = !!watched[p.pid];
+    var b = el("button", "w-tog"); b.type = "button";
+    b.setAttribute("data-watch", p.pid);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.setAttribute("aria-describedby", "pr-h-" + p.pid);
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("width", "18"); svg.setAttribute("height", "18");
+    svg.setAttribute("aria-hidden", "true"); svg.setAttribute("focusable", "false");
+    var path = document.createElementNS(ns, "path"); path.setAttribute("d", "M6 3h12v18l-6-4.5L6 21z");
+    svg.appendChild(path); b.appendChild(svg);
+    b.appendChild(el("span", "w-t", on ? "On your watchlist" : "Add to watchlist"));
+    return b;
+  }
+  function syncWatch(pid) {
+    var on = !!watched[pid];
+    document.querySelectorAll('[data-watch="' + pid + '"]').forEach(function (b) {
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      (b.querySelector(".w-t") || b).textContent = on ? "On your watchlist" : "Add to watchlist";
+    });
+  }
+  function watchErr(m, err) {
+    m.textContent = "";
+    if (err === "signin") {
+      var a = el("a", "link", "Create a free account"); a.href = "/#signup";
+      m.appendChild(a); m.appendChild(document.createTextNode(" to keep a watchlist."));
+    } else if (err === "expired") {
+      m.appendChild(document.createTextNode("Your access has ended. "));
+      var s = el("a", "link", "Subscribe"); s.href = "subscribe";
+      m.appendChild(s); m.appendChild(document.createTextNode(" to keep using your watchlist."));
+    } else {
+      m.textContent = err === "full" ? "Your watchlist is full. Remove a game first." : err === "nouid" ? "Open the game page to add this one." : "Couldn't save. Try again.";
+    }
+  }
+  function toggleWatch(p, m) {
+    var on = !!watched[p.pid];
+    var body = on ? { action: "remove", uid: watched[p.pid] } : { action: "add", uid: uidOf(p), pid: p.pid, name: p.name };
+    if (!body.uid) { watchErr(m, "nouid"); return; }
+    m.textContent = "";
+    fetch("/api/watch", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok || j.error) throw new Error(j.error || "save"); return j; }); })
+      .then(function () {
+        if (on) delete watched[p.pid]; else watched[p.pid] = body.uid;
+        syncWatch(p.pid);
+        m.textContent = "";
+        if (on) { m.textContent = "Removed."; return; }
+        m.appendChild(document.createTextNode("Added. "));
+        var a = el("a", "link", "Open your watchlist"); a.href = "watchlist"; m.appendChild(a);
+      }).catch(function (e) { watchErr(m, e.message); });
+  }
   fetch("/api/watch", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : { rows: [] }; }).then(function (j) {
     (j.rows || []).forEach(function (w) { if (w.pid) watched[w.pid] = w.uid; });
     renderBoard();

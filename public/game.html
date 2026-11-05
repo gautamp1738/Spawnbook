@@ -340,10 +340,14 @@
     if (w) {
       T.watchSave({ action: "remove", uid: g.uid }).then(function () { w = null; renderWatch(); msg("Removed from your watchlist."); }).catch(function () { msg("Couldn't save. Try again."); });
     } else {
-      T.watchSave({ action: "add", uid: g.uid, pid: g.pid, name: g.name }).then(function (j) { w = j.row; renderWatch(); msg("Added. See it on your watchlist."); })
+      T.watchSave({ action: "add", uid: g.uid, pid: g.pid, name: g.name }).then(function (j) {
+        w = j.row; renderWatch(); msg("Added. ");
+        var oa = T.el("a", "link", "Open your watchlist"); oa.href = "watchlist"; $("w-msg").appendChild(oa);
+      })
         .catch(function (e) {
-          msg(e.message === "full" ? "Your watchlist is full. Remove a game first." : e.message === "signin" ? "" : "Couldn't save. Try again.");
+          msg(e.message === "full" ? "Your watchlist is full. Remove a game first." : e.message === "signin" ? "" : e.message === "expired" ? "Your access has ended. " : "Couldn't save. Try again.");
           if (e.message === "signin") { var la = T.el("a", "link", "Create a free account"); la.href = "/#signup"; $("w-msg").appendChild(la); $("w-msg").appendChild(document.createTextNode(" to keep a watchlist.")); }
+          if (e.message === "expired") { var sa = T.el("a", "link", "Subscribe"); sa.href = "subscribe"; $("w-msg").appendChild(sa); $("w-msg").appendChild(document.createTextNode(" to keep using your watchlist.")); }
         });
     }
   });
