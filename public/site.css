@@ -151,14 +151,32 @@ p { max-width: 64ch; text-wrap: pretty; }
 .navlinks a[aria-current="page"] { text-decoration-color: currentColor; text-decoration-thickness: 2px; text-underline-offset: 0.4em; }
 .navlinks .nav-end { padding-left: clamp(1rem, 3vw, 3rem); border-left: 1px solid var(--surface-2); }
 .nav-cta.button { min-height: 2.5rem; padding: 0 1.1rem; font-size: var(--step-small); }
+/* The Menu button: three lines that open every part of the site. On narrow screens it's the only menu. */
 .menu-btn { display: none; }
+.js .menu-btn { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; padding: 0 0.9rem; border: 0; background: var(--surface); color: var(--ink); font: inherit; font-size: var(--step-small); font-weight: 600; cursor: pointer; transition: background-color var(--t-hover) ease, color var(--t-hover) ease; }
+.menu-btn .mb-ico { width: 1.15rem; height: 1.15rem; flex: none; }
+.menu-btn .mb-close, .menu-btn[aria-expanded="true"] .mb-open { display: none; }
+.menu-btn[aria-expanded="true"] .mb-close { display: block; }
+.bar.is-open .menu-btn { background: var(--ink); color: var(--bg); }
+@media (hover: hover) and (pointer: fine) { .js .menu-btn:hover { background: var(--ink); color: var(--bg); } }
 @media (max-width: 59.99em) {
-  .js .menu-btn { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 1rem; border: 0; background: var(--surface); color: var(--ink); font: inherit; font-size: var(--step-small); font-weight: 600; cursor: pointer; }
-  .js .topbar .navlinks { display: none; order: 3; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 0; padding-top: 0.25rem; }
-  .js .bar.is-open .navlinks { display: flex; }
-  .js .navlinks a { display: block; padding-block: 0.8rem; font-size: 1rem; border-top: 1px solid var(--surface-2); }
-  .js .navlinks .nav-end { padding-left: 0; border-left: 0; }
+  .js .topbar .navlinks { display: none; }
 }
+/* The open menu stays put while you scroll, even where the top bar would slide away. */
+.bar.is-open, .bar.is-open.is-hidden { transform: none; visibility: visible; border-bottom-color: var(--surface-2); }
+.allnav { margin-top: 1rem; padding-top: 1.25rem; border-top: 1px solid var(--surface-2); max-height: calc(100svh - 6rem); overflow-y: auto; overscroll-behavior: contain; }
+.allnav-in { display: grid; gap: 1.5rem var(--gutter); grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+.an-h { font-size: var(--step-small); font-weight: 600; color: var(--muted); margin: 0 0 0.35rem; }
+.an-group ul { display: grid; gap: 0.1rem; margin: 0; padding: 0; list-style: none; }
+.an-group a { display: grid; gap: 0.1rem; padding: 0.5rem 0; text-decoration: none; }
+.an-l { font-weight: 600; text-decoration: underline; text-decoration-color: transparent; text-decoration-thickness: 2px; text-underline-offset: 0.3em; transition: text-decoration-color var(--t-hover) ease; }
+.an-d { font-size: var(--step-small); color: var(--muted); line-height: 1.4; max-width: 34ch; }
+.an-group a[aria-current="page"] .an-l { text-decoration-color: currentColor; }
+@media (hover: hover) and (pointer: fine) { .an-group a:hover .an-l { text-decoration-color: var(--muted); } }
+.an-foot { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 1.5rem; padding-block: 1rem 0.25rem; border-top: 1px solid var(--surface-2); font-size: var(--step-small); }
+.an-foot a { text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 0.25em; }
+@media (hover: hover) and (pointer: fine) { .an-foot a:hover { text-decoration-color: currentColor; } }
+@media (max-width: 47.99em) { .allnav-in { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; } .an-d { max-width: none; } }
 
 /* ---------- "On this page": the board's sections, under the top menu ---------- */
 .subnav { position: sticky; top: 0; z-index: 25; background: var(--bg); border-bottom: 1px solid var(--surface-2); transition: top var(--t-ui) var(--ease-out); }
