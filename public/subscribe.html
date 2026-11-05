@@ -22,9 +22,9 @@
       <li><a href="track">Track record</a></li>
       <li><a href="g">Look up a game</a></li>
       <li><a href="subscribe" aria-current="page">Pricing</a></li>
-      <li class="nav-end"><a href="signin">Sign in</a></li>
+      <li class="nav-end" id="nav-signin"><a href="signin">Sign in</a></li>
     </ul>
-    <a class="button nav-cta" href="board">Today's board</a>
+    <a class="button nav-cta" id="nav-board" href="board">Today's board</a>
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="navlinks">Menu</button>
   </nav>
 </div>
@@ -84,7 +84,8 @@
   fetch("/api/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
     if (m && m.access === "none" && m.trial && !m.trial.active) document.getElementById("sub-lead").textContent = over;
     if (!m || m.access === "none") return;
-    document.getElementById("nav-signin").hidden = true;
+    // Signed in: the menu's Sign in becomes Account.
+    var ns = document.querySelector("#nav-signin a"); if (ns) { ns.textContent = "Account"; ns.href = "account"; }
     if (m.access === "expired") document.getElementById("sub-lead").textContent = "Your free day is over. To keep seeing the board every day, subscribe.";
     // Fill in the email they signed up with, so we can match the payment to the account.
     var a = document.getElementById("sub-mail");
