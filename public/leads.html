@@ -49,7 +49,7 @@
   <section class="sec wrap grid" aria-labelledby="box-h">
     <div class="c-l stack">
       <h2 id="box-h" class="head">What you buy</h2>
-      <p>We use this to pick games for you, and you can change it any time. It's private: sellers and other buyers never see it.</p>
+      <p>We use this to pick games for you, and to email you when a game on the board fits. You can change it any time. It's private: sellers and other buyers never see it.</p>
     </div>
     <div class="c-r">
       <form class="form" id="box" novalidate>
@@ -80,6 +80,11 @@
           <span class="status" id="b-status" aria-live="polite"></span>
         </div>
       </form>
+      <div class="alert-switch stack">
+        <label class="check" for="b-alerts"><input type="checkbox" id="b-alerts" checked> Email me when a game on the board fits this</label>
+        <p class="small muted">One email in the evening, only on days a game you haven't seen yet fits, and each game only once. Games on your watchlist are left out. The emails stop when your access ends.</p>
+        <p class="status small" id="a-status" aria-live="polite"></p>
+      </div>
     </div>
   </section>
 
@@ -246,7 +251,20 @@
   }
 
   api("/api/me").then(function (m) { if (m.email) $("l-who").textContent = "Signed in as " + m.email + "."; }).catch(function () {});
-  api("/api/buybox").then(function (j) { fillBox(j.box); }).catch(function () {});
+  api("/api/buybox").then(function (j) { fillBox(j.box); $("b-alerts").checked = j.alerts !== false; }).catch(function () {});
+
+  // The buy box email switch saves as soon as it's changed.
+  $("b-alerts").addEventListener("change", function (e) {
+    var cb = e.target, want = cb.checked;
+    $("a-status").textContent = "Saving.";
+    api("/api/buybox", { alerts: want }).then(function (j) {
+      cb.checked = j.alerts !== false;
+      $("a-status").textContent = j.alerts ? "On. We'll email you when a new game fits." : "Off. We won't email you about games that fit.";
+    }).catch(function (err) {
+      cb.checked = !want;
+      $("a-status").textContent = err.status === 401 ? "You've been signed out. Sign in again, then try again." : "That didn't save. Try again in a minute.";
+    });
+  });
   api("/api/leads").then(function (j) {
     var rows = j.rows || [];
     $("l-status").textContent = rows.length ? (rows.length === 1 ? "1 lead." : rows.length + " leads, newest first.") : "";

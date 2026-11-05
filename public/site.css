@@ -703,6 +703,9 @@ th.r, td.r, .mini .r { text-align: right; }
 .genre-set, .age-set { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 0.5rem; }
 .genre-set legend, .age-set legend { font-weight: 600; font-size: var(--step-small); padding: 0; margin-bottom: 0.5rem; }
 .genre-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0 1rem; }
+.alert-switch { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--surface-2); gap: 0.35rem; }
+.alert-switch .check { font-size: 1rem; }
+.alert-switch .status:empty { display: none; }
 .verified-list { gap: 0.9rem; max-width: 62ch; }
 .sell-steps { display: grid; gap: 0.75rem; padding-left: 1.25rem; margin: 0; max-width: 60ch; list-style: decimal; }
 .age-set .consent input { border-radius: 50%; }

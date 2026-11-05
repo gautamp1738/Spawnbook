@@ -1538,13 +1538,13 @@
       var t = el("p");
       t.appendChild(document.createTextNode("Want games like these sent to you? "));
       var a = el("a", "link", "Make a free account"); a.href = "/#signup"; t.appendChild(a);
-      t.appendChild(document.createTextNode(" and tell us what you buy. When an owner tells us they'd sell a game that fits, you'll see it on your Leads page."));
+      t.appendChild(document.createTextNode(" and tell us what you buy. We'll email you when a new game on the board fits, and when an owner tells us they'd sell one, you'll see it on your Leads page."));
       box.appendChild(t);
       return;
     }
     var b = el("button", "button quiet", "Save these answers to my account"); b.type = "button";
     var s = el("span", "status"); s.setAttribute("aria-live", "polite");
-    box.appendChild(el("p", null, "Your account's buy box picks the verified leads we send you. Saving replaces its genres, player range and budget with these answers."));
+    box.appendChild(el("p", null, "Your account's buy box picks the verified leads we send you, and we email you when a new game on the board fits it. Saving replaces its genres, player range and budget with these answers."));
     var r = el("div", "rowline"); r.appendChild(b); r.appendChild(s); box.appendChild(r);
     b.addEventListener("click", function () {
       var q = found.q;

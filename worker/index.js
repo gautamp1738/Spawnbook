@@ -41,8 +41,10 @@
 //                           and a plain-English read of them (worker/lookup.js), cached 10 minutes a game
 //   GET  /leads             verified leads: any signed-in account, even after its access ends, so a
 //                           free lead still shows
-//   GET  /api/buybox        what the signed-in buyer buys (genres, players, budget...), for matching
-//   POST /api/buybox        saves it, as JSON
+//   GET  /api/buybox        what the signed-in buyer buys (genres, players, budget...), for matching,
+//                           and whether buy box alerts are on
+//   POST /api/buybox        saves it, as JSON; { alerts: true | false } on its own switches the alerts
+//   GET|POST /unsubscribe?t=&l=alerts  the link in every buy box alert
 //   POST /api/find          the board's game finder: { kind: "find", genres, size, budget, skipWave,
 //                           matches } when someone asks for matches, { kind: "draft", pid } when they
 //                           open a first message to a game's owner. Recorded for /admin/activity
@@ -54,7 +56,8 @@
 //
 // Once a day (the cron in wrangler.jsonc) the Worker also runs a check that adds new games for each
 // buyer, flags leads whose game changed owner on Roblox, and emails a summary when Resend is set up
-// (the RESEND_API_KEY secret, and optionally EMAIL_FROM).
+// (the RESEND_API_KEY secret, and optionally EMAIL_FROM). Then the daily top 5 goes out, and each
+// member gets an email when a game on today's board fits their buy box (the buy box alerts).
 //
 // Accounts are kept in a Durable Object with SQLite storage (Store, below), which Cloudflare
 // creates on deploy, so there's no database to set up. Passwords are stored only as salted
@@ -132,7 +135,8 @@ export default {
   async scheduled(event, env, ctx) {
     const origin = "https://spawnbook.com";
     ctx.waitUntil(runDaily(env, origin).catch((e) => console.error("daily", e && e.stack || e))
-      .then(() => sendDailyPicks(env, origin)).catch((e) => console.error("picks", e && e.stack || e)));
+      .then(() => sendDailyPicks(env, origin)).catch((e) => console.error("picks", e && e.stack || e))
+      .then(() => sendBoxAlerts(env, origin)).catch((e) => console.error("alerts", e && e.stack || e)));
   },
 };
 
@@ -379,6 +383,106 @@ async function sendDailyPicks(env, origin, opts) {
   return out;
 }
 
+// ---------- buy box alerts ----------
+// Every evening, after the top 5 goes out, each member whose access is running gets an email when a
+// game on today's board fits their buy box and hasn't been sent to them before. Nothing new, no email.
+// They turn it off on /leads or with the link in the email. Needs Resend, like the other emails.
+const ALERT_DETAIL = 5; // games described in full; the rest are named in one line
+const ALERT_MAX = 15;   // games in one email at most
+
+// Today's board from data.js, each game with the board's price estimate and monthly revenue.
+async function boardToday(env, origin) {
+  const asset = await env.ASSETS.fetch(new Request(new URL("/data.js", origin)));
+  if (!asset.ok) return null;
+  const text = await asset.text();
+  const at = text.indexOf("window.BR =");
+  if (at < 0) return null;
+  const BR = JSON.parse(text.slice(at + 11).trim().replace(/;\s*$/, ""));
+  const earn = BR.META && BR.META.earn;
+  const games = (BR.BOARD || []).map((r) => {
+    const v = globalThis.SBV.value(globalThis.SBV.boardInput(r, earn), earn);
+    const x = r[26] || {};
+    return { pid: r[0], uid: Number(x.uid) || null, name: cleanName(r[1]), genre: r[4] || "", genre2: r[5] || "", age: r[6], players: r[7], perDay: r[8], wave: !!r[22], score: r[24], price: v.mid, rev: v.rev.mid };
+  });
+  return { date: (BR.META && BR.META.snapshot) || "", games };
+}
+
+// Does a board game fit a buy box? Total visits aren't on the board, so maxVisits isn't checked here
+// (the daily leads check uses it). A box that asks for nothing in particular gets no alerts: every
+// game would fit, and that's what the daily top 5 email is for.
+function boxAsks(box) {
+  return !!(box && ((box.genres && box.genres.length) || box.minPlayers || box.maxPlayers || box.maxAgeDays || box.minRevenue || box.maxPrice || /trend|brainrot/i.test(box.avoid || "")));
+}
+function boxFits(g, box) {
+  if (box.genres && box.genres.length && !box.genres.includes(g.genre)) return false;
+  if (box.minPlayers && g.players < box.minPlayers) return false;
+  if (box.maxPlayers && g.players > box.maxPlayers) return false;
+  if (box.maxAgeDays && g.age > box.maxAgeDays) return false;
+  if (box.maxPrice && g.price > box.maxPrice) return false;
+  if (box.minRevenue && g.rev < box.minRevenue) return false;
+  if (g.wave && /trend|brainrot/i.test(box.avoid || "")) return false;
+  return true;
+}
+
+function alertEmail(board, list, d, origin) {
+  const unsub = origin + "/unsubscribe?t=" + d.token + "&l=alerts";
+  const first = String(d.name || "").trim().split(/\s+/)[0];
+  const n = list.length;
+  const shown = list.slice(0, ALERT_DETAIL), rest = list.slice(ALERT_DETAIL);
+  const lines = ["Hi " + (first || "there") + ",", "", (n === 1 ? "A game on today's Spawnbook board (" + noYear(board.date) + ") fits" : n + " games on today's Spawnbook board (" + noYear(board.date) + ") fit") + " the buy box on your account.", ""];
+  shown.forEach((g, i) => {
+    lines.push((i + 1) + ". " + g.name + " (score " + g.score + " of 100)");
+    lines.push("   " + (g.genre2 || g.genre ? (g.genre2 || g.genre) + ", " : "") + commas(g.players) + " playing, " + g.age + " days old, " + shortNum(g.perDay) + " visits a day. Estimated price about " + usd(g.price) + ".");
+    lines.push("   On Spawnbook: " + origin + "/game?pid=" + g.pid + "&via=alert");
+    lines.push("   On Roblox: " + gameUrl(g.pid), "");
+  });
+  if (rest.length) lines.push((rest.length === 1 ? "One more fits too: " : rest.length + " more fit too: ") + rest.map((g) => g.name).join(", ") + ". They're on the board: " + origin + "/board?via=alert", "");
+  lines.push("We send each game once, so these won't come again. To change what you buy, or turn these emails off, go to your Leads page: " + origin + "/leads", "");
+  if (d.until - Date.now() < 3 * DAY_MS) {
+    const until = new Date(d.until).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" });
+    lines.push("Your access runs until " + until + ". To keep the board and these emails after that, subscribe: " + origin + "/subscribe", "");
+  }
+  lines.push("Gautam Prasanna", "Spawnbook, spawnbook.com", "", ADDRESS, "Stop these emails: " + unsub);
+  return {
+    to: d.email,
+    subject: n === 1 ? "A game on today's board fits what you buy: " + list[0].name : n + " games on today's board fit what you buy",
+    text: lines.join("\n"),
+    headers: { "List-Unsubscribe": "<" + unsub + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+  };
+}
+
+async function sendBoxAlerts(env, origin, opts) {
+  opts = opts || {};
+  if (!emailOn(env)) return { off: true };
+  const board = await boardToday(env, origin);
+  if (!board || !board.games.length) return { skipped: "There's no board to match against." };
+  const last = await call(env, "kv-get", { k: "alerts_sent" });
+  if (last.v === board.date && !opts.force) return { skipped: "Today's buy box alerts (" + board.date + ") already went out." };
+  const due = (await call(env, "alerts-due", { date: board.date })).rows || [];
+  const out = { date: board.date, at: Date.now(), members: due.length, emails: 0, games: 0 };
+  const quiet = [], all = [];
+  for (const d of due) {
+    let box;
+    try { box = JSON.parse(d.box); } catch (e) { box = null; }
+    const sent = new Set(d.sent || []), watched = new Set(d.watched || []);
+    const list = boxAsks(box) ? board.games.filter((g) => boxFits(g, box) && !sent.has(g.pid) && !(g.uid && watched.has(g.uid))).sort((a, b) => b.score - a.score).slice(0, ALERT_MAX) : [];
+    if (!list.length) { quiet.push({ email: d.email, pids: [] }); continue; }
+    all.push({ email: d.email, pids: list.map((g) => g.pid), msg: alertEmail(board, list, d, origin) });
+  }
+  if (quiet.length) await call(env, "alerts-sent", { date: board.date, rows: quiet });
+  for (let i = 0; i < all.length; i += 100) {
+    const chunk = all.slice(i, i + 100);
+    const r = await sendEmailBatch(env, chunk.map((x) => x.msg));
+    if (!r.ok) { out.emailError = true; continue; }
+    await call(env, "alerts-sent", { date: board.date, rows: chunk.map((x) => ({ email: x.email, pids: x.pids })) });
+    out.emails += chunk.length;
+    out.games += chunk.reduce((s, x) => s + x.pids.length, 0);
+  }
+  await call(env, "kv-set", { k: "alerts_sent", v: board.date });
+  await call(env, "kv-set", { k: "alerts_last", v: JSON.stringify(out) });
+  return out;
+}
+
 // The sign-up box ("email me the daily top 5") on the landing page and board, and the switch on the
 // account page. Answers JSON for the page's script; a plain form post is sent back to the landing page.
 async function dailyEmailApi(request, env, url, ctx) {
@@ -425,6 +529,14 @@ async function unsubscribe(request, env, url) {
   const t = String(url.searchParams.get("t") || "");
   const home = `<p><a class="button quiet" href="/">Go to Spawnbook</a></p>`;
   if (!/^[0-9a-f]{64}$/.test(t)) return page("Unsubscribe", `<h1 class="head">That link didn't work</h1><p>Use the unsubscribe link from the bottom of one of our emails, or reply to any email and we'll take you off the list.</p>${home}`);
+  // The buy box alerts carry &l=alerts, and turn off only those.
+  if (url.searchParams.get("l") === "alerts") {
+    if (request.method === "POST") {
+      const r = await call(env, "alerts-unsub", { token: t });
+      return page("Unsubscribed", r.ok ? `<h1 class="head">Buy box emails are off</h1><p>We won't email you when a game fits what you buy. You can turn them back on from your <a class="link" href="/leads">Leads page</a>.</p>${home}` : `<h1 class="head">That link didn't work</h1><p>Reply to any of our emails and we'll turn them off for you.</p>${home}`);
+    }
+    return page("Unsubscribe", `<h1 class="head">Stop the buy box emails?</h1><p>You'll stop getting an email when a game on the board fits what you buy. The daily top 5, if you get it, isn't affected.</p><form method="post" action="/unsubscribe?t=${t}&amp;l=alerts"><button class="button" type="submit">Stop these emails</button></form>`);
+  }
   if (request.method === "POST") {
     const r = await call(env, "daily-email-unsub", { token: t });
     return page("Unsubscribed", r.ok ? `<h1 class="head">You're unsubscribed</h1><p>We won't send you the daily top 5 again.</p>${home}` : `<h1 class="head">That link didn't work</h1><p>Reply to any of our emails and we'll take you off the list.</p>${home}`);
@@ -870,7 +982,10 @@ async function buybox(request, env) {
   if (request.method !== "POST") return json({ error: "method" }, 405);
   let b;
   try { b = await request.json(); } catch (e) { return json({ error: "bad" }, 400); }
-  return json(await call(env, "buybox-set", { email: s.email, box: JSON.stringify(cleanBox(b || {})) }));
+  b = b || {};
+  // { alerts: true | false } on its own is the Leads page's email switch, and leaves the box alone.
+  const onlyAlerts = typeof b.alerts === "boolean" && Object.keys(b).length === 1;
+  return json(await call(env, "buybox-set", { email: s.email, box: onlyAlerts ? null : JSON.stringify(cleanBox(b)), alerts: typeof b.alerts === "boolean" ? b.alerts : undefined }));
 }
 
 // The board's game finder: someone asked for matches, or opened a first message to an owner. Only
@@ -1170,7 +1285,7 @@ async function admin(request, env, url, path) {
   }
 
   if (path === "/admin/leads" || path.startsWith("/admin/leads/")) return adminLeads(request, env, url, path);
-  if (path === "/admin/activity" || path === "/admin/picks/send") return adminActivity(request, env, url, path);
+  if (path === "/admin/activity" || path === "/admin/picks/send" || path === "/admin/alerts/send") return adminActivity(request, env, url, path);
 
   if (path === "/admin/access" && request.method === "POST") {
     const form = await request.formData();
@@ -1265,6 +1380,11 @@ async function adminActivity(request, env, url, path) {
     const msg = r.skipped ? r.skipped : "Sent " + r.date + "'s top 5: " + r.discord + " Discord " + (r.discord === 1 ? "channel" : "channels") + (r.discordFailed ? " (" + r.discordFailed + " failed)" : "") + ", " + (r.emailsOff ? "no emails (Resend isn't connected yet)" : r.emails + " " + (r.emails === 1 ? "email" : "emails") + (r.emailError ? ", and some emails failed" : "")) + ".";
     return redirect("/admin/activity?sent=" + encodeURIComponent(msg) + "#picks");
   }
+  if (path === "/admin/alerts/send" && request.method === "POST") {
+    const r = await sendBoxAlerts(env, url.origin);
+    const msg = r.off ? "No alerts sent: emails are off until Resend is connected." : r.skipped ? r.skipped : "Buy box alerts for " + r.date + ": " + r.emails + " " + (r.emails === 1 ? "email" : "emails") + " with " + r.games + " " + (r.games === 1 ? "game" : "games") + ", out of " + r.members + " " + (r.members === 1 ? "member" : "members") + " checked" + (r.emailError ? ". Some emails failed" : "") + ".";
+    return redirect("/admin/activity?asent=" + encodeURIComponent(msg) + "#alerts");
+  }
   const a = await call(env, "activity", { days: 14 });
   // Game names for game pages opened, from today's history file.
   const names = {};
@@ -1347,6 +1467,12 @@ async function adminActivity(request, env, url, path) {
 <form method="post" action="/admin/picks/send"><button class="button quiet" type="submit">Send today's top 5 now</button></form>${sentMsg}
 <h3>Email list</h3>${emailTable}
 <h3>Discord</h3>${a.discord.length ? `<ul class="dlist">${hookRows}</ul>` : "<p>No member has connected Discord yet.</p>"}</section>`;
+  const al = a.lastAlerts ? JSON.parse(a.lastAlerts) : null;
+  const asentMsg = url.searchParams.get("asent") ? `<p class="msg" role="status">${esc(url.searchParams.get("asent"))}</p>` : "";
+  const alerts = `<section class="today" id="alerts" aria-labelledby="al-h"><h2 id="al-h">Buy box alerts</h2>
+<p>Every evening, after the top 5, each member whose access is running gets an email when a game on today's board fits their buy box and hasn't been sent to them before. Games on their watchlist are skipped, and no email goes out when nothing new fits. ${a.alertsOn} ${a.alertsOn === 1 ? "member has" : "members have"} a buy box with alerts on.${emailOn(env) ? "" : " <strong>Nothing is sent until Resend is connected.</strong>"}</p>
+<p>${al ? "Last run: " + esc(al.date) + ", " + al.emails + " " + (al.emails === 1 ? "email" : "emails") + " with " + al.games + " " + (al.games === 1 ? "game" : "games") + ", " + al.members + " " + (al.members === 1 ? "member" : "members") + " checked" + (al.emailError ? ", and some emails failed" : "") + "." : "Nothing sent yet."} Clicks from these emails show above as tagged links (?via=alert).</p>
+<form method="post" action="/admin/alerts/send"><button class="button quiet" type="submit">Send today's buy box alerts now</button></form>${asentMsg}</section>`;
 
   // " from x.com", or " through a ?via=discord link" for a tagged one.
   const fromText = (s) => { const m = /^via ([a-z0-9_-]+)(.*)$/.exec(s || ""); return m ? " through a ?via=" + m[1] + " link" + m[2] : s ? " from " + s : ""; };
@@ -1375,6 +1501,7 @@ async function adminActivity(request, env, url, path) {
 <div class="two"><section><h2>Where visitors came from</h2><p class="small muted">Last 7 days: home page and public game page visits, plus any page opened through a tagged link.</p>${fromList}</section><section><h2>Games people looked at</h2>${gameList}</section></div>
 <h2>Your tagged links, last 30 days</h2>${taggedList}${tagHelp}
 ${picks}
+${alerts}
 <h2>Latest activity</h2>${recent}`);
 }
 
@@ -1805,7 +1932,25 @@ export class Store {
     for (const col of ["discord TEXT", "discord_at INTEGER", "discord_err TEXT"]) {
       try { this.sql.exec("ALTER TABLE signups ADD COLUMN " + col); } catch (e) { /* already there */ }
     }
+    // Buy box alerts: an email when a game on the board fits what a member buys. state is on or off;
+    // a member with a buy box and no row yet counts as on. alert_sent keeps every game already
+    // emailed to each member, so a game that stays on the board isn't sent twice.
+    this.sql.exec("CREATE TABLE IF NOT EXISTS alerts (email TEXT PRIMARY KEY, state TEXT NOT NULL DEFAULT 'on', token TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL, last_sent TEXT, sends INTEGER NOT NULL DEFAULT 0)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS alert_sent (email TEXT NOT NULL, pid INTEGER NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (email, pid))");
     this.seedOwner();
+  }
+
+  // A member's alerts row, made (switched on) if there isn't one yet. Returns its unsubscribe token.
+  alertRow(email) {
+    const r = this.sql.exec("SELECT token FROM alerts WHERE email = ?", email).toArray()[0];
+    if (r) return r.token;
+    const token = randomToken();
+    this.sql.exec("INSERT INTO alerts (email, token, created_at) VALUES (?, ?, ?)", email, token, Date.now());
+    return token;
+  }
+  alertsOn(email) {
+    const r = this.sql.exec("SELECT state FROM alerts WHERE email = ?", email).toArray()[0];
+    return !r || r.state === "on";
   }
 
   seedOwner() {
@@ -1995,12 +2140,45 @@ export class Store {
 
     if (op === "buybox-get") {
       const r = this.sql.exec("SELECT box, updated_at FROM buybox WHERE email = ?", p.email).toArray()[0];
-      return reply({ box: r ? JSON.parse(r.box) : null, updated_at: r ? r.updated_at : null });
+      return reply({ box: r ? JSON.parse(r.box) : null, updated_at: r ? r.updated_at : null, alerts: this.alertsOn(p.email) });
     }
 
     if (op === "buybox-set") {
-      this.sql.exec("INSERT OR REPLACE INTO buybox (email, box, updated_at) VALUES (?, ?, ?)", p.email, p.box, now);
-      return reply({ ok: true, box: JSON.parse(p.box), updated_at: now });
+      if (p.box != null) this.sql.exec("INSERT OR REPLACE INTO buybox (email, box, updated_at) VALUES (?, ?, ?)", p.email, p.box, now);
+      if (typeof p.alerts === "boolean") {
+        this.alertRow(p.email);
+        this.sql.exec("UPDATE alerts SET state = ? WHERE email = ?", p.alerts ? "on" : "off", p.email);
+      }
+      const r = this.sql.exec("SELECT box, updated_at FROM buybox WHERE email = ?", p.email).toArray()[0];
+      return reply({ ok: true, box: r ? JSON.parse(r.box) : null, updated_at: r ? r.updated_at : null, alerts: this.alertsOn(p.email) });
+    }
+
+    // ---------- buy box alerts ----------
+    // Members whose access is running and who have a buy box and haven't turned alerts off, with the
+    // games already sent to each and the games on their watchlist (those aren't news to them).
+    if (op === "alerts-due") {
+      const rows = this.sql.exec("SELECT b.email AS email, b.box AS box, u.name AS name, u.access_until AS until FROM buybox b JOIN signups u ON u.email = b.email LEFT JOIN alerts a ON a.email = b.email WHERE u.access_until > ? AND (a.state IS NULL OR a.state = 'on') AND (a.last_sent IS NULL OR a.last_sent != ?)", now, String(p.date)).toArray();
+      for (const r of rows) {
+        r.token = this.alertRow(r.email);
+        r.sent = this.sql.exec("SELECT pid FROM alert_sent WHERE email = ?", r.email).toArray().map((x) => Number(x.pid));
+        r.watched = this.sql.exec("SELECT uid FROM watch WHERE email = ?", r.email).toArray().map((x) => Number(x.uid));
+      }
+      return reply({ rows });
+    }
+    // After a send: remember the games each member was sent. A member with nothing new still gets
+    // last_sent, so tonight's run doesn't look at them again.
+    if (op === "alerts-sent") {
+      for (const r of p.rows || []) {
+        this.alertRow(r.email);
+        for (const pid of r.pids || []) this.sql.exec("INSERT OR IGNORE INTO alert_sent (email, pid, at) VALUES (?, ?, ?)", r.email, Number(pid), now);
+        this.sql.exec("UPDATE alerts SET last_sent = ?, sends = sends + ? WHERE email = ?", String(p.date), r.pids && r.pids.length ? 1 : 0, r.email);
+      }
+      return reply({ ok: true });
+    }
+    if (op === "alerts-unsub") {
+      const row = this.sql.exec("SELECT email FROM alerts WHERE token = ?", String(p.token)).toArray()[0];
+      if (row) this.sql.exec("UPDATE alerts SET state = 'off' WHERE token = ?", String(p.token));
+      return reply({ ok: !!row });
     }
 
     if (op === "lead-upsert") {
@@ -2202,6 +2380,8 @@ export class Store {
         emails: this.sql.exec("SELECT d.email, d.created_at, d.until, d.source, d.state, d.last_sent, d.sends, s.access_until FROM daily_emails d LEFT JOIN signups s ON s.email = d.email ORDER BY d.created_at DESC LIMIT 200").toArray(),
         discord: this.sql.exec("SELECT email, discord_at, discord_err, access_until FROM signups WHERE discord IS NOT NULL ORDER BY email").toArray(),
         lastPicks: (this.sql.exec("SELECT v FROM kv WHERE k = 'picks_last'").toArray()[0] || {}).v || null,
+        lastAlerts: (this.sql.exec("SELECT v FROM kv WHERE k = 'alerts_last'").toArray()[0] || {}).v || null,
+        alertsOn: (this.sql.exec("SELECT COUNT(*) AS n FROM buybox b JOIN signups u ON u.email = b.email LEFT JOIN alerts a ON a.email = b.email WHERE u.access_until > ? AND (a.state IS NULL OR a.state = 'on')", now).toArray()[0] || {}).n || 0,
       });
     }
 
@@ -2292,6 +2472,8 @@ export class Store {
       this.sql.exec("DELETE FROM credits WHERE referrer = ? OR referred = ?", p.email, p.email);
       this.sql.exec("DELETE FROM watch WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM buybox WHERE email = ?", p.email);
+      this.sql.exec("DELETE FROM alerts WHERE email = ?", p.email);
+      this.sql.exec("DELETE FROM alert_sent WHERE email = ?", p.email);
       this.sql.exec("DELETE FROM lead_sends WHERE email = ?", p.email);
       this.sql.exec("UPDATE leads SET for_email = NULL WHERE for_email = ?", p.email);
       this.sql.exec("UPDATE signups SET referred_by = NULL WHERE referred_by = ?", p.email);
