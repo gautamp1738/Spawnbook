@@ -191,6 +191,53 @@
     </div>
   </section>
 
+  <section id="leftoff" class="sec wrap grid" aria-labelledby="leftoff-h">
+    <div class="c-l stick stack">
+      <h2 id="leftoff-h" class="head" data-reveal>Check these first</h2>
+      <p data-reveal style="--i:1" class="lead" >These scored well enough for the board, but each has one thing a buyer should check before going further.</p>
+      <p data-reveal style="--i:2" class="small muted" >Nothing here is an accusation against the creators.</p>
+    </div>
+    <div class="offlists c-r">
+      <div data-reveal style="--i:1">
+        <h3>Names that reference other brands</h3>
+        <p class="small">Lawyers call unlicensed characters or brands a major red flag in a game sale. We haven't checked whether these are licensed, and some may be through Roblox's License Manager.</p>
+        <ul id="ip-list"></ul>
+      </div>
+      <div data-reveal style="--i:2">
+        <h3>Unusual numbers to check first</h3>
+        <p class="small">Bots and AFK farms can inflate players and play time, and they tend not to vote or favorite. These numbers stand out from the rest of today's pool. There can be ordinary reasons, so ask the creator before pricing.</p>
+        <ul id="flag-list"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="charted" class="sec wrap" aria-labelledby="charted-h">
+    <div class="grid sec-head">
+      <h2 id="charted-h" class="head c-l6" data-reveal>Already charting</h2>
+      <p class="c-r" data-reveal style="--i:1">The 25 biggest games under six months old. Big buyers are more likely to know these already, so they're here for context. Use the column buttons to sort.</p>
+    </div>
+    <div class="table-box">
+      <table class="big">
+        <caption class="sr-only">The 25 biggest games under six months old, with estimated revenue and price</caption>
+        <thead>
+          <tr>
+            <th scope="col">Rank</th>
+            <th scope="col">Game</th>
+            <th scope="col" class="r" data-key="age"><button type="button">Age</button></th>
+            <th scope="col" class="r" data-key="playing" aria-sort="descending"><button type="button">Players</button></th>
+            <th scope="col" class="r" data-key="pace"><button type="button">Visits a day</button></th>
+            <th scope="col" class="r" data-key="like"><button type="button">Rating</button></th>
+            <th scope="col" class="r" data-key="rev"><button type="button">Est. revenue a month</button></th>
+            <th scope="col" class="r" data-key="fair"><button type="button">Est. price now</button></th>
+            <th scope="col" class="r" data-key="lasts"><button type="button">If it holds a year</button></th>
+          </tr>
+        </thead>
+        <tbody id="big-rows"></tbody>
+      </table>
+    </div>
+    <p class="table-more"><button type="button" class="button quiet" id="big-all" aria-expanded="false" aria-controls="big-rows">Show all 25 games</button></p>
+  </section>
+
   <section id="comps" class="sec wrap grid" aria-labelledby="comps-h">
     <div class="c-l stick">
       <h2 id="comps-h" class="head" data-reveal>Hits start small</h2>
@@ -243,53 +290,6 @@
     </div>
   </section>
 
-  <section id="charted" class="sec wrap" aria-labelledby="charted-h">
-    <div class="grid sec-head">
-      <h2 id="charted-h" class="head c-l6" data-reveal>Already charting</h2>
-      <p class="c-r" data-reveal style="--i:1">The 25 biggest games under six months old. Big buyers are more likely to know these already, so they're here for context. Use the column buttons to sort.</p>
-    </div>
-    <div class="table-box">
-      <table class="big">
-        <caption class="sr-only">The 25 biggest games under six months old, with estimated revenue and price</caption>
-        <thead>
-          <tr>
-            <th scope="col">Rank</th>
-            <th scope="col">Game</th>
-            <th scope="col" class="r" data-key="age"><button type="button">Age</button></th>
-            <th scope="col" class="r" data-key="playing" aria-sort="descending"><button type="button">Players</button></th>
-            <th scope="col" class="r" data-key="pace"><button type="button">Visits a day</button></th>
-            <th scope="col" class="r" data-key="like"><button type="button">Rating</button></th>
-            <th scope="col" class="r" data-key="rev"><button type="button">Est. revenue a month</button></th>
-            <th scope="col" class="r" data-key="fair"><button type="button">Est. price now</button></th>
-            <th scope="col" class="r" data-key="lasts"><button type="button">If it holds a year</button></th>
-          </tr>
-        </thead>
-        <tbody id="big-rows"></tbody>
-      </table>
-    </div>
-    <p class="table-more"><button type="button" class="button quiet" id="big-all" aria-expanded="false" aria-controls="big-rows">Show all 25 games</button></p>
-  </section>
-
-  <section id="leftoff" class="sec wrap grid" aria-labelledby="leftoff-h">
-    <div class="c-l stick stack">
-      <h2 id="leftoff-h" class="head" data-reveal>Check these first</h2>
-      <p data-reveal style="--i:1" class="lead" >These scored well enough for the board, but each has one thing a buyer should check before going further.</p>
-      <p data-reveal style="--i:2" class="small muted" >Nothing here is an accusation against the creators.</p>
-    </div>
-    <div class="offlists c-r">
-      <div data-reveal style="--i:1">
-        <h3>Names that reference other brands</h3>
-        <p class="small">Lawyers call unlicensed characters or brands a major red flag in a game sale. We haven't checked whether these are licensed, and some may be through Roblox's License Manager.</p>
-        <ul id="ip-list"></ul>
-      </div>
-      <div data-reveal style="--i:2">
-        <h3>Unusual numbers to check first</h3>
-        <p class="small">Bots and AFK farms can inflate players and play time, and they tend not to vote or favorite. These numbers stand out from the rest of today's pool. There can be ordinary reasons, so ask the creator before pricing.</p>
-        <ul id="flag-list"></ul>
-      </div>
-    </div>
-  </section>
-
   <section id="record" class="band inv" aria-labelledby="record-h">
     <div class="wrap grid">
       <div class="c-l stack">
@@ -304,178 +304,7 @@
     </div>
   </section>
 
-  <section id="value" class="sec wrap value" aria-labelledby="value-h">
-    <h2 id="value-h" data-reveal><label for="vq">Value your game. Type what it earned in the last 30 days, in Robux, visits or dollars.</label></h2>
-    <div class="vq-line" data-ui>
-      <input id="vq" type="text" inputmode="text" autocomplete="off" spellcheck="false" value="2,500,000 Robux" aria-describedby="vq-help">
-      <span class="caret" aria-hidden="true"></span>
-      <span class="vq-measure" aria-hidden="true"></span>
-    </div>
-    <p class="sr-only" id="vq-help">For example 2,500,000 Robux, 40 million visits or $9,500. The estimate below updates as you type.</p>
-    <div class="examples">
-      <span class="lbl">Try</span>
-      <button type="button" data-q="800,000 Robux">800,000 Robux</button>
-      <button type="button" data-q="40 million visits">40 million visits</button>
-      <button type="button" data-q="$9,500">$9,500</button>
-    </div>
-    <div class="grid vq-body">
-      <div class="answer c-l6" data-ui>
-        <div class="a-out" aria-live="polite">
-          <span class="a-cap">Estimated price now</span>
-          <span class="a-range" id="v-range">$0</span>
-          <span class="a-line" id="v-line"></span>
-          <span id="v-lasts"></span>
-        </div>
-        <div class="a-fade">
-          <span class="lbl" id="fade-lbl">How is it doing?</span>
-          <div class="seg" role="group" aria-labelledby="fade-lbl">
-            <button type="button" id="f-rocket" aria-pressed="false">Rising: trend, sim or copy game</button>
-            <button type="button" id="f-stair" aria-pressed="true">Rising: competitive, social or fishing</button>
-            <button type="button" id="f-measured" aria-pressed="false">I know how fast it's losing players</button>
-          </div>
-          <div class="decline-field" id="wrap-decline" hidden>
-            <label for="decline">Players lost per month</label>
-            <input id="decline" inputmode="decimal" value="15%" autocomplete="off" aria-describedby="decline-help">
-            <span class="help" id="decline-help">For example, 15%</span>
-          </div>
-        </div>
-      </div>
-      <div class="movers c-r5" data-reveal style="--i:1">
-        <h3>What moves a game up its range</h3>
-        <p>Buyers pay for staying power. Voldex has said it buys established communities because marketing can't cheaply rebuild them, and it moved Brookhaven to weekly updates.</p>
-        <ul>
-          <li>Each update leaves a higher low point than the last</li>
-          <li>Players come back on many days, not one long session</li>
-          <li>Ownership sits in a group, with IP assignments from every contributor</li>
-          <li>No borrowed characters, brands or music</li>
-          <li>Kids and Select audiences already unlocked</li>
-          <li>Most traffic comes from Roblox recommendations, not ads</li>
-        </ul>
-        <p class="small muted">A starting range, not an appraisal. Everything stays in your browser. Robux convert at the DevEx rate, $0.0038 each. Visits use a rule of thumb, about $0.008 of developer revenue each, so they give a wide range. We cap the price at 12 months of revenue even for durable games, because buyers discount for risk.</p>
-        <p><a class="link" href="#requests" data-tab="tab-sell">Want a real valuation? Send us your game</a></p>
-      </div>
-    </div>
-  </section>
 
-  <section id="requests" class="sec wrap grid" aria-labelledby="req-h">
-    <div class="c-l stick">
-      <h2 id="req-h" class="head" data-reveal>Get the report or a valuation</h2>
-      <div class="req-notes">
-        <p data-reveal style="--i:1">This page doesn't send or store anything. Fill in a form, copy the message it writes, and send it to us yourself. Only include what's asked. Never send passwords, account cookies or payment card numbers.</p>
-        <p data-reveal style="--i:2" class="small muted">We value developers' games for free and sell a report to buyers. We never share a developer's private numbers without written permission, and we never take a fee from both sides of a deal.</p>
-        <div class="mailline" data-reveal style="--i:3">
-          <span>Send it to <span class="addr" id="mail-a">gautamuprasanna@gmail.com</span></span>
-          <button type="button" class="button quiet" id="mail-copy">Copy address</button>
-          <span class="status small" id="mail-status" aria-live="polite"></span>
-        </div>
-        <p class="small muted" data-reveal style="--i:3">Or reply in the thread where you got this link.</p>
-      </div>
-    </div>
-    <div class="c-r" data-reveal style="--i:1">
-      <div class="tabs" role="tablist" aria-label="Request type">
-        <button type="button" role="tab" id="tab-weekly" aria-selected="true" aria-controls="weekly" tabindex="0">Get the weekly report</button>
-        <button type="button" role="tab" id="tab-sell" aria-selected="false" aria-controls="sell" tabindex="-1">Get my game valued</button>
-      </div>
-
-      <form class="form" id="weekly" role="tabpanel" aria-labelledby="tab-weekly" novalidate>
-        <p class="hint">For studios and investors buying games. Weekly: the prospect board, comps, price ranges and red flags. Your first issue is free and doesn't start a subscription. After that, the pilot price is $500 a month, billed monthly until you cancel. See the <a class="link" href="terms.html#subscription">Terms</a> and <a class="link" href="refunds.html">Refund Policy</a>.</p>
-        <div class="fields">
-          <div class="field">
-            <label for="b-name">Your name <span class="opt">(required)</span></label>
-            <input id="b-name" autocomplete="name" aria-required="true">
-          </div>
-          <div class="field">
-            <label for="b-co">Studio or fund <span class="opt">(required)</span></label>
-            <input id="b-co" autocomplete="organization" aria-required="true">
-          </div>
-          <div class="field">
-            <label for="b-genres">Genres you buy <span class="opt">(optional)</span></label>
-            <input id="b-genres" placeholder="Tycoon, survival, sports" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="b-size">Typical deal size <span class="opt">(optional)</span></label>
-            <select id="b-size">
-              <option value="">Prefer not to say</option>
-              <option>Under $100K</option>
-              <option>$100K to $1M</option>
-              <option>$1M to $10M</option>
-              <option>$10M+</option>
-            </select>
-          </div>
-          <div class="field full">
-            <label for="b-contact">Email or Discord name <span class="opt">(required)</span></label>
-            <input id="b-contact" autocomplete="email" aria-required="true">
-          </div>
-          <label class="consent full" for="b-agree">
-            <input type="checkbox" id="b-agree" aria-required="true">
-            <span>I'm 18 or older. I agree that Spawnbook can use these details to send me the free issue and reply to me, as described in the <a class="link" href="privacy.html">Privacy Policy</a>, and I accept the <a class="link" href="terms.html">Terms</a>.</span>
-          </label>
-        </div>
-        <div class="form-row">
-          <button class="button" type="submit">Write my message</button>
-          <span class="err" id="b-err" role="alert"></span>
-        </div>
-        <div class="out" id="b-out" hidden>
-          <label class="small" for="b-msg">Your message. Copy it and send it to us.</label>
-          <textarea id="b-msg" readonly></textarea>
-          <div class="rowline"><button class="button quiet" type="button" id="b-copy">Copy message</button><span class="status" id="b-status" aria-live="polite"></span></div>
-        </div>
-      </form>
-
-      <form class="form" id="sell" role="tabpanel" aria-labelledby="tab-sell" novalidate hidden>
-        <p class="hint">For developers. We reply with a value range and what would raise it. Free.</p>
-        <div class="fields">
-          <div class="field full">
-            <label for="s-link">Game link <span class="opt">(required)</span></label>
-            <input id="s-link" type="url" placeholder="https://www.roblox.com/games/…" autocomplete="off" aria-required="true">
-          </div>
-          <div class="field">
-            <label for="s-role">Your role</label>
-            <select id="s-role">
-              <option>Owner</option>
-              <option>Co-owner</option>
-              <option>Developer on the team</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="s-age">Your age</label>
-            <select id="s-age" aria-describedby="s-age-help">
-              <option value="adult">18 or older</option>
-              <option value="teen">13 to 17</option>
-              <option value="child">Under 13</option>
-            </select>
-            <span class="help" id="s-age-help">Under 18, a parent or guardian has to send this with you.</span>
-          </div>
-          <div class="field">
-            <label for="s-robux">Robux, last 30 days <span class="opt">(optional)</span></label>
-            <input id="s-robux" inputmode="numeric" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="s-contact">Discord name or email <span class="opt">(required)</span></label>
-            <input id="s-contact" autocomplete="off" aria-required="true">
-          </div>
-          <div class="field full">
-            <label for="s-notes">Anything else <span class="opt">(optional)</span></label>
-            <textarea id="s-notes" rows="2" placeholder="Team size, who built what, any offers so far" aria-describedby="s-notes-help"></textarea>
-            <span class="help" id="s-notes-help">Don't include other people's personal details.</span>
-          </div>
-          <label class="consent full" for="s-agree">
-            <input type="checkbox" id="s-agree" aria-required="true">
-            <span>I agree that Spawnbook can use these details to reply to me, as described in the <a class="link" href="privacy.html">Privacy Policy</a>, and I accept the <a class="link" href="terms.html">Terms</a>.</span>
-          </label>
-        </div>
-        <div class="form-row">
-          <button class="button" type="submit">Write my message</button>
-          <span class="err" id="s-err" role="alert"></span>
-        </div>
-        <div class="out" id="s-out" hidden>
-          <label class="small" for="s-msg">Your message. Copy it and send it to us.</label>
-          <textarea id="s-msg" readonly></textarea>
-          <div class="rowline"><button class="button quiet" type="button" id="s-copy">Copy message</button><span class="status" id="s-status" aria-live="polite"></span></div>
-        </div>
-      </form>
-    </div>
-  </section>
 
   <section id="sale" class="sec wrap" aria-labelledby="sale-h">
     <div class="grid sec-head">
@@ -623,31 +452,7 @@
       else fallback();
     } catch (e) { fallback(); }
   }
-  $("mail-copy").addEventListener("click", function () { copyText(MAIL, $("mail-status")); });
   $("foot-copy").addEventListener("click", function () { copyText(MAIL, $("foot-status")); });
-
-  // ---------- request tabs ----------
-  var tabs = [$("tab-weekly"), $("tab-sell")];
-  function selectTab(t, focus) {
-    tabs.forEach(function (x) {
-      var on = x === t;
-      x.setAttribute("aria-selected", on ? "true" : "false");
-      x.tabIndex = on ? 0 : -1;
-      $(x.getAttribute("aria-controls")).hidden = !on;
-    });
-    if (focus) t.focus();
-  }
-  tabs.forEach(function (t, i) {
-    t.addEventListener("click", function () { selectTab(t); });
-    t.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); selectTab(tabs[(i + 1) % 2], true); }
-      if (e.key === "Home") { e.preventDefault(); selectTab(tabs[0], true); }
-      if (e.key === "End") { e.preventDefault(); selectTab(tabs[1], true); }
-    });
-  });
-  document.querySelectorAll("[data-tab]").forEach(function (a) {
-    a.addEventListener("click", function () { selectTab($(a.getAttribute("data-tab"))); });
-  });
 
   // ---------- top bar: hides while you read down, comes back on any scroll up ----------
   var bar = document.querySelector(".bar");
@@ -1789,126 +1594,6 @@
   COMPS.forEach(function (c) { c.pts.forEach(function (p) { var tr = el("tr"); tr.appendChild(el("td", null, c.name)); tr.appendChild(el("td", "r", String(p[0]))); tr.appendChild(el("td", "r", commas(p[1]))); tr.appendChild(el("td", null, p[2])); ct.appendChild(tr); }); });
   byScore.forEach(function (p) { var tr = el("tr"); tr.appendChild(el("td", null, p.name)); tr.appendChild(el("td", "r", String(p.age))); tr.appendChild(el("td", "r", commas(p.playing))); tr.appendChild(el("td", null, "Today, score " + p.score)); ct.appendChild(tr); });
 
-  // ---------- value: the headline you can type ----------
-  var fade = "stair";
-  var FADES = { rocket: "f-rocket", stair: "f-stair", measured: "f-measured" };
-  function parseQuery(str) {
-    var t = String(str || "").toLowerCase();
-    var mm = t.match(/([\d][\d,]*(?:\.\d+)?|\.\d+)\s*(k|thousand|m|mil|million|b|billion)?\b/);
-    if (!mm) return null;
-    var n = parseFloat(mm[1].replace(/,/g, ""));
-    var mul = { k: 1e3, thousand: 1e3, m: 1e6, mil: 1e6, million: 1e6, b: 1e9, billion: 1e9 }[mm[2]] || 1;
-    n = n * mul;
-    if (!(n > 0)) return null;
-    var kind = /visit|play/.test(t) ? "visits" : (/\$|usd|dollar/.test(t) ? "usd" : "robux");
-    return { n: n, kind: kind };
-  }
-  function calc() {
-    var q = parseQuery($("vq").value);
-    $("wrap-decline").hidden = fade !== "measured";
-    if (!q) { $("v-range").textContent = "Type a number"; $("v-line").textContent = "Try 2,500,000 Robux, 40 million visits or $9,500."; $("v-lasts").textContent = ""; return; }
-    // Same model as the board (public/valuation.js), on the revenue typed in.
-    var o = { shape: fade === "rocket" ? "rocket" : "staircase" };
-    if (q.kind === "robux") o.seller = q.n * SBV.DEVEX;
-    else if (q.kind === "usd") o.seller = q.n;
-    else o.visitsMonth = q.n;
-    if (fade === "measured") {
-      var d = parseNum($("decline").value) / 100;
-      if (!(d > 0)) { $("v-range").textContent = "Enter a decline"; $("v-line").textContent = "Type the share of players it loses in a month, like 15%."; $("v-lasts").textContent = ""; return; }
-      o.decay = d;
-    }
-    var v = SBV.value(o, null), mo = Math.round(v.months.mid * 10) / 10;
-    $("v-range").textContent = money(v.lo) + "–" + money(v.hi);
-    var basis = q.kind === "robux" ? commas(q.n) + " Robux is about " + money(v.rev.mid) + " at the DevEx rate. " : q.kind === "visits" ? short(q.n) + " visits is roughly " + money(v.rev.mid) + " of revenue, a rule of thumb, so the range is wide. Robux earned gives a much tighter one. " : "";
-    $("v-line").textContent = basis + "Middle about " + money(v.mid) + ": " + money(v.rev.mid) + " a month × " + mo + " months" + (fade === "measured" ? ", from its decline" : fade === "rocket" ? " (fast-rise games sell for 1 to 2)" : " (slow-build games sell for 3 to 6)") + ".";
-    $("v-lasts").textContent = "If it holds its players for a year: " + money(v.year);
-  }
-  function placeCaret() {
-    var inp = $("vq"), meas = document.querySelector(".vq-measure"), caret = document.querySelector(".vq-line .caret");
-    meas.textContent = inp.value || " ";
-    caret.style.left = Math.min(meas.offsetWidth + 6, inp.clientWidth - 8) + "px";
-  }
-  Object.keys(FADES).forEach(function (k) {
-    $(FADES[k]).addEventListener("click", function () {
-      fade = k;
-      Object.keys(FADES).forEach(function (j) { $(FADES[j]).setAttribute("aria-pressed", j === k ? "true" : "false"); });
-      calc();
-    });
-  });
-  $("vq").addEventListener("input", function () { calc(); placeCaret(); });
-  $("decline").addEventListener("input", calc);
-  document.querySelectorAll(".examples [data-q]").forEach(function (b) {
-    b.addEventListener("click", function () { $("vq").value = b.getAttribute("data-q"); calc(); placeCaret(); });
-  });
-  calc();
-  placeCaret();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeCaret);
-  window.addEventListener("resize", placeCaret);
-
-  // ---------- requests ----------
-  function copier(btnId, areaId, statusId) {
-    $(btnId).addEventListener("click", function () { copyText($(areaId).value, $(statusId), $(areaId)); });
-  }
-  copier("s-copy", "s-msg", "s-status");
-  copier("b-copy", "b-msg", "b-status");
-  function fail(errId, outId, fieldId, msg) {
-    $(errId).textContent = msg;
-    $(outId).hidden = true;
-    var f = $(fieldId);
-    if (f) { f.setAttribute("aria-invalid", "true"); f.focus(); }
-  }
-  function clearInvalid(form) { form.querySelectorAll("[aria-invalid]").forEach(function (x) { x.removeAttribute("aria-invalid"); }); }
-
-  $("sell").addEventListener("submit", function (e) {
-    e.preventDefault();
-    clearInvalid(this);
-    var link = $("s-link").value.trim(), contact = $("s-contact").value.trim(), age = $("s-age").value;
-    if (!/^https?:\/\/(www\.)?roblox\.com\/games\/\d+/i.test(link)) return fail("s-err", "s-out", "s-link", "Paste the game's roblox.com/games/ link.");
-    if (age === "child") return fail("s-err", "s-out", "s-age", "We can't take requests from anyone under 13. A parent or guardian can contact us instead.");
-    if (!contact) return fail("s-err", "s-out", "s-contact", "Add a Discord name or email so we can reply.");
-    if (!$("s-agree").checked) return fail("s-err", "s-out", "s-agree", "Check the box to agree before writing your message.");
-    $("s-err").textContent = "";
-    var robux = parseNum($("s-robux").value);
-    var lines = [
-      "Valuation request (Spawnbook)",
-      "Game: " + link,
-      "My role: " + $("s-role").value,
-      "Age: " + (age === "adult" ? "18 or older" : "13 to 17. My parent or guardian is sending this with me"),
-      "Robux earned, last 30 days: " + (robux ? commas(robux) : "not shared"),
-      "Contact: " + contact
-    ];
-    var notes = $("s-notes").value.trim();
-    if (notes) lines.push("Notes: " + notes);
-    lines.push("I agree to the Spawnbook Terms and Privacy Policy.");
-    $("s-msg").value = lines.join("\n");
-    $("s-status").textContent = "";
-    $("s-out").hidden = false;
-    $("s-msg").focus();
-  });
-
-  $("weekly").addEventListener("submit", function (e) {
-    e.preventDefault();
-    clearInvalid(this);
-    var name = $("b-name").value.trim(), co = $("b-co").value.trim(), contact = $("b-contact").value.trim();
-    if (!name) return fail("b-err", "b-out", "b-name", "Add your name.");
-    if (!co) return fail("b-err", "b-out", "b-co", "Add your studio or fund.");
-    if (!contact) return fail("b-err", "b-out", "b-contact", "Add an email or Discord name so we can send the issue.");
-    if (!$("b-agree").checked) return fail("b-err", "b-out", "b-agree", "Check the box to agree before writing your message.");
-    $("b-err").textContent = "";
-    var lines = [
-      "Weekly report request (Spawnbook)",
-      "Name: " + name,
-      "Studio or fund: " + co,
-      "Genres: " + ($("b-genres").value.trim() || "open"),
-      "Typical deal size: " + ($("b-size").value || "not shared"),
-      "Contact: " + contact,
-      "I'd like the free first issue. I'm 18 or older and agree to the Spawnbook Terms and Privacy Policy."
-    ];
-    $("b-msg").value = lines.join("\n");
-    $("b-status").textContent = "";
-    $("b-out").hidden = false;
-    $("b-msg").focus();
-  });
 })();
 </script>
 
