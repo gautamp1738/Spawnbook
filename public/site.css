@@ -740,6 +740,25 @@ th.r, td.r, .mini .r { text-align: right; }
 .alert-switch .status:empty { display: none; }
 .verified-list { gap: 0.9rem; max-width: 62ch; }
 .sell-steps { display: grid; gap: 0.75rem; padding-left: 1.25rem; margin: 0; max-width: 60ch; list-style: decimal; }
+
+/* ---------- /sell: the owner proves it's their game ---------- */
+.verify { display: grid; gap: 1.25rem; }
+.v-title { font-size: var(--step-lead); line-height: 1.25; }
+.v-steps { display: grid; gap: 1rem; margin: 0; padding: 0; list-style: none; counter-reset: v; }
+.v-step { counter-increment: v; position: relative; display: grid; gap: 0.6rem; background: var(--surface); padding: 1.25rem 1.25rem 1.25rem 3.75rem; transition: opacity var(--t-hover) ease; }
+.v-step::before { content: counter(v); position: absolute; left: 1.25rem; top: 1.15rem; display: grid; place-items: center; width: 1.75rem; height: 1.75rem; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: var(--step-small); }
+.v-step h4 { font-size: 1.0625rem; line-height: 1.3; }
+.v-step.is-done::before { content: ""; background: var(--ink); }
+.v-step.is-done::after { content: ""; position: absolute; left: calc(1.25rem + 0.64rem); top: calc(1.15rem + 0.36rem); width: 0.45rem; height: 0.8rem; border: solid var(--bg); border-width: 0 0.17rem 0.17rem 0; transform: rotate(45deg); }
+.v-step.is-off { opacity: 0.55; }
+.v-code-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+.v-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.08em; background: var(--bg); padding: 0.35rem 0.75rem; user-select: all; }
+.v-step .form-row { margin-top: 0.25rem; }
+.v-proof.form { background: none; padding: 0; margin: 0; gap: 0.75rem; }
+.v-proof .field input { background: var(--bg); }
+.v-step .button.quiet { background: var(--bg); }
+.v-step .status:empty { display: none; }
+.v-step .rowline { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
 .age-set .consent input { border-radius: 50%; }
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 

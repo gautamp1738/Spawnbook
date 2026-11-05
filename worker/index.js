@@ -50,7 +50,11 @@
 //                           open a first message to a game's owner. Recorded for /admin/activity
 //   GET  /api/leads         the verified leads sent to the signed-in buyer
 //   POST /api/leads         { id, status, note } as JSON: the buyer's own progress on a lead
-//   POST /api/sell          the public "Open to selling?" form on /sell, from game owners
+//   POST /api/sell          the public "Open to selling?" form on /sell, from game owners. Answers
+//                           with a private link (/sell#t=...) and a code for the game's description
+//   GET  /api/sell/status?t=  where that owner is: code found in the description, recording sent
+//   POST /api/sell/check    { t }: look for the code in the game's description on Roblox now
+//   POST /api/sell/proof    { t, url }: the owner's Creator Dashboard recording, once the code checks out
 //   /admin                  accounts and access, behind the ADMIN_KEY secret (off until it's set)
 //   /admin/leads            finding games for each buyer, asking owners, verifying and sending leads
 //
@@ -109,6 +113,7 @@ export default {
       else if (path === "/api/find") res = await findApi(request, env, ctx);
       else if (path === "/api/leads") res = await myLeads(request, env);
       else if (path === "/api/sell") res = await sellForm(request, env);
+      else if (path.startsWith("/api/sell/")) res = await sellSteps(request, env, url, path);
       else if (path === "/api/lookup") res = await lookupApi(request, env, url, ctx);
       else if (path === "/api/daily-email") res = await dailyEmailApi(request, env, url, ctx);
       else if (path === "/api/discord") res = await discordApi(request, env, url, ctx);
@@ -177,6 +182,16 @@ function digestText(d, origin) {
   if (d.offers.length) {
     lines.push("Owners who filled in the selling form");
     for (const o of d.offers) lines.push("- " + o.name + ": contact " + o.contact + (o.asking ? ", asking " + o.asking : "") + ". " + lead(o.id));
+    lines.push("");
+  }
+  if (d.confirmed && d.confirmed.length) {
+    lines.push("Owners who proved the game is theirs (their code is in its description)");
+    for (const c of d.confirmed) lines.push("- " + c.name + (c.proof_at ? ", recording sent too" : ", recording not sent yet") + ". " + lead(c.id));
+    lines.push("");
+  }
+  if (d.recordings && d.recordings.length) {
+    lines.push("Dashboard recordings to watch");
+    for (const c of d.recordings) lines.push("- " + c.name + ": " + c.proof + " " + lead(c.id));
     lines.push("");
   }
   if (d.changed.length) {
@@ -1132,22 +1147,94 @@ async function sellForm(request, env) {
   const c = info.creator || {};
   const owner = await ownerOf(c.type, c.id, c.name);
   const name = String(info.name || "").slice(0, 120);
+  const token = randomToken(), code = verifyCode();
   const r = await call(env, "offer", {
     uid, pid: info.pid || pid, name, creator: String(c.name || "").slice(0, 120), ctype: c.type || null, cid: Number(c.id) || null,
     owner_user: owner ? owner.name : null, owner_user_id: owner ? owner.id : null,
     contact, age, deal, asking: asking ? asking : "",
     offer: JSON.stringify({ contact, role, deal, asking, notes, age }),
+    token, code,
   });
   if (r.limited) return back("busy");
-  if (r.fresh) {
-    const link = new URL(request.url).origin + "/admin/leads?id=" + r.id + "#lead-" + r.id;
+  // Sent for this game in the last 10 minutes already: no second link.
+  if (!r.fresh) return wantsJson ? json({ ok: true, recent: true }) : redirect("/sell?sent=1#offer");
+  const origin = new URL(request.url).origin;
+  const mine = origin + "/sell#t=" + token;
+  const link = origin + "/admin/leads?id=" + r.id + "#lead-" + r.id;
+  await sendEmail(env, {
+    to: OWNER_EMAIL,
+    subject: "Open to selling: " + (name || "a Roblox game"),
+    text: "Someone filled in the selling form.\n\nGame: " + (name || "Unknown") + " (" + gameUrl(info.pid || pid) + ")\nPlayers now: " + commas(info.players) + "\nContact: " + contact + "\nRole: " + role + "\nWould sell: " + DEALS[deal] + "\nAsking: " + (asking || "Not given") + "\nAge: " + AGES[age] + "\nNotes: " + (notes || "None") + "\n\nWe've asked them to put " + code + " in the game's description to show it's theirs, then send a recording of their Creator Dashboard. You'll get an email when each one comes in. Their lead:\n" + link,
+  });
+  // An owner who gave an email gets their link and code too, so closing the page doesn't lose them.
+  if (validEmail(contact.toLowerCase())) {
     await sendEmail(env, {
-      to: OWNER_EMAIL,
-      subject: "Open to selling: " + (name || "a Roblox game"),
-      text: "Someone filled in the selling form.\n\nGame: " + (name || "Unknown") + " (" + gameUrl(info.pid || pid) + ")\nPlayers now: " + commas(info.players) + "\nContact: " + contact + "\nRole: " + role + "\nWould sell: " + DEALS[deal] + "\nAsking: " + (asking || "Not given") + "\nAge: " + AGES[age] + "\nNotes: " + (notes || "None") + "\n\nCheck it on Roblox before you reply, and ask for their Creator Dashboard recording:\n" + link,
+      to: contact,
+      subject: "Show " + (name || "your game") + " is yours: your Spawnbook code",
+      text: ["Hi,", "", "Thanks for telling us about " + (name || "your game") + ". Buyers only see games whose owner we've confirmed, so there are two quick steps:", "",
+        "1. Put this code anywhere in your game's description on Roblox and save: " + code, "   You can take it out again once we've seen it.",
+        "2. Send a short screen recording of your Creator Dashboard (the last 30 days of Robux and players).", "",
+        "Do both from your private link: " + mine, "",
+        "We only pass your contact and numbers to a buyer after you say yes. If you didn't fill in our form, ignore this email.", "",
+        "Gautam Prasanna", "Spawnbook, spawnbook.com"].join("\n"),
     });
   }
-  return done();
+  return wantsJson ? json({ ok: true, t: token, code }) : redirect("/sell?sent=1#t=" + token);
+}
+
+// A code for an owner to paste into their game's description. Letters only, without ones that pass
+// for digits, so Roblox's text filter doesn't turn it into ####.
+function verifyCode() {
+  const A = "ACDEFGHJKMNPQRTUVWXY";
+  const b = new Uint8Array(6);
+  crypto.getRandomValues(b);
+  return "SB-" + Array.from(b, (x) => A[x % A.length]).join("");
+}
+const codeIn = (text, code) => String(text || "").toUpperCase().replace(/[^A-Z]/g, "").includes(String(code || "").toUpperCase().replace(/[^A-Z]/g, ""));
+
+// The owner's private steps after the form: check the code, then send the recording.
+async function sellSteps(request, env, url, path) {
+  let b = {};
+  if (request.method === "POST") b = await request.json().catch(() => ({}));
+  const t = String(request.method === "POST" ? b.t || "" : url.searchParams.get("t") || "");
+  if (!/^[0-9a-f]{64}$/.test(t)) return json({ error: "link" }, 404);
+  const { lead } = await call(env, "seller-get", { token: t });
+  if (!lead) return json({ error: "link" }, 404);
+  const state = (extra) => json(Object.assign({ name: lead.name, pid: lead.pid, code: lead.verify_code, confirmed: lead.owner_verified_at || null, proof: !!(lead.proof && lead.proof_at), proofAt: lead.proof_at || null }, extra || {}));
+  if (path === "/api/sell/status" && request.method === "GET") return state();
+  if (request.method !== "POST") return json({ error: "method" }, 405);
+  const origin = url.origin;
+  const adminLink = origin + "/admin/leads?id=" + lead.id + "#lead-" + lead.id;
+
+  if (path === "/api/sell/check") {
+    if (lead.owner_verified_at) return state();
+    if (lead.check_at && Date.now() - lead.check_at < 10e3) return state({ error: "wait" });
+    let g = null;
+    try {
+      const r = await fetch("https://games.roblox.com/v1/games?universeIds=" + Number(lead.uid), Object.assign({}, ROBLOX, withTimeout(8000)));
+      if (r.ok) g = ((await r.json()).data || [])[0] || null;
+    } catch (e) { g = null; }
+    if (!g) { await call(env, "seller-checked", { token: t, found: false }); return state({ error: "roblox" }); }
+    // The code only counts while the game has the owner it had when they filled in the form.
+    if (lead.creator_id && g.creator && Number(g.creator.id) !== Number(lead.creator_id)) { await call(env, "seller-checked", { token: t, found: false }); return state({ error: "owner" }); }
+    const found = codeIn(g.description, lead.verify_code);
+    const r = await call(env, "seller-checked", { token: t, found });
+    if (!found) return state({ error: "missing" });
+    await sendEmail(env, { to: OWNER_EMAIL, subject: "Owner confirmed: " + (lead.name || "a game"), text: "The owner of " + (lead.name || "a game") + " (" + gameUrl(lead.pid) + ") put " + lead.verify_code + " in its description, so whoever filled in the form controls the game on Roblox.\n\nNext they'll send their Creator Dashboard recording. Their lead:\n" + adminLink });
+    return json({ name: lead.name, pid: lead.pid, code: lead.verify_code, confirmed: r.at, proof: !!(lead.proof && lead.proof_at), proofAt: lead.proof_at || null });
+  }
+
+  if (path === "/api/sell/proof") {
+    if (!lead.owner_verified_at) return state({ error: "first" });
+    const link = String(b.url || "").trim();
+    let u = null;
+    try { u = new URL(link); } catch (e) { u = null; }
+    if (!u || u.protocol !== "https:" || link.length > 500) return state({ error: "url" });
+    await call(env, "seller-proof", { token: t, url: link });
+    await sendEmail(env, { to: OWNER_EMAIL, subject: "Dashboard recording: " + (lead.name || "a game"), text: "The confirmed owner of " + (lead.name || "a game") + " sent their Creator Dashboard recording:\n" + link + "\n\nWatch it, check Robux and players against the public numbers, fill in what you checked and mark it Verified:\n" + adminLink });
+    return json({ name: lead.name, pid: lead.pid, code: lead.verify_code, confirmed: lead.owner_verified_at, proof: true, proofAt: Date.now() });
+  }
+  return json({ error: "path" }, 404);
 }
 
 // ---------- the board ----------
@@ -1562,11 +1649,24 @@ function matchGames(HX, box) {
     for (const x of r) { if (x[0] <= now[0] - 7) back = x; }
     if (!back && r[0] && r[0][0] <= now[0] - 3) back = r[0];
     const change = back && back[1] > 0 ? (players - back[1]) / back[1] : null;
-    out.push({ uid: Number(uid), name: g[0], pid: g[1], genre: g[2], genre2: g[3], creator: g[4], ctype: g[5], cid: g[6], age, players, visits, change, since: back ? HX.dates[back[0]] : null });
+    const peak = r.reduce((m, x) => Math.max(m, x[1] || 0), 0);
+    out.push({ uid: Number(uid), name: g[0], pid: g[1], genre: g[2], genre2: g[3], creator: g[4], ctype: g[5], cid: g[6], age, players, visits, change, since: back ? HX.dates[back[0]] : null, signals: sellSignals({ players, peak, change, age, ctype: g[5] }) });
   }
   out.sort((a, b) => (b.change == null ? -9 : b.change) - (a.change == null ? -9 : a.change) || b.players - a.players);
   return out.slice(0, 60);
 }
+
+// Why an owner might sell: signs that cashing out could appeal to them. None of these says the game
+// is bad; they're a way to choose whom to ask first.
+function sellSignals(g) {
+  const out = [];
+  if (g.peak > 0 && g.players / g.peak <= 0.7) out.push("players down " + Math.round((1 - g.players / g.peak) * 100) + "% from their peak");
+  if (g.change != null && g.change <= -0.15) out.push("lost " + Math.round(-g.change * 100) + "% of players in a week");
+  else if (g.age != null && g.age >= 45 && g.change != null && Math.abs(g.change) < 0.1) out.push("growth has stalled");
+  if (g.ctype === "User") out.push("solo developer");
+  return out;
+}
+const signalsOf = (l) => { try { return l.sell_signals ? JSON.parse(l.sell_signals) : []; } catch (e) { return []; } };
 
 const LEAD_SCRIPT = `
 document.querySelectorAll("[data-copy]").forEach(function (b) {
@@ -1700,10 +1800,10 @@ async function matchPage(env, url) {
       : `<form class="inline" method="post" action="/admin/leads/new"><input type="hidden" name="uid" value="${g.uid}"><input type="hidden" name="pid" value="${esc(g.pid)}"><input type="hidden" name="name" value="${esc(g.name)}"><input type="hidden" name="creator" value="${esc(g.creator)}"><input type="hidden" name="ctype" value="${esc(g.ctype)}"><input type="hidden" name="cid" value="${esc(g.cid)}"><input type="hidden" name="for" value="${esc(email)}"><button class="button" type="submit">Start a lead</button></form>`;
     const ch = g.change == null ? "–" : (g.change > 0 ? "+" : "") + Math.round(g.change * 100) + "%";
     const owner = creatorUrl(g.ctype, g.cid);
-    return `<tr><td><a class="link" href="${esc(gameUrl(g.pid))}" target="_blank" rel="noopener">${esc(g.name)}</a><span class="sub">${esc(g.genre2 || g.genre || "")}</span></td><td>${g.age == null ? "–" : commas(g.age) + " days"}</td><td class="r">${commas(g.players)}</td><td class="r">${esc(ch)}${g.since ? `<span class="sub">since ${esc(shortDay(Date.parse(g.since) + 12 * 3600e3))}</span>` : ""}</td><td class="r">${commas(g.visits)}</td><td>${owner ? `<a class="link" href="${esc(owner)}" target="_blank" rel="noopener">${esc(g.creator || "Owner")}</a>` : esc(g.creator || "")}<span class="sub">${esc(g.ctype || "")}</span></td><td>${action}</td></tr>`;
+    return `<tr><td><a class="link" href="${esc(gameUrl(g.pid))}" target="_blank" rel="noopener">${esc(g.name)}</a><span class="sub">${esc(g.genre2 || g.genre || "")}</span></td><td>${g.age == null ? "–" : commas(g.age) + " days"}</td><td class="r">${commas(g.players)}</td><td class="r">${esc(ch)}${g.since ? `<span class="sub">since ${esc(shortDay(Date.parse(g.since) + 12 * 3600e3))}</span>` : ""}</td><td class="r">${commas(g.visits)}</td><td>${owner ? `<a class="link" href="${esc(owner)}" target="_blank" rel="noopener">${esc(g.creator || "Owner")}</a>` : esc(g.creator || "")}<span class="sub">${esc(g.ctype || "")}</span></td><td>${g.signals.length ? esc(g.signals.join(", ")) : "–"}</td><td>${action}</td></tr>`;
   }).join("");
   const table = found.length
-    ? `<div class="table-box"><table><thead><tr><th>Game</th><th>Age</th><th>Players at the last reading</th><th>Change in players</th><th>Visits</th><th>Owner on Roblox</th><th><span class="sr-only">Action</span></th></tr></thead><tbody>${rows}</tbody></table></div>`
+    ? `<div class="table-box"><table><thead><tr><th>Game</th><th>Age</th><th>Players at the last reading</th><th>Change in players</th><th>Visits</th><th>Owner on Roblox</th><th>Might sell because</th><th><span class="sr-only">Action</span></th></tr></thead><tbody>${rows}</tbody></table></div>`
     : `<p>No game in today's history fits this yet. The history covers games that have reached 300 players or been on the board, so very small games won't show up here. Add those by link on the leads page.</p>`;
   return page("Find games", `${adminNav("leads")}<h1 class="head">Games for ${esc(email)}</h1><p><strong>What they buy:</strong> ${esc(boxSummary(box))}.${box.notes ? " " + esc(box.notes) : ""}</p><p class="small muted">From the daily reading on ${esc(shortDay(Date.parse(HX.dates[HX.dates.length - 1]) + 12 * 3600e3))}, fastest-growing first. Revenue isn't public, so check it against their minimum when the owner sends their dashboard. Start a lead to get a message you can send the owner.</p>${table}${back}`);
 }
@@ -1736,6 +1836,8 @@ async function leadsPage(env, url) {
     const parts = [];
     if (today.found.length) parts.push(`<h3>New games for your buyers</h3><ul class="dlist">${today.found.map((f) => `<li>For ${esc(f.email)}: ${f.items.map((it) => leadLink(it.id, it.name) + " (" + commas(it.players) + " players)").join(", ")}</li>`).join("")}</ul>`);
     if (today.offers.length) parts.push(`<h3>Owners who filled in the selling form</h3><ul class="dlist">${today.offers.map((o) => `<li>${leadLink(o.id, o.name)}: ${esc(o.contact)}${o.asking ? ", asking " + esc(o.asking) : ""}</li>`).join("")}</ul>`);
+    if (today.confirmed && today.confirmed.length) parts.push(`<h3>Owners who proved it's their game</h3><ul class="dlist">${today.confirmed.map((c) => `<li>${leadLink(c.id, c.name)}${c.proof_at ? ", recording sent" : ", recording not sent yet"}</li>`).join("")}</ul>`);
+    if (today.recordings && today.recordings.length) parts.push(`<h3>Dashboard recordings to watch</h3><ul class="dlist">${today.recordings.map((c) => `<li>${leadLink(c.id, c.name)}</li>`).join("")}</ul>`);
     if (today.changed.length) parts.push(`<h3>Changed owner on Roblox</h3><ul class="dlist">${today.changed.map((c) => `<li>${leadLink(c.id, c.name)}: now ${esc(c.now)}, was ${esc(c.was)}${c.sentTo.length ? ". Sent to " + esc(c.sentTo.join(", ")) + ", so ask whether they bought it" : ""}</li>`).join("")}</ul>`);
     if (today.updates.length) parts.push(`<h3>Buyers' updates</h3><ul class="dlist">${today.updates.map((u) => `<li>${esc(u.email)} marked ${leadLink(u.id, u.name)} as ${esc(PICK_LABELS[u.status] || u.status)}</li>`).join("")}</ul>`);
     if (today.willing || today.stale.length) parts.push(`<h3>Waiting on you</h3><ul class="dlist">${today.willing ? `<li>${today.willing} ${today.willing === 1 ? "owner has" : "owners have"} said they'd sell but ${today.willing === 1 ? "isn't" : "aren't"} verified yet</li>` : ""}${today.stale.map((st) => `<li>No answer from ${leadLink(st.id, st.name)} for ${st.days} days. Follow up?</li>`).join("")}</ul>`);
@@ -1781,7 +1883,12 @@ async function leadsPage(env, url) {
       sends.length ? "sent to " + sends.length : "",
       l.source === "owner" ? "the owner came to us" : "",
       l.auto ? "found by the daily check" : "",
+      signalsOf(l).length ? "might sell: " + signalsOf(l).join(", ") : "",
     ].filter(Boolean).join(", ");
+    const recording = l.proof && l.proof_at && /^https:\/\//i.test(l.proof);
+    const proofBlock = l.verify_code
+      ? `<div class="offer"><h4>Owner's proof</h4><ul class="dlist">${l.owner_verified_at ? `<li><strong>Owner confirmed ${esc(shortDay(l.owner_verified_at))}:</strong> the code ${esc(l.verify_code)} was in the game's description on Roblox, so whoever filled in the form controls the game. They can take the code out now.</li>` : `<li>Waiting for the owner to put <strong>${esc(l.verify_code)}</strong> in the game's description. They do it from the private link we gave them${validEmail(String(l.contact || "").toLowerCase()) ? " and emailed them" : ""}.</li>`}${recording ? `<li><strong>Dashboard recording, sent ${esc(shortDay(l.proof_at))}:</strong> <a class="link" href="${esc(l.proof)}" target="_blank" rel="noopener">open it</a>. Check Robux and players against the public numbers, fill in what you checked below and mark it Verified. It's also in the proof link, so the buyer can watch it once you send the lead.</li>` : l.owner_verified_at ? `<li>No dashboard recording yet.</li>` : ""}</ul></div>`
+      : "";
     const offerBlock = offer ? `<div class="offer"><h4>What the owner sent us${l.offered_at ? " on " + esc(shortDay(l.offered_at)) : ""}</h4><dl><dt>Contact</dt><dd>${esc(offer.contact)}</dd><dt>Role</dt><dd>${esc(offer.role)}</dd><dt>Would sell</dt><dd>${esc(DEALS[offer.deal] || "")}</dd><dt>Asking</dt><dd>${esc(offer.asking || "Not given")}</dd><dt>Age</dt><dd>${esc(AGES[offer.age] || "")}</dd><dt>Notes</dt><dd>${esc(offer.notes || "None")}</dd></dl><p class="small muted">They haven't agreed to share their contact with a specific buyer yet. Ask before you send it.</p></div>` : "";
     const sendList = sends.length
       ? `<ul class="sends">${sends.map((s) => `<li><strong>${esc(s.email)}</strong>, sent ${esc(shortDay(s.sent_at))}. Their status: ${esc(s.status)}${s.note ? `. Their note: ${esc(s.note)}` : ""}<form class="inline" method="post" action="/admin/leads/unsend"><input type="hidden" name="id" value="${l.id}"><input type="hidden" name="email" value="${esc(s.email)}"><button class="linkbutton small" type="submit">Take it back</button></form></li>`).join("")}</ul>`
@@ -1791,11 +1898,12 @@ async function leadsPage(env, url) {
       ? `<form class="inline" method="post" action="/admin/leads/send"><input type="hidden" name="id" value="${l.id}"><label class="sr-only" for="to-${l.id}">Buyer</label><select id="to-${l.id}" name="email" required>${buyerOptions(already)}</select><button class="button" type="submit">Send</button></form>`
       : `<p class="small muted">Mark it Verified to send it.</p>`;
     const f = (k) => esc(l[k] == null ? "" : l[k]);
-    return `<details class="lead-row" id="lead-${l.id}"${l.id === openId ? " open" : ""}><summary>${esc(l.name || "Game " + l.pid)}${changed ? ` <span class="flag">Owner changed</span>` : ""}${l.source === "owner" && l.status === "willing" && !l.contact_ok ? ` <span class="flag">New from the selling form</span>` : ""}<span class="l-meta">${esc(meta)}</span></summary><div class="l-body">
+    return `<details class="lead-row" id="lead-${l.id}"${l.id === openId ? " open" : ""}><summary>${esc(l.name || "Game " + l.pid)}${changed ? ` <span class="flag">Owner changed</span>` : ""}${l.source === "owner" && l.status === "willing" && !l.contact_ok ? ` <span class="flag">New from the selling form</span>` : ""}${recording && l.status !== "verified" ? ` <span class="flag">Recording to watch</span>` : l.owner_verified_at && l.status !== "verified" ? ` <span class="flag">Owner confirmed</span>` : ""}<span class="l-meta">${esc(meta)}</span></summary><div class="l-body">
 <p class="small"><a class="link" href="${esc(gameUrl(l.pid))}" target="_blank" rel="noopener">Game on Roblox</a>${owner ? ` and its owner, <a class="link" href="${esc(owner)}" target="_blank" rel="noopener">${esc(l.creator || "on Roblox")}</a> (${esc(l.creator_type || "")})` : ""}. ${now ? commas(now.players) + " players and " + commas(now.visits) + " visits right now." : ""} Added ${esc(shortDay(l.created_at))}.${l.verified_at ? " Verified " + esc(shortDay(l.verified_at)) + "." : ""}</p>
 ${l.owner_user && l.owner_user_id ? `<p class="small">Run on Roblox by <a class="link" href="https://www.roblox.com/users/${esc(l.owner_user_id)}/profile" target="_blank" rel="noopener">${esc(l.owner_user)}</a>${l.creator_type === "Group" ? ", who owns the group" : ""}. <a class="link" href="https://x.com/search?q=${encodeURIComponent(l.owner_user)}&amp;f=user" target="_blank" rel="noopener">Search X for that name</a>: it's a search, not a confirmed account, so check it's really them. If you're signed in to Roblox, the game page also shows any Discord or X link they've added.</p>` : ""}
 ${changed ? `<p class="msg">Roblox now shows <strong>${esc(nowOwner.name)}</strong> (${esc(nowOwner.type)}) as the owner, not ${esc(l.creator)}. If you sent this lead to someone, the game may have sold. Ask them.</p>` : ""}
 ${offerBlock}
+${proofBlock}
 <div class="out"><label class="small" for="msg-${l.id}">Message for the owner. Send it from X or Discord, not Roblox chat: messaging strangers about money there can get your Roblox account flagged. Look for their Discord or X on the game page or the group.</label><textarea id="msg-${l.id}" readonly rows="10">${esc(ownerMessage(l.name))}</textarea><div class="rowline"><button class="button quiet" type="button" data-copy="msg-${l.id}">Copy message</button><span class="status" aria-live="polite"></span></div></div>
 <form class="form" method="post" action="/admin/leads/save"><input type="hidden" name="id" value="${l.id}">
 <h4>What the owner told you</h4>
@@ -1820,8 +1928,10 @@ ${offerBlock}
   };
 
   const order = ["willing", "asked", "found", "verified", "sold", "declined"];
+  const rank = (l) => (l.proof_at ? 2 : 0) + (l.owner_verified_at ? 1 : 0);
   const groups = order.map((st) => {
-    const list = d.leads.filter((l) => l.status === st);
+    const list = d.leads.filter((l) => l.status === st)
+      .sort((a, b) => rank(b) - rank(a) || (st === "found" ? signalsOf(b).length - signalsOf(a).length : 0) || b.updated_at - a.updated_at);
     return list.length ? `<h3>${esc(LEAD_STATUSES[st])} (${list.length})</h3>${list.map(leadBlock).join("")}` : "";
   }).join("");
   const add = `<form class="form add" id="add" method="post" action="/admin/leads/add"><h2 class="form-h">Add a game by its link</h2><div class="fields"><div class="field"><label for="ad-link">Roblox game link</label><input id="ad-link" name="link" required placeholder="https://www.roblox.com/games/…"></div><div class="field"><label for="ad-for">Found for <span class="opt">(optional)</span></label><select id="ad-for" name="for"><option value="">Nobody in particular</option>${boxes.map((b) => `<option value="${esc(b.email)}">${esc(b.email)}</option>`).join("")}</select></div></div><div class="form-row"><button class="button" type="submit">Add game</button></div></form>`;
@@ -1831,7 +1941,7 @@ ${offerBlock}
 <ol class="steps small">
 <li><strong>Find.</strong> Every evening the daily check adds up to ${AUTO_PER_BUYER} new games for each buyer, and owners who fill in the selling form at /sell show up on their own. You can also click Find games next to a buyer, or add a game by its link.</li>
 <li><strong>Ask.</strong> Open the lead, copy the message and send it to the owner from X or Discord.</li>
-<li><strong>Check.</strong> When they send a screen recording of their Creator Dashboard, compare it with the public numbers, fill in what they told you and set the status to Verified.</li>
+<li><strong>Check.</strong> Owners who come through /sell prove it's their game themselves: they put a code in its description, which the site checks on Roblox, then send a recording of their Creator Dashboard. Those leads go to the top, marked Owner confirmed or Recording to watch. Compare the recording with the public numbers, fill in what they told you and set the status to Verified. Found games are listed with the likeliest sellers first (players falling, growth stalled, solo developer).</li>
 <li><strong>Send.</strong> Pick the buyer and click Send. Once Resend is connected, they're emailed automatically. If Roblox later shows a new owner for a lead's game, it's flagged here and in the summary.</li>
 </ol>
 ${msg}
@@ -1913,6 +2023,13 @@ export class Store {
     // Added with the daily check: whether the check found it, who runs the game on Roblox, and when
     // Roblox started showing a different owner. kv keeps the time and summary of the last check.
     for (const col of ["auto INTEGER NOT NULL DEFAULT 0", "owner_user TEXT", "owner_user_id INTEGER", "owner_now TEXT", "owner_changed_at INTEGER"]) {
+      try { this.sql.exec("ALTER TABLE leads ADD COLUMN " + col); } catch (e) { /* already there */ }
+    }
+    // Owners proving it's their game from /sell: seller_token is their private link, verify_code the
+    // code they put in the game's description, owner_verified_at when we saw it there, proof_at when
+    // they sent their dashboard recording (kept in proof). sell_signals: why an owner the daily check
+    // found might sell (a JSON list), so the likeliest are asked first.
+    for (const col of ["seller_token TEXT", "verify_code TEXT", "owner_verified_at INTEGER", "proof_at INTEGER", "check_at INTEGER", "sell_signals TEXT"]) {
       try { this.sql.exec("ALTER TABLE leads ADD COLUMN " + col); } catch (e) { /* already there */ }
     }
     this.sql.exec("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
@@ -2201,9 +2318,29 @@ export class Store {
       if (!have) {
         this.sql.exec("INSERT INTO leads (uid, pid, name, creator, creator_type, creator_id, owner_user, owner_user_id, source, status, contact, owner_age, asking, deal, offer, offered_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'owner', 'willing', ?, ?, ?, ?, ?, ?, ?, ?)", p.uid, p.pid || null, p.name || "", p.creator || "", p.ctype || null, p.cid || null, p.owner_user || null, p.owner_user_id || null, p.contact, p.age, p.asking || "", p.deal || "", p.offer, now, now, now);
       } else {
+        // Whoever sent the form last gets the link and code: an earlier confirmation was someone
+        // else's (or theirs, with a code they've since lost), so it starts over.
+        this.sql.exec("UPDATE leads SET owner_verified_at = NULL, check_at = NULL WHERE id = ?", have.id);
         this.sql.exec("UPDATE leads SET offer = ?, offered_at = ?, source = 'owner', auto = 0, status = CASE WHEN status IN ('found', 'asked', 'declined') THEN 'willing' ELSE status END, contact = CASE WHEN contact = '' THEN ? ELSE contact END, owner_age = CASE WHEN owner_age = 'unknown' THEN ? ELSE owner_age END, asking = CASE WHEN asking = '' THEN ? ELSE asking END, deal = CASE WHEN deal = '' THEN ? ELSE deal END, owner_user = COALESCE(owner_user, ?), owner_user_id = COALESCE(owner_user_id, ?), updated_at = ? WHERE id = ?", p.offer, now, p.contact, p.age, p.asking || "", p.deal || "", p.owner_user || null, p.owner_user_id || null, now, have.id);
       }
-      return reply({ ok: true, fresh: true, id: this.sql.exec("SELECT id FROM leads WHERE uid = ?", p.uid).toArray()[0].id });
+      const id = this.sql.exec("SELECT id FROM leads WHERE uid = ?", p.uid).toArray()[0].id;
+      if (p.token && p.code) this.sql.exec("UPDATE leads SET seller_token = ?, verify_code = ? WHERE id = ?", p.token, p.code, id);
+      return reply({ ok: true, fresh: true, id });
+    }
+
+    // ---------- an owner proving it's their game, from their private link ----------
+    if (op === "seller-get") {
+      const l = this.sql.exec("SELECT id, uid, pid, name, creator_id, verify_code, owner_verified_at, proof, proof_at, check_at FROM leads WHERE seller_token = ?", String(p.token)).toArray()[0];
+      return reply({ lead: l || null });
+    }
+    if (op === "seller-checked") {
+      this.sql.exec("UPDATE leads SET check_at = ? WHERE seller_token = ?", now, String(p.token));
+      if (p.found) this.sql.exec("UPDATE leads SET owner_verified_at = COALESCE(owner_verified_at, ?), updated_at = ? WHERE seller_token = ?", now, now, String(p.token));
+      return reply({ ok: true, at: (this.sql.exec("SELECT owner_verified_at FROM leads WHERE seller_token = ?", String(p.token)).toArray()[0] || {}).owner_verified_at || null });
+    }
+    if (op === "seller-proof") {
+      this.sql.exec("UPDATE leads SET proof = ?, proof_at = ?, updated_at = ? WHERE seller_token = ? AND owner_verified_at IS NOT NULL", String(p.url), now, now, String(p.token));
+      return reply({ ok: true });
     }
 
     if (op === "lead-list") {
@@ -2285,7 +2422,7 @@ export class Store {
             if (have.has(g.uid)) continue;
             have.add(g.uid);
             total++;
-            this.sql.exec("INSERT INTO leads (uid, pid, name, creator, creator_type, creator_id, source, status, for_email, auto, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'scouted', 'found', ?, 1, ?, ?)", g.uid, g.pid || null, g.name || "", g.creator || "", g.ctype || null, g.cid || null, b.email, now, now);
+            this.sql.exec("INSERT INTO leads (uid, pid, name, creator, creator_type, creator_id, source, status, for_email, auto, sell_signals, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'scouted', 'found', ?, 1, ?, ?, ?)", g.uid, g.pid || null, g.name || "", g.creator || "", g.ctype || null, g.cid || null, b.email, JSON.stringify(g.signals || []), now, now);
             const id = this.sql.exec("SELECT id FROM leads WHERE uid = ?", g.uid).toArray()[0].id;
             items.push({ id, name: g.name, players: g.players, change: g.change, genre: g.genre2 || g.genre, ctype: g.ctype, cid: g.cid, creator: g.creator });
           }
@@ -2314,12 +2451,14 @@ export class Store {
 
       // 3. What happened since the last check.
       d.offers = this.sql.exec("SELECT id, name, contact, asking FROM leads WHERE offered_at > ? ORDER BY offered_at DESC LIMIT 30", since).toArray();
+      d.confirmed = this.sql.exec("SELECT id, name, proof_at FROM leads WHERE owner_verified_at > ? ORDER BY owner_verified_at DESC LIMIT 30", since).toArray();
+      d.recordings = this.sql.exec("SELECT id, name, proof FROM leads WHERE proof_at > ? AND status != 'verified' ORDER BY proof_at DESC LIMIT 30", since).toArray();
       d.updates = this.sql.exec("SELECT s.lead_id AS id, l.name AS name, s.email AS email, s.status AS status FROM lead_sends s JOIN leads l ON l.id = s.lead_id WHERE s.updated_at > ? AND s.updated_at > s.sent_at AND s.status != 'new' ORDER BY s.updated_at DESC LIMIT 30", since).toArray();
       d.willing = this.sql.exec("SELECT COUNT(*) AS n FROM leads WHERE status = 'willing'").toArray()[0].n;
       d.stale = this.sql.exec("SELECT id, name, updated_at FROM leads WHERE status = 'asked' AND updated_at < ? ORDER BY updated_at LIMIT 20", now - 3 * DAY_MS).toArray()
         .map((r) => ({ id: r.id, name: r.name, days: Math.floor((now - r.updated_at) / DAY_MS) }));
       const newGames = d.found.reduce((n, f) => n + f.items.length, 0);
-      d.any = !!(newGames || d.offers.length || d.changed.length || d.updates.length);
+      d.any = !!(newGames || d.offers.length || d.confirmed.length || d.recordings.length || d.changed.length || d.updates.length);
       const bits = [];
       if (newGames) bits.push(newGames + (newGames === 1 ? " new game" : " new games") + " for your buyers");
       if (d.offers.length) bits.push(d.offers.length + (d.offers.length === 1 ? " owner wants" : " owners want") + " to sell");

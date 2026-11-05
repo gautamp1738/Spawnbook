@@ -43,8 +43,8 @@
     <div class="c-r stack">
       <ol class="sell-steps">
         <li><strong>You tell us about your game</strong> with the form below.</li>
-        <li><strong>If it fits what a buyer wants,</strong> we message you and ask for a short screen recording of your Creator Dashboard, so buyers see real numbers.</li>
-        <li><strong>With your OK,</strong> we send your contact and those numbers to that buyer. You talk to them directly and decide everything yourself.</li>
+        <li><strong>You show it's yours,</strong> in about two minutes: put a code we give you in the game's description, then send a short screen recording of your Creator Dashboard. Buyers only see games whose owner we've confirmed.</li>
+        <li><strong>When a buyer wants a game like yours,</strong> we ask you first. With your OK, we send them your contact and numbers. You talk to them directly and decide everything yourself.</li>
       </ol>
       <p class="small muted">It's free for owners, and we don't take a cut of any sale. Not sure what it's worth? <a class="link" href="value">Value your game</a> first.</p>
     </div>
@@ -57,6 +57,30 @@
     </div>
     <div class="c-r stack">
       <p class="done" id="o-done" role="status" tabindex="-1" hidden>Thanks, we've got it. If a buyer is looking for a game like yours, we'll message you at the contact you gave. That can take a few days.</p>
+      <div class="verify" id="v" hidden>
+        <h3 class="v-title" id="v-title" tabindex="-1">Thanks. Now show us it's your game.</h3>
+        <p>Buyers only see games whose owner we've confirmed, so this is what gets yours in front of them. Do it now, or come back to your private link any time: <a class="link" id="v-mine" href="#">your link</a>. <button type="button" class="linkbutton" id="v-mine-copy">Copy it</button> <span class="status small" id="v-mine-status" aria-live="polite"></span></p>
+        <ol class="v-steps">
+          <li class="v-step" id="v-s1">
+            <h4>Put this code in your game's description</h4>
+            <p class="v-code-row"><code class="v-code" id="v-code">SB-XXXXXX</code> <button type="button" class="button quiet" id="v-code-copy">Copy code</button> <span class="status small" id="v-code-status" aria-live="polite"></span></p>
+            <p class="small">Open <a class="link" href="https://create.roblox.com/dashboard/creations" target="_blank" rel="noopener">Creator Hub<span class="sr-only"> (opens in a new tab)</span></a>, go to your game's settings, add the code anywhere in the description and save. You can take it out once we've seen it. Only someone who can edit the game can do this, which is how we know it's yours.</p>
+            <div class="rowline"><button type="button" class="button" id="v-check">Check my game</button><span class="status" id="v-check-status" role="status"></span></div>
+          </li>
+          <li class="v-step" id="v-s2">
+            <h4>Send a short recording of your Creator Dashboard</h4>
+            <p class="small">Record your screen for about a minute: the last 30 days of Robux earned and concurrent users for this game. Upload it as an unlisted YouTube video, a Loom or a Google Drive file anyone with the link can view, and paste the link. We only show it to a buyer after you say yes.</p>
+            <form class="form v-proof" id="v-proof" novalidate>
+              <div class="field"><label for="v-url">Link to your recording</label><input id="v-url" type="url" inputmode="url" maxlength="500" autocomplete="off" placeholder="https://"></div>
+              <div class="form-row"><button class="button" type="submit" id="v-send">Send recording</button><span class="status" id="v-proof-status" role="status"></span></div>
+            </form>
+          </li>
+          <li class="v-step" id="v-s3">
+            <h4>We check it and keep you in mind</h4>
+            <p class="small">We compare your recording with Roblox's public numbers. When a buyer is looking for a game like yours, we'll message you at the contact you gave and ask before passing anything on.</p>
+          </li>
+        </ol>
+      </div>
       <form class="form" id="o-form" method="post" action="/api/sell" novalidate>
         <div class="fields">
           <div class="field full">
@@ -156,8 +180,80 @@
     var f = $(e[0]); if (f) { f.setAttribute("aria-invalid", "true"); f.focus(); }
   }
   var q = new URLSearchParams(location.search);
-  if (q.get("sent")) { $("o-done").hidden = false; $("o-form").hidden = true; }
+  var hashT = /^#t=([0-9a-f]{64})$/.exec(location.hash);
+  if (hashT) { $("o-form").hidden = true; loadSteps(hashT[1], false); }
+  else if (q.get("sent")) { $("o-done").hidden = false; $("o-form").hidden = true; }
   else if (q.get("e")) show(q.get("e"));
+
+  // ---------- after the form: prove it's yours ----------
+  var T;
+  function api(path, body) {
+    return fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body), credentials: "same-origin" } : { credentials: "same-origin", headers: { Accept: "application/json" } })
+      .then(function (r) { return r.json().catch(function () { return { error: "net" }; }); });
+  }
+  function day(t) { return new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+  function render(st) {
+    $("v-code").textContent = st.code || "";
+    var s1 = $("v-s1"), s2 = $("v-s2"), s3 = $("v-s3");
+    s1.classList.toggle("is-done", !!st.confirmed);
+    $("v-check").hidden = !!st.confirmed;
+    if (st.confirmed) $("v-check-status").textContent = "Confirmed " + day(st.confirmed) + ": the code is in your game's description. You can take it out now.";
+    s2.classList.toggle("is-off", !st.confirmed);
+    $("v-url").disabled = $("v-send").disabled = !st.confirmed;
+    s2.classList.toggle("is-done", !!st.proof);
+    if (st.proof) { $("v-proof").hidden = true; s2.querySelector("p").textContent = "Got it" + (st.proofAt ? ", " + day(st.proofAt) : "") + ". Thanks."; }
+    s3.classList.toggle("is-off", !st.proof);
+  }
+  function loadSteps(t, fresh, st) {
+    T = t;
+    var mine = location.origin + "/sell#t=" + t;
+    $("v-mine").href = mine; $("v-mine").textContent = mine.replace(/^https?:\/\//, "").replace(/(#t=.{8}).*$/, "$1…");
+    if (location.hash !== "#t=" + t && history.replaceState) history.replaceState(null, "", "/sell#t=" + t);
+    $("v").hidden = false;
+    if (fresh) $("v-title").focus();
+    if (st) { render(st); return; }
+    api("/api/sell/status?t=" + t).then(function (j) {
+      if (j.error) { $("v").hidden = true; $("o-form").hidden = false; $("o-err").textContent = "That link didn't work. Fill in the form again and you'll get a new one."; return; }
+      $("v-title").textContent = "Show us " + (j.name || "your game") + " is yours";
+      render(j);
+    });
+  }
+  function copy(text, statusId) {
+    var st = $(statusId);
+    try { navigator.clipboard.writeText(text).then(function () { st.textContent = "Copied."; }, function () { st.textContent = "Select it and copy it."; }); } catch (e) { st.textContent = "Select it and copy it."; }
+  }
+  $("v-code-copy").addEventListener("click", function () { copy($("v-code").textContent, "v-code-status"); });
+  $("v-mine-copy").addEventListener("click", function () { copy($("v-mine").href, "v-mine-status"); });
+  var CHECK = {
+    missing: "We don't see the code in your game's description yet. Check you saved it. Roblox can take a minute or two to show a change, so try again shortly.",
+    owner: "Roblox shows a different owner for this game than when you filled in the form. Email us and we'll sort it out.",
+    roblox: "We couldn't reach Roblox just now. Try again in a minute.",
+    wait: "Give it a few seconds, then check again.",
+    net: "That didn't go through. Check your connection and try again.",
+    link: "That link didn't work. Fill in the form again and you'll get a new one."
+  };
+  $("v-check").addEventListener("click", function () {
+    var b = $("v-check"); b.disabled = true; $("v-check-status").textContent = "Checking your game on Roblox.";
+    api("/api/sell/check", { t: T }).then(function (j) {
+      b.disabled = false;
+      if (j.error) { $("v-check-status").textContent = CHECK[j.error] || CHECK.net; return; }
+      render(j);
+      if (j.confirmed) $("v-url").focus();
+    });
+  });
+  $("v-proof").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var u = $("v-url").value.trim();
+    $("v-url").removeAttribute("aria-invalid");
+    if (!/^https:\/\/\S+\.\S+/i.test(u)) { $("v-proof-status").textContent = "Paste the full link, starting with https://."; $("v-url").setAttribute("aria-invalid", "true"); $("v-url").focus(); return; }
+    $("v-send").disabled = true; $("v-proof-status").textContent = "Sending.";
+    api("/api/sell/proof", { t: T, url: u }).then(function (j) {
+      $("v-send").disabled = false;
+      if (j.error) { $("v-proof-status").textContent = j.error === "url" ? "Paste the full link, starting with https://." : j.error === "first" ? "Check your game first, in step 1." : CHECK[j.error] || CHECK.net; return; }
+      $("v-proof-status").textContent = "";
+      render(j);
+    });
+  });
 
   $("o-form").addEventListener("submit", function (ev) {
     document.querySelectorAll("#o-form [aria-invalid]").forEach(function (n) { n.removeAttribute("aria-invalid"); });
@@ -175,7 +271,8 @@
       .then(function (r) { return r.json().catch(function () { return { error: "roblox" }; }); })
       .then(function (j) {
         btn.disabled = false;
-        if (j && j.ok) { $("o-err").textContent = ""; $("o-form").hidden = true; $("o-done").hidden = false; $("o-done").focus(); return; }
+        if (j && j.ok && j.t) { $("o-err").textContent = ""; $("o-form").hidden = true; loadSteps(j.t, true, { code: j.code, confirmed: null, proof: false }); return; }
+        if (j && j.ok) { $("o-err").textContent = ""; $("o-form").hidden = true; $("o-done").textContent = j.recent ? "We got a form for this game a few minutes ago. Use the link from that one, or try again in 10 minutes for a new one." : $("o-done").textContent; $("o-done").hidden = false; $("o-done").focus(); return; }
         $("o-err").textContent = ""; show(j && ERR[j.error] ? j.error : "roblox");
       })
       .catch(function () { btn.disabled = false; $("o-err").textContent = "That didn't send. Check your connection and try again."; });
