@@ -55,6 +55,9 @@
 //   GET  /api/sell/status?t=  where that owner is: code found in the description, recording sent
 //   POST /api/sell/check    { t }: look for the code in the game's description on Roblox now
 //   POST /api/sell/proof    { t, url }: the owner's Creator Dashboard recording, once the code checks out
+//   POST /api/sell/upload/start, /chunk, /done
+//                           the same recording, or screenshots, uploaded from the page in 1 MB pieces
+//   GET  /api/file?f=       an uploaded file: for the admin, and for a buyer once the lead is sent to them
 //   /admin                  accounts and access, behind the ADMIN_KEY secret (off until it's set)
 //   /admin/leads            finding games for each buyer, asking owners, verifying and sending leads
 //
@@ -114,6 +117,7 @@ export default {
       else if (path === "/api/leads") res = await myLeads(request, env);
       else if (path === "/api/sell") res = await sellForm(request, env);
       else if (path.startsWith("/api/sell/")) res = await sellSteps(request, env, url, path);
+      else if (path === "/api/file") res = await fileApi(request, env, url);
       else if (path === "/api/lookup") res = await lookupApi(request, env, url, ctx);
       else if (path === "/api/daily-email") res = await dailyEmailApi(request, env, url, ctx);
       else if (path === "/api/discord") res = await discordApi(request, env, url, ctx);
@@ -597,6 +601,10 @@ async function runDaily(env, origin) {
   const asset = await env.ASSETS.fetch(new Request(new URL("/history.js", origin)));
   const history = asset.ok ? await asset.text() : "";
   const r = await call(env, "daily", { history, origin });
+  // Pieces of uploads that never finished.
+  const byLead = {};
+  for (const f of r.staleFiles || []) (byLead[f.lead_id] = byLead[f.lead_id] || []).push(f.id);
+  for (const id of Object.keys(byLead)) await filesCall(env, id, "file-drop", { ids: byLead[id] }).catch(() => {});
   if (r.digest && r.digest.any) {
     await sendEmail(env, { to: OWNER_EMAIL, subject: "Spawnbook leads: " + r.digest.headline, text: digestText(r.digest, origin) });
   }
@@ -689,6 +697,14 @@ function gatedPage(path) {
 
 function store(env) {
   return env.STORE.get(env.STORE.idFromName("main"));
+}
+
+// A lead's own object, which holds the pieces of the files its owner uploaded.
+const filesStub = (env, leadId) => env.STORE.get(env.STORE.idFromName("files-" + Number(leadId)));
+async function filesCall(env, leadId, op, payload) {
+  const res = await filesStub(env, leadId).fetch("https://store/" + op, { method: "POST", body: JSON.stringify(payload || {}) });
+  if (!res.ok) throw new Error("Files " + op + " failed: " + res.status);
+  return res.json();
 }
 
 async function call(env, op, payload) {
@@ -1164,7 +1180,7 @@ async function sellForm(request, env) {
   await sendEmail(env, {
     to: OWNER_EMAIL,
     subject: "Open to selling: " + (name || "a Roblox game"),
-    text: "Someone filled in the selling form.\n\nGame: " + (name || "Unknown") + " (" + gameUrl(info.pid || pid) + ")\nPlayers now: " + commas(info.players) + "\nContact: " + contact + "\nRole: " + role + "\nWould sell: " + DEALS[deal] + "\nAsking: " + (asking || "Not given") + "\nAge: " + AGES[age] + "\nNotes: " + (notes || "None") + "\n\nWe've asked them to put " + code + " in the game's description to show it's theirs, then send a recording of their Creator Dashboard. You'll get an email when each one comes in. Their lead:\n" + link,
+    text: "Someone filled in the selling form.\n\nGame: " + (name || "Unknown") + " (" + gameUrl(info.pid || pid) + ")\nPlayers now: " + commas(info.players) + "\nContact: " + contact + "\nRole: " + role + "\nWould sell: " + DEALS[deal] + "\nAsking: " + (asking || "Not given") + "\nAge: " + AGES[age] + "\nNotes: " + (notes || "None") + "\n\nWe've asked them to put " + code + " in the game's description to show it's theirs, then add a screenshot or recording of their Creator Dashboard on the page. You'll get an email when each one comes in. Their lead:\n" + link,
   });
   // An owner who gave an email gets their link and code too, so closing the page doesn't lose them.
   if (validEmail(contact.toLowerCase())) {
@@ -1173,13 +1189,66 @@ async function sellForm(request, env) {
       subject: "Show " + (name || "your game") + " is yours: your Spawnbook code",
       text: ["Hi,", "", "Thanks for telling us about " + (name || "your game") + ". Buyers only see games whose owner we've confirmed, so there are two quick steps:", "",
         "1. Put this code anywhere in your game's description on Roblox and save: " + code, "   You can take it out again once we've seen it.",
-        "2. Send a short screen recording of your Creator Dashboard (the last 30 days of Robux and players).", "",
+        "2. Add a screenshot (or a short screen recording) of your Creator Dashboard showing the last 30 days of Robux and players. You upload it right on the page.", "",
         "Do both from your private link: " + mine, "",
         "We only pass your contact and numbers to a buyer after you say yes. If you didn't fill in our form, ignore this email.", "",
         "Gautam Prasanna", "Spawnbook, spawnbook.com"].join("\n"),
     });
   }
   return wantsJson ? json({ ok: true, t: token, code }) : redirect("/sell?sent=1#t=" + token);
+}
+
+// Owners' uploads: screen recordings and screenshots, sent from the browser in 1 MB pieces.
+const FILE_CHUNK = 1024 * 1024;
+// Cloudflare's free plan allows 1 GB per object and 5 GB across the account, so keep uploads modest.
+const FILE_MAX = 150 * 1024 * 1024;       // one file
+const FILE_MAX_TOTAL = 250 * 1024 * 1024; // all of one lead's files
+const FILE_MAX_COUNT = 8;
+const FILE_TYPES = /^(video\/(mp4|quicktime|webm|x-matroska|3gpp|x-msvideo|mpeg)|image\/(png|jpeg|webp|gif|heic|heif))$/;
+
+// An uploaded file, read back in its pieces. Open to the admin, and to a buyer the lead was sent to
+// once it's verified; anyone else gets a plain 404. Ranges work, so videos play and seek in Safari.
+async function fileApi(request, env, url) {
+  const nope = () => new Response("Not found", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
+  const f = Number(url.searchParams.get("f"));
+  if (request.method !== "GET" && request.method !== "HEAD") return nope();
+  if (!Number.isSafeInteger(f) || f <= 0) return nope();
+  const admin = await isAdmin(request, env);
+  const s = admin ? null : await session(request, env);
+  const { file, sent } = await call(env, "file-meta", { f, email: s ? s.email : null });
+  if (!file || !file.done || !FILE_TYPES.test(file.type)) return nope();
+  if (!admin && !(s && sent && file.lead_status === "verified")) return nope();
+  const size = file.size;
+  let start = 0, end = size - 1, status = 200;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(request.headers.get("Range") || "");
+  if (m && (m[1] || m[2])) {
+    if (m[1] === "") start = Math.max(0, size - Number(m[2]));
+    else { start = Number(m[1]); end = m[2] ? Math.min(Number(m[2]), size - 1) : size - 1; }
+    if (start > end || start >= size) return new Response(null, { status: 416, headers: { "Content-Range": "bytes */" + size } });
+    status = 206;
+  }
+  const headers = {
+    "Content-Type": file.type, "Content-Length": String(end - start + 1), "Accept-Ranges": "bytes",
+    "Content-Disposition": "inline; filename=\"" + String(file.name).replace(/[^\w.\- ]/g, "_") + "\"",
+    "Cache-Control": "private, no-store",
+  };
+  if (status === 206) headers["Content-Range"] = "bytes " + start + "-" + end + "/" + size;
+  if (request.method === "HEAD") return new Response(null, { status, headers });
+  const st = filesStub(env, file.lead_id);
+  let i = Math.floor(start / FILE_CHUNK);
+  const last = Math.floor(end / FILE_CHUNK);
+  const body = new ReadableStream({
+    async pull(ctrl) {
+      if (i > last) { ctrl.close(); return; }
+      const r = await st.fetch("https://store/file-read?f=" + f + "&i=" + i);
+      if (!r.ok) { ctrl.error(new Error("missing piece")); return; }
+      const buf = new Uint8Array(await r.arrayBuffer());
+      const base = i * FILE_CHUNK;
+      ctrl.enqueue(buf.subarray(Math.max(start - base, 0), Math.min(end - base + 1, buf.length)));
+      i++;
+    },
+  });
+  return new Response(body, { status, headers });
 }
 
 // A code for an owner to paste into their game's description. Letters only, without ones that pass
@@ -1194,6 +1263,17 @@ const codeIn = (text, code) => String(text || "").toUpperCase().replace(/[^A-Z]/
 
 // The owner's private steps after the form: check the code, then send the recording.
 async function sellSteps(request, env, url, path) {
+  // A piece of an upload: raw bytes, with the link and file in the address.
+  if (path === "/api/sell/upload/chunk") {
+    if (request.method !== "POST") return json({ error: "method" }, 405);
+    const t = url.searchParams.get("t") || "", f = url.searchParams.get("f") || "", i = url.searchParams.get("i") || "";
+    if (!/^[0-9a-f]{64}$/.test(t) || !/^\d{1,9}$/.test(f) || !/^\d{1,4}$/.test(i)) return json({ error: "file" }, 400);
+    if (Number(request.headers.get("Content-Length") || 0) > FILE_CHUNK) return json({ error: "size" }, 413);
+    const okd = await call(env, "file-ok", { token: t, f: Number(f), i: Number(i) });
+    if (!okd.lead_id) return json({ error: "file" }, 400);
+    const r = await filesStub(env, okd.lead_id).fetch("https://store/file-put?f=" + f + "&i=" + i, { method: "POST", body: await request.arrayBuffer() });
+    return new Response(await r.text(), { status: r.status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" } });
+  }
   let b = {};
   if (request.method === "POST") b = await request.json().catch(() => ({}));
   const t = String(request.method === "POST" ? b.t || "" : url.searchParams.get("t") || "");
@@ -1222,6 +1302,33 @@ async function sellSteps(request, env, url, path) {
     if (!found) return state({ error: "missing" });
     await sendEmail(env, { to: OWNER_EMAIL, subject: "Owner confirmed: " + (lead.name || "a game"), text: "The owner of " + (lead.name || "a game") + " (" + gameUrl(lead.pid) + ") put " + lead.verify_code + " in its description, so whoever filled in the form controls the game on Roblox.\n\nNext they'll send their Creator Dashboard recording. Their lead:\n" + adminLink });
     return json({ name: lead.name, pid: lead.pid, code: lead.verify_code, confirmed: r.at, proof: !!(lead.proof && lead.proof_at), proofAt: lead.proof_at || null });
+  }
+
+  if (path === "/api/sell/upload/start") {
+    const name = String(b.name || "file").replace(/[\u0000-\u001f"\\/]/g, "").slice(0, 120) || "file";
+    const ext = (/\.([a-z0-9]{2,5})$/i.exec(name) || [])[1];
+    const byExt = { mp4: "video/mp4", m4v: "video/mp4", mov: "video/quicktime", webm: "video/webm", mkv: "video/x-matroska", avi: "video/x-msvideo", "3gp": "video/3gpp", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif", heic: "image/heic", heif: "image/heif" };
+    const type = FILE_TYPES.test(String(b.type || "")) ? String(b.type) : byExt[String(ext || "").toLowerCase()] || "";
+    const size = Number(b.size);
+    if (!type) return state({ error: "type" });
+    if (!Number.isSafeInteger(size) || size <= 0) return state({ error: "type" });
+    if (size > FILE_MAX) return state({ error: "big" });
+    const r = await call(env, "file-start", { token: t, name, type, size });
+    if (r.error) return state({ error: r.error });
+    return json({ f: r.f, chunk: FILE_CHUNK });
+  }
+
+  if (path === "/api/sell/upload/done") {
+    const f = Number(b.f);
+    if (!Number.isSafeInteger(f) || f <= 0) return state({ error: "file" });
+    const { lead_id } = await call(env, "file-lead", { token: t, f });
+    if (!lead_id) return state({ error: "file" });
+    const got = await filesCall(env, lead_id, "file-count", { f });
+    const r = await call(env, "file-done", { token: t, f, link: origin + "/api/file?f=" + f, got: { n: Number(got.n), bytes: Number(got.bytes) } });
+    if (r.error) return state({ error: r.error });
+    // One email for the batch, when the page sends its last file.
+    if (b.last) await sendEmail(env, { to: OWNER_EMAIL, subject: "Dashboard files: " + (lead.name || "a game"), text: "The confirmed owner of " + (lead.name || "a game") + " uploaded " + (r.files === 1 ? "a file" : r.files + " files") + " from their Creator Dashboard.\n\nOpen them on their lead, check Robux and players against the public numbers, fill in what you checked and mark it Verified:\n" + adminLink });
+    return json({ name: lead.name, pid: lead.pid, code: lead.verify_code, confirmed: lead.owner_verified_at, proof: true, proofAt: Date.now(), files: r.files });
   }
 
   if (path === "/api/sell/proof") {
@@ -1765,6 +1872,7 @@ async function adminLeads(request, env, url, path) {
     const id = posInt(get("id"), Number.MAX_SAFE_INTEGER);
     if (get("sure") !== "yes") return redirect("/admin/leads?id=" + id + "&e=sure#lead-" + id);
     await call(env, "lead-delete", { id });
+    await filesCall(env, id, "file-drop", { all: true }).catch(() => {});
     return redirect("/admin/leads?deleted=1");
   }
 
@@ -1815,6 +1923,9 @@ async function leadsPage(env, url) {
   const live = await robloxGames(d.leads.map((l) => l.uid));
   const sendsBy = {};
   for (const s of d.sends) (sendsBy[s.lead_id] = sendsBy[s.lead_id] || []).push(s);
+  const filesBy = {};
+  for (const f of d.files || []) (filesBy[f.lead_id] = filesBy[f.lead_id] || []).push(f);
+  const mb = (n) => (n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB");
   const openId = Number(url.searchParams.get("id")) || 0;
   const q = (k) => url.searchParams.get(k) || "";
 
@@ -1885,9 +1996,11 @@ async function leadsPage(env, url) {
       l.auto ? "found by the daily check" : "",
       signalsOf(l).length ? "might sell: " + signalsOf(l).join(", ") : "",
     ].filter(Boolean).join(", ");
-    const recording = l.proof && l.proof_at && /^https:\/\//i.test(l.proof);
+    const files = filesBy[l.id] || [];
+    const recording = (l.proof && l.proof_at && /^https:\/\//i.test(l.proof)) || files.length > 0;
+    const fileList = files.length ? `<li><strong>Files from their Creator Dashboard, sent ${esc(shortDay(l.proof_at || files[0].created_at))}:</strong> ${files.map((x) => `<a class="link" href="/api/file?f=${x.id}" target="_blank" rel="noopener">${esc(x.name)}</a> (${/^video/.test(x.type) ? "video" : "picture"}, ${mb(x.size)})`).join(", ")}. Check Robux and players against the public numbers, fill in what you checked below and mark it Verified. The first file is the lead's proof link, so the buyer can open it once you send the lead.</li>` : "";
     const proofBlock = l.verify_code
-      ? `<div class="offer"><h4>Owner's proof</h4><ul class="dlist">${l.owner_verified_at ? `<li><strong>Owner confirmed ${esc(shortDay(l.owner_verified_at))}:</strong> the code ${esc(l.verify_code)} was in the game's description on Roblox, so whoever filled in the form controls the game. They can take the code out now.</li>` : `<li>Waiting for the owner to put <strong>${esc(l.verify_code)}</strong> in the game's description. They do it from the private link we gave them${validEmail(String(l.contact || "").toLowerCase()) ? " and emailed them" : ""}.</li>`}${recording ? `<li><strong>Dashboard recording, sent ${esc(shortDay(l.proof_at))}:</strong> <a class="link" href="${esc(l.proof)}" target="_blank" rel="noopener">open it</a>. Check Robux and players against the public numbers, fill in what you checked below and mark it Verified. It's also in the proof link, so the buyer can watch it once you send the lead.</li>` : l.owner_verified_at ? `<li>No dashboard recording yet.</li>` : ""}</ul></div>`
+      ? `<div class="offer"><h4>Owner's proof</h4><ul class="dlist">${l.owner_verified_at ? `<li><strong>Owner confirmed ${esc(shortDay(l.owner_verified_at))}:</strong> the code ${esc(l.verify_code)} was in the game's description on Roblox, so whoever filled in the form controls the game. They can take the code out now.</li>` : `<li>Waiting for the owner to put <strong>${esc(l.verify_code)}</strong> in the game's description. They do it from the private link we gave them${validEmail(String(l.contact || "").toLowerCase()) ? " and emailed them" : ""}.</li>`}${fileList}${recording && !files.length ? `<li><strong>Dashboard recording, sent ${esc(shortDay(l.proof_at))}:</strong> <a class="link" href="${esc(l.proof)}" target="_blank" rel="noopener">open it</a>. Check Robux and players against the public numbers, fill in what you checked below and mark it Verified. It's also in the proof link, so the buyer can watch it once you send the lead.</li>` : !recording && l.owner_verified_at ? `<li>No dashboard recording yet.</li>` : ""}</ul></div>`
       : "";
     const offerBlock = offer ? `<div class="offer"><h4>What the owner sent us${l.offered_at ? " on " + esc(shortDay(l.offered_at)) : ""}</h4><dl><dt>Contact</dt><dd>${esc(offer.contact)}</dd><dt>Role</dt><dd>${esc(offer.role)}</dd><dt>Would sell</dt><dd>${esc(DEALS[offer.deal] || "")}</dd><dt>Asking</dt><dd>${esc(offer.asking || "Not given")}</dd><dt>Age</dt><dd>${esc(AGES[offer.age] || "")}</dd><dt>Notes</dt><dd>${esc(offer.notes || "None")}</dd></dl><p class="small muted">They haven't agreed to share their contact with a specific buyer yet. Ask before you send it.</p></div>` : "";
     const sendList = sends.length
@@ -2032,6 +2145,10 @@ export class Store {
     for (const col of ["seller_token TEXT", "verify_code TEXT", "owner_verified_at INTEGER", "proof_at INTEGER", "check_at INTEGER", "sell_signals TEXT"]) {
       try { this.sql.exec("ALTER TABLE leads ADD COLUMN " + col); } catch (e) { /* already there */ }
     }
+    // Screen recordings and screenshots an owner uploads from /sell, kept here in 1 MB pieces (a row
+    // holds up to 2 MB), so there's no separate file store to set up. done = every piece arrived.
+    this.sql.exec("CREATE TABLE IF NOT EXISTS lead_files (id INTEGER PRIMARY KEY, lead_id INTEGER NOT NULL, name TEXT NOT NULL, type TEXT NOT NULL, size INTEGER NOT NULL, chunks INTEGER NOT NULL, done INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS lead_file_chunks (file_id INTEGER NOT NULL, i INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (file_id, i))");
     this.sql.exec("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
     // Activity: one row per thing someone did (landing visit, free pass started, page opened, lookup,
     // sign-up), kept 120 days, for the admin activity page. "who" is an account's email, or "pass"
@@ -2055,6 +2172,23 @@ export class Store {
     this.sql.exec("CREATE TABLE IF NOT EXISTS alerts (email TEXT PRIMARY KEY, state TEXT NOT NULL DEFAULT 'on', token TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL, last_sent TEXT, sends INTEGER NOT NULL DEFAULT 0)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS alert_sent (email TEXT NOT NULL, pid INTEGER NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (email, pid))");
     this.seedOwner();
+  }
+
+  // One piece of an owner's upload. Pieces live in a separate object for each lead ("files-<lead>"),
+  // so uploads never use up the main object's space. The Worker checks the owner's link against the
+  // main object first; nothing else can reach a Durable Object.
+  async filePut(u, request) {
+    const f = Number(u.searchParams.get("f")), i = Number(u.searchParams.get("i"));
+    if (!Number.isSafeInteger(f) || f <= 0 || !Number.isInteger(i) || i < 0) return new Response(JSON.stringify({ error: "file" }), { status: 400 });
+    const data = new Uint8Array(await request.arrayBuffer());
+    if (!data.length || data.length > FILE_CHUNK) return new Response(JSON.stringify({ error: "size" }), { status: 400 });
+    this.sql.exec("INSERT OR REPLACE INTO lead_file_chunks (file_id, i, data) VALUES (?, ?, ?)", f, i, data);
+    return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+  }
+  fileRead(u) {
+    const r = this.sql.exec("SELECT data FROM lead_file_chunks WHERE file_id = ? AND i = ?", Number(u.searchParams.get("f")), Number(u.searchParams.get("i"))).toArray()[0];
+    if (!r) return new Response("", { status: 404 });
+    return new Response(r.data, { headers: { "Content-Type": "application/octet-stream" } });
   }
 
   // A member's alerts row, made (switched on) if there isn't one yet. Returns its unsubscribe token.
@@ -2107,7 +2241,11 @@ export class Store {
   }
 
   async fetch(request) {
-    const op = new URL(request.url).pathname.slice(1);
+    const u = new URL(request.url);
+    const op = u.pathname.slice(1);
+    // Pieces of an uploaded file go in and out as raw bytes, not JSON.
+    if (op === "file-put") return this.filePut(u, request);
+    if (op === "file-read") return this.fileRead(u);
     const p = await request.json();
     const now = Date.now();
     const reply = (data) => new Response(JSON.stringify(data), { headers: { "Content-Type": "application/json" } });
@@ -2338,6 +2476,52 @@ export class Store {
       if (p.found) this.sql.exec("UPDATE leads SET owner_verified_at = COALESCE(owner_verified_at, ?), updated_at = ? WHERE seller_token = ?", now, now, String(p.token));
       return reply({ ok: true, at: (this.sql.exec("SELECT owner_verified_at FROM leads WHERE seller_token = ?", String(p.token)).toArray()[0] || {}).owner_verified_at || null });
     }
+    // ---------- files an owner uploads ----------
+    if (op === "file-start") {
+      const l = this.sql.exec("SELECT id, owner_verified_at FROM leads WHERE seller_token = ?", String(p.token)).toArray()[0];
+      if (!l) return reply({ error: "link" });
+      if (!l.owner_verified_at) return reply({ error: "first" });
+      const have = this.sql.exec("SELECT COUNT(*) AS n, COALESCE(SUM(size), 0) AS bytes FROM lead_files WHERE lead_id = ?", l.id).toArray()[0];
+      if (have.n >= FILE_MAX_COUNT || have.bytes + p.size > FILE_MAX_TOTAL) return reply({ error: "full" });
+      this.sql.exec("INSERT INTO lead_files (lead_id, name, type, size, chunks, created_at) VALUES (?, ?, ?, ?, ?, ?)", l.id, String(p.name).slice(0, 120), String(p.type), Number(p.size), Math.ceil(Number(p.size) / FILE_CHUNK), now);
+      return reply({ f: this.sql.exec("SELECT last_insert_rowid() AS id").toArray()[0].id });
+    }
+    // Is this piece of this file the owner's to send? (Checked here; the piece itself goes to the
+    // lead's files object.)
+    if (op === "file-ok") {
+      const f = this.sql.exec("SELECT f.id, f.lead_id, f.chunks, f.done FROM lead_files f JOIN leads l ON l.id = f.lead_id WHERE f.id = ? AND l.seller_token = ?", Number(p.f), String(p.token)).toArray()[0];
+      if (!f || f.done || !(p.i >= 0 && p.i < f.chunks)) return reply({ error: "file" });
+      return reply({ lead_id: f.lead_id });
+    }
+    if (op === "file-lead") {
+      const f = this.sql.exec("SELECT f.id, f.lead_id FROM lead_files f JOIN leads l ON l.id = f.lead_id WHERE f.id = ? AND l.seller_token = ?", Number(p.f), String(p.token)).toArray()[0];
+      return reply({ lead_id: f ? f.lead_id : null });
+    }
+    // In a lead's files object: how much of a file has arrived, and removing files.
+    if (op === "file-count") {
+      return reply(this.sql.exec("SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(data)), 0) AS bytes FROM lead_file_chunks WHERE file_id = ?", Number(p.f)).toArray()[0]);
+    }
+    if (op === "file-drop") {
+      if (p.all) this.sql.exec("DELETE FROM lead_file_chunks");
+      for (const id of p.ids || []) this.sql.exec("DELETE FROM lead_file_chunks WHERE file_id = ?", Number(id));
+      return reply({ ok: true });
+    }
+    if (op === "file-done") {
+      const f = this.sql.exec("SELECT f.id, f.lead_id, f.size, f.chunks, f.done FROM lead_files f JOIN leads l ON l.id = f.lead_id WHERE f.id = ? AND l.seller_token = ?", Number(p.f), String(p.token)).toArray()[0];
+      if (!f) return reply({ error: "file" });
+      const got = p.got || {};
+      if (got.n !== f.chunks || got.bytes !== f.size) return reply({ error: "missing" });
+      this.sql.exec("UPDATE lead_files SET done = 1 WHERE id = ?", f.id);
+      // The first file becomes the lead's proof link, unless there's already a recording link.
+      this.sql.exec("UPDATE leads SET proof = CASE WHEN proof = '' OR proof IS NULL THEN ? ELSE proof END, proof_at = ?, updated_at = ? WHERE id = ?", String(p.link), now, now, f.lead_id);
+      return reply({ ok: true, files: this.sql.exec("SELECT COUNT(*) AS n FROM lead_files WHERE lead_id = ? AND done = 1", f.lead_id).toArray()[0].n });
+    }
+    if (op === "file-meta") {
+      const f = this.sql.exec("SELECT f.id, f.lead_id, f.name, f.type, f.size, f.chunks, f.done, l.status AS lead_status FROM lead_files f JOIN leads l ON l.id = f.lead_id WHERE f.id = ?", Number(p.f)).toArray()[0];
+      const sent = f && p.email ? !!this.sql.exec("SELECT 1 FROM lead_sends WHERE lead_id = ? AND email = ?", f.lead_id, String(p.email)).toArray()[0] : false;
+      return reply({ file: f || null, sent });
+    }
+
     if (op === "seller-proof") {
       this.sql.exec("UPDATE leads SET proof = ?, proof_at = ?, updated_at = ? WHERE seller_token = ? AND owner_verified_at IS NOT NULL", String(p.url), now, now, String(p.token));
       return reply({ ok: true });
@@ -2347,6 +2531,7 @@ export class Store {
       return reply({
         leads: this.sql.exec("SELECT * FROM leads ORDER BY updated_at DESC").toArray(),
         sends: this.sql.exec("SELECT lead_id, email, sent_at, status, note, updated_at FROM lead_sends ORDER BY sent_at DESC").toArray(),
+        files: this.sql.exec("SELECT id, lead_id, name, type, size, created_at FROM lead_files WHERE done = 1 ORDER BY id").toArray(),
         accounts: this.sql.exec("SELECT email, name, company FROM signups ORDER BY created_at DESC").toArray(),
         boxes: this.sql.exec("SELECT b.email AS email, b.box AS box, b.updated_at AS updated_at, u.name AS name, u.company AS company, (SELECT COUNT(*) FROM lead_sends s WHERE s.email = b.email) AS sent FROM buybox b LEFT JOIN signups u ON u.email = b.email ORDER BY b.updated_at DESC").toArray(),
         digest: (this.sql.exec("SELECT v FROM kv WHERE k = 'digest'").toArray()[0] || {}).v || null,
@@ -2375,6 +2560,7 @@ export class Store {
     }
 
     if (op === "lead-delete") {
+      this.sql.exec("DELETE FROM lead_files WHERE lead_id = ?", p.id);
       this.sql.exec("DELETE FROM lead_sends WHERE lead_id = ?", p.id);
       this.sql.exec("DELETE FROM leads WHERE id = ?", p.id);
       return reply({ ok: true });
@@ -2404,6 +2590,10 @@ export class Store {
       const lastRow = this.sql.exec("SELECT v FROM kv WHERE k = 'daily_at'").toArray()[0];
       const since = lastRow ? Number(lastRow.v) : now - DAY_MS;
       const d = { at: now, date: new Date(now).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" }), history: !!HX, found: [], offers: [], changed: [], updates: [], stale: [], willing: 0 };
+
+      // Uploads that never finished: forgotten here, and their pieces dropped by the Worker.
+      const staleFiles = this.sql.exec("SELECT id, lead_id FROM lead_files WHERE done = 0 AND created_at < ?", now - DAY_MS).toArray();
+      this.sql.exec("DELETE FROM lead_files WHERE done = 0 AND created_at < ?", now - DAY_MS);
 
       // Clear out the check's own suggestions that nobody has touched for a while.
       this.sql.exec("DELETE FROM leads WHERE auto = 1 AND status = 'found' AND updated_at < ? AND id NOT IN (SELECT lead_id FROM lead_sends)", now - AUTO_KEEP_DAYS * DAY_MS);
@@ -2464,10 +2654,12 @@ export class Store {
       if (d.offers.length) bits.push(d.offers.length + (d.offers.length === 1 ? " owner wants" : " owners want") + " to sell");
       if (d.changed.length) bits.push(d.changed.length + (d.changed.length === 1 ? " game changed owner" : " games changed owner"));
       if (d.updates.length) bits.push(d.updates.length + (d.updates.length === 1 ? " buyer update" : " buyer updates"));
+      if (d.confirmed.length) bits.push(d.confirmed.length + (d.confirmed.length === 1 ? " owner confirmed" : " owners confirmed"));
+      if (d.recordings.length) bits.push(d.recordings.length + (d.recordings.length === 1 ? " dashboard to check" : " dashboards to check"));
       d.headline = bits.join(", ") || "nothing new";
       this.sql.exec("INSERT OR REPLACE INTO kv (k, v) VALUES ('daily_at', ?)", String(now));
       this.sql.exec("INSERT OR REPLACE INTO kv (k, v) VALUES ('digest', ?)", JSON.stringify(d));
-      return reply({ ok: true, digest: d });
+      return reply({ ok: true, digest: d, staleFiles });
     }
 
     if (op === "make-link") {

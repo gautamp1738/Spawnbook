@@ -43,7 +43,7 @@
     <div class="c-r stack">
       <ol class="sell-steps">
         <li><strong>You tell us about your game</strong> with the form below.</li>
-        <li><strong>You show it's yours,</strong> in about two minutes: put a code we give you in the game's description, then send a short screen recording of your Creator Dashboard. Buyers only see games whose owner we've confirmed.</li>
+        <li><strong>You show it's yours,</strong> in about two minutes: put a code we give you in the game's description, then add a screenshot of your Creator Dashboard right here. Buyers only see games whose owner we've confirmed.</li>
         <li><strong>When a buyer wants a game like yours,</strong> we ask you first. With your OK, we send them your contact and numbers. You talk to them directly and decide everything yourself.</li>
       </ol>
       <p class="small muted">It's free for owners, and we don't take a cut of any sale. Not sure what it's worth? <a class="link" href="value">Value your game</a> first.</p>
@@ -68,16 +68,25 @@
             <div class="rowline"><button type="button" class="button" id="v-check">Check my game</button><span class="status" id="v-check-status" role="status"></span></div>
           </li>
           <li class="v-step" id="v-s2">
-            <h4>Send a short recording of your Creator Dashboard</h4>
-            <p class="small">Record your screen for about a minute: the last 30 days of Robux earned and concurrent users for this game. Upload it as an unlisted YouTube video, a Loom or a Google Drive file anyone with the link can view, and paste the link. We only show it to a buyer after you say yes.</p>
-            <form class="form v-proof" id="v-proof" novalidate>
-              <div class="field"><label for="v-url">Link to your recording</label><input id="v-url" type="url" inputmode="url" maxlength="500" autocomplete="off" placeholder="https://"></div>
-              <div class="form-row"><button class="button" type="submit" id="v-send">Send recording</button><span class="status" id="v-proof-status" role="status"></span></div>
-            </form>
+            <h4>Show us your Creator Dashboard</h4>
+            <p class="small" id="v-s2-text">A screenshot is enough. Open this game's analytics in <a class="link" href="https://create.roblox.com/dashboard/creations" target="_blank" rel="noopener">Creator Hub<span class="sr-only"> (opens in a new tab)</span></a> so the last 30 days of Robux earned and players are on screen, then take a screenshot. A short screen recording is even better if you can. We only show these to a buyer after you say yes.</p>
+            <div class="v-upload" id="v-upload">
+              <input class="v-file" type="file" id="v-file" accept="image/*,video/*" multiple disabled>
+              <label class="button" for="v-file" id="v-file-btn">Add screenshots or a recording</label>
+              <p class="small muted">Pictures or videos, up to 150 MB each. On a computer: Windows key + Shift + S takes a screenshot, and Cmd + Shift + 4 on a Mac.</p>
+              <ul class="v-files" id="v-files" aria-live="polite"></ul>
+            </div>
+            <details class="v-more" id="v-more">
+              <summary>Or paste a link instead</summary>
+              <form class="form v-proof" id="v-proof" novalidate>
+                <div class="field"><label for="v-url">Link to your recording or screenshots <span class="opt">(YouTube, Loom, Google Drive)</span></label><input id="v-url" type="url" inputmode="url" maxlength="500" autocomplete="off" placeholder="https://"></div>
+                <div class="form-row"><button class="button quiet" type="submit" id="v-send">Send link</button><span class="status" id="v-proof-status" role="status"></span></div>
+              </form>
+            </details>
           </li>
           <li class="v-step" id="v-s3">
             <h4>We check it and keep you in mind</h4>
-            <p class="small">We compare your recording with Roblox's public numbers. When a buyer is looking for a game like yours, we'll message you at the contact you gave and ask before passing anything on.</p>
+            <p class="small">We compare what you sent with Roblox's public numbers. When a buyer is looking for a game like yours, we'll message you at the contact you gave and ask before passing anything on.</p>
           </li>
         </ol>
       </div>
@@ -199,9 +208,14 @@
     $("v-check").hidden = !!st.confirmed;
     if (st.confirmed) $("v-check-status").textContent = "Confirmed " + day(st.confirmed) + ": the code is in your game's description. You can take it out now.";
     s2.classList.toggle("is-off", !st.confirmed);
-    $("v-url").disabled = $("v-send").disabled = !st.confirmed;
+    $("v-url").disabled = $("v-send").disabled = $("v-file").disabled = !st.confirmed;
+    $("v-file-btn").classList.toggle("is-disabled", !st.confirmed);
     s2.classList.toggle("is-done", !!st.proof);
-    if (st.proof) { $("v-proof").hidden = true; s2.querySelector("p").textContent = "Got it" + (st.proofAt ? ", " + day(st.proofAt) : "") + ". Thanks."; }
+    if (st.proof) {
+      $("v-s2-text").textContent = "Got it" + (st.proofAt ? ", " + day(st.proofAt) : "") + ". Thanks. You can add more if you like.";
+      $("v-file-btn").textContent = "Add more";
+      $("v-more").hidden = true;
+    }
     s3.classList.toggle("is-off", !st.proof);
   }
   function loadSteps(t, fresh, st) {
@@ -241,6 +255,58 @@
       if (j.confirmed) $("v-url").focus();
     });
   });
+  // ---------- uploads: each file goes up in 1 MB pieces, so big videos and slow phones are fine ----------
+  var UP = { type: "That kind of file won't work. Add a picture or a video.", big: "That file is over 150 MB. Record a shorter clip, 30 seconds is plenty.", full: "That's as many files as we can take for one game.", first: "Check your game first, in step 1.", link: CHECK.link, net: "That didn't upload. Check your connection and try again." };
+  function size(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB"; }
+  function putPiece(url, blob, tries) {
+    return fetch(url, { method: "POST", body: blob, credentials: "same-origin" }).then(function (r) {
+      if (r.ok) return true;
+      if (tries > 1 && r.status >= 500) return putPiece(url, blob, tries - 1);
+      return false;
+    }, function () { return tries > 1 ? new Promise(function (res) { setTimeout(res, 1500); }).then(function () { return putPiece(url, blob, tries - 1); }) : false; });
+  }
+  function uploadOne(file, li) {
+    var bar = li.querySelector("progress"), note = li.querySelector(".v-f-note");
+    return api("/api/sell/upload/start", { t: T, name: file.name, type: file.type, size: file.size }).then(function (j) {
+      if (j.error || !j.f) { note.textContent = UP[j.error] || UP.net; li.classList.add("is-bad"); bar.hidden = true; return null; }
+      var n = Math.max(1, Math.ceil(file.size / j.chunk)), i = 0;
+      function step() {
+        if (i >= n) return api("/api/sell/upload/done", { t: T, f: j.f }).then(function (d) {
+          if (d.error) { note.textContent = UP.net; li.classList.add("is-bad"); return null; }
+          bar.value = 1; note.textContent = "Uploaded"; li.classList.add("is-ok"); return j.f;
+        });
+        var blob = file.slice(i * j.chunk, Math.min(file.size, (i + 1) * j.chunk));
+        return putPiece("/api/sell/upload/chunk?t=" + T + "&f=" + j.f + "&i=" + i, blob, 3).then(function (ok) {
+          if (!ok) { note.textContent = UP.net; li.classList.add("is-bad"); return null; }
+          i++; bar.value = i / n; note.textContent = Math.round(i / n * 100) + "%";
+          return step();
+        });
+      }
+      return step();
+    });
+  }
+  $("v-file").addEventListener("change", function () {
+    var files = Array.prototype.slice.call(this.files || []);
+    this.value = "";
+    if (!files.length) return;
+    $("v-file").disabled = true; $("v-file-btn").classList.add("is-disabled");
+    var lastOk = null, chain = Promise.resolve();
+    files.forEach(function (file) {
+      var li = document.createElement("li");
+      li.innerHTML = '<span class="v-f-name"></span><span class="v-f-size small muted"></span><progress max="1" value="0"></progress><span class="v-f-note small">Waiting</span>';
+      li.querySelector(".v-f-name").textContent = file.name;
+      li.querySelector(".v-f-size").textContent = size(file.size);
+      $("v-files").appendChild(li);
+      chain = chain.then(function () { return uploadOne(file, li).then(function (f) { if (f) lastOk = f; }); });
+    });
+    chain.then(function () {
+      $("v-file").disabled = false; $("v-file-btn").classList.remove("is-disabled");
+      if (!lastOk) return;
+      // One email to us for the whole batch.
+      return api("/api/sell/upload/done", { t: T, f: lastOk, last: true }).then(function (j) { if (!j.error) render(j); });
+    });
+  });
+
   $("v-proof").addEventListener("submit", function (e) {
     e.preventDefault();
     var u = $("v-url").value.trim();
