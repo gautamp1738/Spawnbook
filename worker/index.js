@@ -822,7 +822,19 @@ async function signin(request, env) {
 const OAUTH_COOKIE = "sb_oauth";
 const GNEW_COOKIE = "sb_gnew";
 const GOOGLE_PENDING_MS = 15 * 60 * 1000;
-const googleOn = (env) => !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+// A real client ID is "<project number>-<letters>.apps.googleusercontent.com". One that's been
+// pasted with only its end (or with spaces) would send people to Google's "client not found"
+// page, so the button stays hidden until it looks right, and the admin page says why.
+const googleId = (env) => String(env.GOOGLE_CLIENT_ID || "").trim();
+const googleSecret = (env) => String(env.GOOGLE_CLIENT_SECRET || "").trim();
+const googleIdOk = (env) => /^\d{6,}-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(googleId(env));
+const googleOn = (env) => googleIdOk(env) && googleSecret(env).length >= 10;
+function googleStatus(env) {
+  if (!env.GOOGLE_CLIENT_ID && !env.GOOGLE_CLIENT_SECRET) return "Continue with Google is off until the GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET secrets are added in Cloudflare.";
+  if (!googleIdOk(env)) return "<strong>Continue with Google is hidden: the GOOGLE_CLIENT_ID secret doesn't look like a whole client ID.</strong> It should look like 123456789012-abc123.apps.googleusercontent.com" + (googleId(env).endsWith(".apps.googleusercontent.com") && !/^\d/.test(googleId(env)) ? ", but the part before .apps.googleusercontent.com is missing. Copy it again with the copy button next to Client ID in Google Cloud" : "") + ".";
+  if (!(googleSecret(env).length >= 10)) return "<strong>Continue with Google is hidden: the GOOGLE_CLIENT_SECRET secret is missing or too short.</strong>";
+  return "Continue with Google is on.";
+}
 const b64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const CLEAR_OAUTH = OAUTH_COOKIE + "=; Path=/auth/google; Max-Age=0; HttpOnly; Secure; SameSite=Lax";
 const CLEAR_GNEW = GNEW_COOKIE + "=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax";
@@ -845,7 +857,7 @@ async function googleStart(request, env, url) {
   const challenge = b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
   const keep = [state, verifier, next, /^[a-z0-9]{6,16}$/.test(ref) ? ref : ""].map(encodeURIComponent).join("|");
   const q = new URLSearchParams({
-    client_id: env.GOOGLE_CLIENT_ID, redirect_uri: url.origin + "/auth/google/callback", response_type: "code",
+    client_id: googleId(env), redirect_uri: url.origin + "/auth/google/callback", response_type: "code",
     scope: "openid email profile", state, code_challenge: challenge, code_challenge_method: "S256", prompt: "select_account"
   });
   return redirect("https://accounts.google.com/o/oauth2/v2/auth?" + q, { "Set-Cookie": OAUTH_COOKIE + "=" + keep + "; Path=/auth/google; Max-Age=600; HttpOnly; Secure; SameSite=Lax" });
@@ -864,7 +876,7 @@ async function googleBack(request, env, url) {
   try {
     const r = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: url.origin + "/auth/google/callback", grant_type: "authorization_code", code_verifier: verifier })
+      body: new URLSearchParams({ code, client_id: googleId(env), client_secret: googleSecret(env), redirect_uri: url.origin + "/auth/google/callback", grant_type: "authorization_code", code_verifier: verifier })
     });
     tok = await r.json();
     if (!r.ok || !tok.id_token) return fail("google");
@@ -873,7 +885,7 @@ async function googleBack(request, env, url) {
   // can be trusted without checking the signature (OpenID Connect Core 3.1.3.7). The audience,
   // issuer and expiry still have to match.
   const c = jwtClaims(tok.id_token);
-  if (!c || !c.sub || c.aud !== env.GOOGLE_CLIENT_ID || !["accounts.google.com", "https://accounts.google.com"].includes(c.iss) || !(c.exp * 1000 > Date.now())) return fail("google");
+  if (!c || !c.sub || c.aud !== googleId(env) || !["accounts.google.com", "https://accounts.google.com"].includes(c.iss) || !(c.exp * 1000 > Date.now())) return fail("google");
   const email = String(c.email || "").toLowerCase().slice(0, 200);
   if (c.email_verified !== true || !validEmail(email)) return fail("google-email");
 
@@ -1780,6 +1792,7 @@ async function adminActivity(request, env, url, path) {
   const hookRows = a.discord.map((r) => `<li>${esc(r.email)}: ${r.access_until > now ? "" : "access ended, so nothing is posted. "}${r.discord_at ? (r.discord_err ? "last try " + esc(when(r.discord_at)) + " failed (" + esc(r.discord_err) + ")" : "last posted " + esc(when(r.discord_at))) : "nothing posted yet"}</li>`).join("");
   const picks = `<section class="today" id="picks" aria-labelledby="pk-h"><h2 id="pk-h">Daily top 5 by email and Discord</h2>
 <p>${emailOn(env) ? "Emails are on." : "<strong>Emails are off until Resend is connected</strong> (the RESEND_API_KEY secret and the mail.spawnbook.com DNS records). Sign-ups are saved and will start getting emails once it is."} Discord posts work now. Both go out every evening after the daily pull.</p>
+<p>${googleStatus(env)}</p>
 <p>${last ? "Last sent: " + esc(last.date) + ", " + last.discord + " Discord " + (last.discord === 1 ? "channel" : "channels") + ", " + (last.emailsOff ? "emails off" : last.emails + " emails") + "." : "Nothing sent yet."} ${on} on the email list, ${a.discord.length} Discord ${a.discord.length === 1 ? "channel" : "channels"}.</p>
 <form method="post" action="/admin/picks/send"><button class="button quiet" type="submit">Send today's top 5 now</button></form>${sentMsg}
 <h3>Email list</h3>${emailTable}
