@@ -825,8 +825,11 @@ const GOOGLE_PENDING_MS = 15 * 60 * 1000;
 // A real client ID is "<project number>-<letters>.apps.googleusercontent.com". One that's been
 // pasted with only its end (or with spaces) would send people to Google's "client not found"
 // page, so the button stays hidden until it looks right, and the admin page says why.
-const googleId = (env) => String(env.GOOGLE_CLIENT_ID || "").trim();
-const googleSecret = (env) => String(env.GOOGLE_CLIENT_SECRET || "").trim();
+// Client IDs and secrets never contain spaces or quotes, so any pasted along (or an invisible
+// character copied from a web page) are dropped.
+const cleanKey = (v) => String(v || "").replace(/[\s"'`\u200B-\u200D\u2060\uFEFF]/g, "");
+const googleId = (env) => cleanKey(env.GOOGLE_CLIENT_ID).toLowerCase();
+const googleSecret = (env) => cleanKey(env.GOOGLE_CLIENT_SECRET);
 const googleIdOk = (env) => /^\d{6,}-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(googleId(env));
 const googleOn = (env) => googleIdOk(env) && googleSecret(env).length >= 10;
 function googleStatus(env) {
