@@ -20,9 +20,17 @@
 
    Games not on Top Earning earn less than the last game on the chart, so that's their ceiling.
 
-   Months of revenue: measured decline when we've tracked a game 4 weeks, otherwise the genre's
-   typical range (1–2 months for fast-rise games, 3–6 for slow builders), placed lower when the game
-   is falling. Upside isn't priced in: buyers pay for it with a stake or revenue share instead.
+   Months of revenue depend on age, because survival is the best evidence that a game will last.
+   Under six months old, most games fade fast, so the genre's typical range applies: 1–2 months for
+   fast-rise games, 3–6 for slow builders (Blue Lock: Rivals sold for about 3 months of developer
+   revenue near its peak; Naavik's David Taylor says short-lived games often go for 1–2). A game
+   still earning at six months to a year gets 4–9 months, and after a year 8–18, centered on the
+   year of revenue that analysts, published guides and the reported deals put established games at.
+   When we've tracked a game 4 weeks we use its measured decline instead: its future revenue adds up
+   to one month's revenue divided by the share it loses a month, capped at 12 months under six
+   months old (four weeks can't prove a young game will last) and 18 after that. Every range is
+   placed lower when the game is falling, and an older game that's falling is priced like a younger
+   one. Upside isn't priced in: buyers pay for it with a stake or revenue share instead.
 
    The range is a likely range, not best case to worst case. The two uncertainties (revenue, months)
    are combined the way independent errors are, rather than multiplying both worst cases together. */
@@ -32,10 +40,13 @@
   var DEVEX = 0.0038;       // dollars per earned Robux (Roblox's DevEx rate since Sept 2025)
   var PER_VISIT = 0.008;    // rough rule, only for the calculator when someone types visits
   var PER_PLAYER_MAX = 3;   // a small game ranked high still gets at most 3× typical earnings per player
-  var MONTHS = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6] };
+  var MONTHS = { rocket: [1, 1.5, 2], staircase: [3, 4.5, 6], settled: [4, 6, 9], established: [8, 12, 18] };
+  var SETTLED_DAYS = 183, ESTABLISHED_DAYS = 365; // six months, a year
+  var CAP_YOUNG = 12, CAP_OLD = 18;               // most months a measured decline can give
+  var LOWER = { established: "settled", settled: "staircase" }; // where a falling older game is priced
   // How far each revenue estimate could reasonably be off, as a factor either way.
   var K_REV = { seller: 1, rank: 1.3, capped: 1.6, visits: 2, offchart: 2, unknown: 2.5 };
-  var K_MONTHS = { measured: 1.2, genre: 1.25, fixed: 1 };
+  var K_MONTHS = { measured: 1.2, genre: 1.25, age: 1.4, fixed: 1 };
 
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
   function median(xs) {
@@ -106,16 +117,31 @@
     return { mid: 0.5 * RATE * HOURS * players, k: K_REV.unknown, basis: "unknown", players: players };
   }
 
-  // o: { shape: "rocket" | "staircase", decay: share of players lost a month when measured (0.15),
-  //      week: players change over about a week (-0.25), peak: latest players ÷ most seen (0.55),
-  //      months: a fixed number, for the calculator's measured decline }
+  // Which range a game gets: by age when we know it, otherwise the genre's shape. The calculator
+  // can ask for "settled" or "established" directly.
+  function tierOf(o) {
+    if (o.shape === "settled" || o.shape === "established") return o.shape;
+    if (o.age >= ESTABLISHED_DAYS) return "established";
+    if (o.age >= SETTLED_DAYS) return "settled";
+    return o.shape === "staircase" ? "staircase" : "rocket";
+  }
+
+  // o: { shape: "rocket" | "staircase" | "settled" | "established", age: days since launch,
+  //      decay: share of players lost a month when measured (0.15),
+  //      week: players change over about a week (-0.25), peak: latest players ÷ most seen (0.55) }
   function months(o) {
     o = o || {};
-    if (o.decay > 0) return { mid: clamp(1 / o.decay, 1, 12), k: K_MONTHS.measured, basis: "measured", decay: o.decay };
-    var band = MONTHS[o.shape] || MONTHS.rocket, f = 1, why = null;
-    if (o.week != null && o.week <= -0.2) { f = 0.75; why = "falling"; }
+    var tier = tierOf(o), old = !!LOWER[tier];
+    if (o.decay > 0) {
+      // Without an age (the calculator), the owner's own long-run decline gets the higher cap.
+      var cap = old || o.age == null ? CAP_OLD : CAP_YOUNG;
+      return { mid: clamp(1 / o.decay, 1, cap), k: K_MONTHS.measured, basis: "measured", decay: o.decay, cap: cap, capped: 1 / o.decay > cap, tier: tier };
+    }
+    var used = tier, f = 1, why = null;
+    if (o.week != null && o.week <= -0.2) { f = 0.75; why = "falling"; if (old) used = LOWER[tier]; }
     else if (o.peak != null && o.peak < 0.6) { f = 0.85; why = "offpeak"; }
-    return { mid: clamp(band[1] * f, band[0], band[2]), k: K_MONTHS.genre, basis: "genre", band: band, shape: o.shape === "staircase" ? "staircase" : "rocket", why: why };
+    var band = MONTHS[used];
+    return { mid: clamp(band[1] * f, band[0], band[2]), k: old && used === tier ? K_MONTHS.age : K_MONTHS.genre, basis: old ? "age" : "genre", band: band, shape: used, tier: tier, why: why };
   }
 
   function value(o, earn) {
@@ -140,6 +166,7 @@
       rank: earn && earn.ranks ? rankOf(earn, x.uid) : row[18] || 0, // the collector reads the whole chart
       players: row[7],
       shape: row[21],
+      age: row[6],
       decay: row[25] && x.decay != null ? x.decay / 100 : null,
       week: t.d7 && t.d7.players != null ? t.d7.players / 100 : null,
       peak: t.peak && last != null && s.length >= 4 ? last / t.peak : null,
@@ -179,17 +206,27 @@
     }
     return s;
   }
+  var AGE_TEXT = { settled: "Six months to a year old and still earning", established: "Over a year old and still earning" };
   function monthsWhy(v) {
     var m = v.months;
-    if (m.basis === "measured") return "It's losing about " + Math.round(m.decay * 100) + "% of its players a month, so we price it at about " + trim(m.mid) + " months of revenue.";
-    var s = (m.shape === "staircase" ? "Slow-build genre, usually " + m.band[0] + " to " + m.band[2] : "Fast-rise genre, usually " + m.band[0] + " to " + m.band[2]) + " months of revenue";
+    if (m.basis === "measured") {
+      var s0 = "It's losing about " + Math.round(m.decay * 100) + "% of its players a month, so we price it at about " + trim(m.mid) + " months of revenue";
+      if (m.capped) s0 += ", the most we give " + (m.cap === CAP_OLD ? "any game" : "a game under six months old, because four weeks can't prove it will last");
+      return s0 + ".";
+    }
+    if (m.tier !== m.shape) {
+      // An older game that's falling, priced like a younger one.
+      return AGE_TEXT[m.tier] + ", but players fell over 20% this week, so we price it like a younger game: " + trim(m.mid) + " months of revenue.";
+    }
+    var s = (m.shape === "established" || m.shape === "settled" ? AGE_TEXT[m.shape] + ". Games that last that long usually sell for " + m.band[0] + " to " + m.band[2]
+      : m.shape === "staircase" ? "Slow-build genre, usually " + m.band[0] + " to " + m.band[2] : "Fast-rise genre, usually " + m.band[0] + " to " + m.band[2]) + " months of revenue";
     if (m.why === "falling") return s + ". Players fell over 20% this week, so we use " + trim(m.mid) + ".";
     if (m.why === "offpeak") return s + ". It's well below its peak, so we use " + trim(m.mid) + ".";
     return s + "; we use " + trim(m.mid) + ".";
   }
 
   root.SBV = {
-    RATE: RATE, HOURS: HOURS, DEVEX: DEVEX, PER_VISIT: PER_VISIT, MONTHS: MONTHS,
+    RATE: RATE, HOURS: HOURS, DEVEX: DEVEX, PER_VISIT: PER_VISIT, MONTHS: MONTHS, CAP_YOUNG: CAP_YOUNG, CAP_OLD: CAP_OLD, tierOf: tierOf,
     curveFrom: curveFrom, revenue: revenue, months: months, value: value, boardInput: boardInput, rankOf: rankOf, median: median,
     money: money, confLabel: confLabel, rangeText: rangeText, revenueWhy: revenueWhy, monthsWhy: monthsWhy,
   };

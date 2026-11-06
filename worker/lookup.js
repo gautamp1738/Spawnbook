@@ -526,6 +526,7 @@ function analyse(ctx) {
     rank: earn && earn.ranks ? SBV.rankOf(earn, uid) : inToday ? (ex.s && ex.s.te) || 0 : null,
     players: lastRow && hx && lastRow.d === hx.dates[hx.dates.length - 1] ? lastRow.players : g.playing,
     shape,
+    age,
     decay: row && row[25] && x26.decay != null ? x26.decay / 100 : null,
     week: playersWeek ? playersWeek.change : null,
     peak: peakHold,

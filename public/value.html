@@ -65,6 +65,8 @@
           <div class="seg" role="group" aria-labelledby="fade-lbl">
             <button type="button" id="f-rocket" aria-pressed="false">Rising: trend, sim or copy game</button>
             <button type="button" id="f-stair" aria-pressed="true">Rising: competitive, social or fishing</button>
+            <button type="button" id="f-settled" aria-pressed="false">Steady, 6 to 12 months old</button>
+            <button type="button" id="f-established" aria-pressed="false">Steady, over a year old</button>
             <button type="button" id="f-measured" aria-pressed="false">I know how fast it's losing players</button>
           </div>
           <div class="decline-field" id="wrap-decline" hidden>
@@ -85,7 +87,7 @@
           <li>Kids and Select audiences already unlocked</li>
           <li>Most traffic comes from Roblox recommendations, not ads</li>
         </ul>
-        <p class="small muted">A starting range, not an appraisal. Everything stays in your browser. Robux convert at the DevEx rate, $0.0038 each. Visits use a rule of thumb, about $0.008 of developer revenue each, so they give a wide range. We cap the price at 12 months of revenue even for durable games, because buyers discount for risk.</p>
+        <p class="small muted">A starting range, not an appraisal. Everything stays in your browser. Robux convert at the DevEx rate, $0.0038 each. Visits use a rule of thumb, about $0.008 of developer revenue each, so they give a wide range. Young games are priced at 1 to 6 months of revenue, because most fade within months. A game still earning at 6 to 12 months gets 4 to 9, and after a year 8 to 18, about where analysts and the few reported deals put established games. Nothing goes past 18, because buyers discount for risk.</p>
         <p><a class="link" href="#request">Want a real valuation? Send us your game</a></p>
         <p><a class="link" href="sell">Open to selling? Tell buyers about your game</a></p>
       </div>
@@ -225,7 +227,14 @@
 
   // ---------- value: the headline you can type ----------
   var fade = "stair";
-  var FADES = { rocket: "f-rocket", stair: "f-stair", measured: "f-measured" };
+  var FADES = { rocket: "f-rocket", stair: "f-stair", settled: "f-settled", established: "f-established", measured: "f-measured" };
+  var FADE_NOTE = {
+    rocket: " (fast-rise games sell for 1 to 2)",
+    stair: " (slow-build games sell for 3 to 6)",
+    settled: " (games still earning at 6 to 12 months sell for 4 to 9)",
+    established: " (games still earning after a year sell for 8 to 18)",
+    measured: ", from its decline"
+  };
   function parseQuery(str) {
     var t = String(str || "").toLowerCase();
     var mm = t.match(/([\d][\d,]*(?:\.\d+)?|\.\d+)\s*(k|thousand|m|mil|million|b|billion)?\b/);
@@ -242,7 +251,7 @@
     $("wrap-decline").hidden = fade !== "measured";
     if (!q) { $("v-range").textContent = "Type a number"; $("v-line").textContent = "Try 2,500,000 Robux, 40 million visits or $9,500."; $("v-lasts").textContent = ""; return; }
     // Same model as the board (public/valuation.js), on the revenue typed in.
-    var o = { shape: fade === "rocket" ? "rocket" : "staircase" };
+    var o = { shape: fade === "rocket" ? "rocket" : fade === "settled" || fade === "established" ? fade : "staircase" };
     if (q.kind === "robux") o.seller = q.n * SBV.DEVEX;
     else if (q.kind === "usd") o.seller = q.n;
     else o.visitsMonth = q.n;
@@ -254,8 +263,9 @@
     var v = SBV.value(o, null), mo = Math.round(v.months.mid * 10) / 10;
     $("v-range").textContent = money(v.lo) + "–" + money(v.hi);
     var basis = q.kind === "robux" ? commas(q.n) + " Robux is about " + money(v.rev.mid) + " at the DevEx rate. " : q.kind === "visits" ? short(q.n) + " visits is roughly " + money(v.rev.mid) + " of revenue, a rule of thumb, so the range is wide. Robux earned gives a much tighter one. " : "";
-    $("v-line").textContent = basis + "Middle about " + money(v.mid) + ": " + money(v.rev.mid) + " a month × " + mo + " months" + (fade === "measured" ? ", from its decline" : fade === "rocket" ? " (fast-rise games sell for 1 to 2)" : " (slow-build games sell for 3 to 6)") + ".";
-    $("v-lasts").textContent = "If it holds its players for a year: " + money(v.year);
+    $("v-line").textContent = basis + "Middle about " + money(v.mid) + ": " + money(v.rev.mid) + " a month × " + mo + " months" + (FADE_NOTE[fade] || "") + (fade === "measured" && v.months.capped ? ", capped at " + v.months.cap : "") + ".";
+    // Only worth saying when a year of revenue is more than the price already counts.
+    $("v-lasts").textContent = v.months.mid >= 12 ? "" : "If it holds its players for a year: " + money(v.year);
   }
   function placeCaret() {
     var inp = $("vq"), meas = document.querySelector(".vq-measure"), caret = document.querySelector(".vq-line .caret");

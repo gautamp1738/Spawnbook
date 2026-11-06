@@ -270,8 +270,8 @@
   <section id="pricing" class="sec wrap grid" aria-labelledby="pricing-h">
     <div class="ledger-head c-l6 stick">
       <h2 id="pricing-h" class="head" data-reveal><span class="soft l1">How fast it fades</span> sets the price</h2>
-      <p data-reveal style="--i:1">If a game loses a share of its players every month, its future revenue adds up to about one month's revenue divided by that share. Analyst David Taylor says short-lived games sell for one to two months of revenue and durable ones for about 12, so we cap it at 12. These past games line up with the few deal prices that have been reported.</p>
-      <p class="small muted" data-reveal style="--i:2">The decline rates are our estimates from reported player counts, and the fast-fade rows start from event peaks, so they overstate the drop. A game under six weeks old, or still rising, has no fade to measure yet. We price fast-rise games at 1 to 2 months and slow-build games at 3 to 6, starting in the middle and going lower when a game is falling. Upside is better bought with a stake or revenue share than with a bigger upfront price.</p>
+      <p data-reveal style="--i:1">If a game loses a share of its players every month, its future revenue adds up to about one month's revenue divided by that share. Analyst David Taylor says short-lived games sell for one to two months of revenue and durable ones for about 12. We cap games under six months old at 12, since a few weeks can't prove a young game will last, and older games at 18. These past games line up with the few deal prices that have been reported.</p>
+      <p class="small muted" data-reveal style="--i:2">The decline rates are our estimates from reported player counts, and the fast-fade rows start from event peaks, so they overstate the drop. A game under six weeks old, or still rising, has no fade to measure yet. We price fast-rise games at 1 to 2 months and slow-build games at 3 to 6, starting in the middle and going lower when a game is falling. Games still earning after six months get 4 to 9, and after a year 8 to 18. Upside is better bought with a stake or revenue share than with a bigger upfront price.</p>
     </div>
     <div class="c-r" data-reveal style="--i:1">
       <table class="ledger" data-ui>
@@ -284,7 +284,7 @@
           <tr><td class="fw">2</td><td class="fd">.1</td><td class="cap"><span class="g">Blue Lock: Rivals</span>Sold for more than $3 million near its 1 million peak, about 50,000 four months later.<span class="x">Lost about 50% a month.</span></td></tr>
           <tr><td class="fw">4</td><td class="fd"></td><td class="cap"><span class="g">Grow a Garden</span>2.7 million average in June 2025, 15,000 to 30,000 now.<span class="x">Lost 25 to 28% a month.</span></td></tr>
           <tr><td class="fw">6–8</td><td class="fd"></td><td class="cap"><span class="g">Steal a Brainrot</span>About 1 million average in Sept 2025, 90,000 to 170,000 now.<span class="x">Lost 13 to 17% a month.</span></td></tr>
-          <tr><td class="fw">12</td><td class="fd"></td><td class="cap"><span class="g">RIVALS</span>Down about 7% month over month in Sept 2026.<span class="x">Lost about 7% a month. 12 is our cap.</span></td></tr>
+          <tr><td class="fw">14</td><td class="fd"></td><td class="cap"><span class="g">RIVALS</span>Over a year old, down about 7% month over month in Sept 2026.<span class="x">Lost about 7% a month. Older games are capped at 18.</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -1450,7 +1450,7 @@
     o.ip = extra.ip; o.note = extra.note;
     var em = /(?:^| )E(\d+)/.exec(o.ranks || "");
     // r[13] is the universe ID (data from Nov 1, 2026 on); before that, today's rank from the chart list.
-    var v = SBV.value({ rank: EARN && r[13] ? SBV.rankOf(EARN, r[13]) : em ? Number(em[1]) : 0, players: o.playing, shape: o.shape, decay: extra.decay ? extra.decay / 100 : null }, EARN);
+    var v = SBV.value({ rank: EARN && r[13] ? SBV.rankOf(EARN, r[13]) : em ? Number(em[1]) : 0, players: o.playing, shape: o.shape, age: o.age, decay: extra.decay ? extra.decay / 100 : null }, EARN);
     o.v = v; o.rev = v.rev.mid; o.fair = v.mid; o.fairLo = v.lo; o.fairHi = v.hi; o.lasts = v.year;
     o.multTxt = "About " + money(v.mid) + ". " + (Math.round(v.months.mid * 10) / 10) + (v.months.basis === "measured" ? " months, measured fade" : " months");
     return o;
