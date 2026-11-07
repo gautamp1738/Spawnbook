@@ -1035,6 +1035,8 @@
   // ---------- small games ----------
   function renderSmall() {
     var info = META.small || {};
+    var navLink = document.querySelector('.subnav a[href="#small"]');
+    if (navLink) navLink.parentNode.hidden = !S.length;
     if (!S.length) return;
     $("small").hidden = false;
     $("small-sub").textContent = "Young games with " + commas(info.lo || 100) + " to 499 players that pass the board's other rules: under four months old, rated 85% or better and getting visits." + (info.pool ? " " + info.pool + " did today, and the " + S.length + " shown scored " + (info.min || 50) + " or more against each other." : "");
