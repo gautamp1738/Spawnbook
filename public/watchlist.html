@@ -106,6 +106,7 @@
   var T = window.SBT, $ = T.$, el = T.el, HX = T.HX;
   var BR = window.BR, onBoard = {};
   if (BR && BR.BOARD) BR.BOARD.forEach(function (r) { onBoard[r[0]] = { rank: (r[26] && r[26].rank) || null, score: r[24] }; });
+  if (BR && BR.SMALL) BR.SMALL.forEach(function (r) { onBoard[r[0]] = { rank: (r[26] && r[26].rank) || null, score: r[24], small: true }; });
   T.STATUS_ORDER.forEach(function (k) { var o = el("option", null, T.STATUS[k]); o.value = k; $("f-status").appendChild(o); });
   var rows = [], live = {}, filter = "";
 
@@ -141,7 +142,7 @@
       else wk.textContent = "–";
       tr.appendChild(wk);
       var b = onBoard[r.pid];
-      tr.appendChild(el("td", null, b ? "#" + b.rank + ", score " + b.score : "No"));
+      tr.appendChild(el("td", null, b ? (b.small ? "Small games #" : "#") + b.rank + ", score " + b.score : "No"));
       var nt = el("td", "w-note"); nt.textContent = r.note ? (r.note.length > 90 ? r.note.slice(0, 90) + "…" : r.note) : ""; tr.appendChild(nt);
       var rm = el("td"), btn = el("button", "linkbutton small", "Remove"); btn.type = "button";
       btn.setAttribute("aria-label", "Remove " + a.textContent + " from your watchlist");

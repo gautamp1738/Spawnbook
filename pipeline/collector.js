@@ -58,7 +58,7 @@ window.BRC = (function () {
   var STAIR = { "RPG": 1, "Shooter": 1, "Action": 1, "Sports & Racing": 1, "Strategy": 1, "Roleplay & Avatar Sim": 1, "Adventure": 1, "Puzzle": 1, "Party & Casual": 1, "Survival": 1, "Obby & Platformer": 1 };
   var WAVE = /steal|grow a|\+1|egg|brainrot|hatcher|rng|anomaly|lucky block|evolution|roll a/i;
   var IP = [[/free fire/i, "Free Fire"], [/blue lock/i, "Blue Lock"], [/deltarune|undertale/i, "DELTARUNE or Undertale"], [/hulk|ultron|marvel|spider-?man|avengers/i, "Marvel characters"], [/\bipad\b|\biphone\b|\bapple\b/i, "Apple"], [/chiikawa/i, "Chiikawa"], [/adventure time/i, "Adventure Time"], [/fnaf|freddy/i, "Five Nights at Freddy's"], [/oregon trail/i, "The Oregon Trail"], [/mothra|godzilla|kaiju/i, "Toho's kaiju"], [/krusty|spongebob/i, "SpongeBob"], [/morioh|jojo/i, "JoJo's Bizarre Adventure"], [/kukirin/i, "Kukirin, a scooter brand"], [/mafuba|dragon ball/i, "Dragon Ball"], [/naruto/i, "Naruto"], [/one piece/i, "One Piece"], [/pok[eé]mon/i, "Pokémon"], [/minecraft/i, "Minecraft"], [/disney|pixar/i, "Disney"], [/skibidi|cameraman/i, "Skibidi Toilet"], [/\bsonic\b/i, "Sonic"], [/\bmario\b/i, "Mario"]];
-  var AFK = /afk|donate|pls |ugc/i;
+  var AFK = /afk|donat|pls |ugc/i; // "donat" catches donate, donation and donations
   var CUE = /upd|update|world ?2|ch ?2|v3|new|🎃|season|halloween|release|event/i;
   function ipOf(name) { for (var i = 0; i < IP.length; i++) if (IP[i][0].test(name)) return IP[i][1]; return null; }
   function upMin(g) { var t = Date.parse(g && g.updated); return isFinite(t) ? Math.round(t / 60000) : 0; }
@@ -145,8 +145,9 @@ window.BRC = (function () {
   // Extra public detail for the games that make the board. Every source is optional: if one fails,
   // that field is left out and the run carries on. Sources that fail with a network error (blocked)
   // are skipped for the rest of the run.
-  async function deep(list) {
+  async function deep(list, dopts) {
     var out = {}, off = {};
+    if (dopts && dopts.servers === false) off.servers = true;
     async function tryGet(key, url, init) {
       if (off[key]) return null;
       try { return await getOnce(url, init); }
@@ -530,6 +531,7 @@ window.BRC = (function () {
     var onBoard = {}, series = {}, last = snaps.length - 1;
     snaps.forEach(function (s, di) {
       (s.b || []).forEach(function (u) { onBoard[u] = 1; });
+      (s.sm || []).forEach(function (u) { onBoard[u] = 1; });
       var t = Date.parse(s.t);
       Object.keys(s.g).forEach(function (u) {
         var a = s.g[u], r = [di, a[1], a[0], a[3], a[4]];
@@ -663,10 +665,12 @@ window.BRC = (function () {
       if (AFK.test(r.name)) flags.push("Name suggests AFK or free-item rewards");
       return { mom: mom, st: st, lo: lo, og: og, mon: mon, deal: deal, own: own, flags: flags };
     }
-    function scoreAll(members) {
-      var parts = pool.map(function (r) { return rawParts(r, members[r.uid] && members[r.uid].members); });
+    // Scores a list of games against each other: momentum and stickiness are percentiles within the list.
+    function scoreAll(members, list) {
+      list = list || pool;
+      var parts = list.map(function (r) { return rawParts(r, members[r.uid] && members[r.uid].members); });
       var pm = pct(parts.map(function (p) { return p.mom; })), ps = pct(parts.map(function (p) { return p.st; }));
-      pool.forEach(function (r, i) {
+      list.forEach(function (r, i) {
         var p = parts[i];
         r.comp = [Math.round(pm[i] * 25), Math.round(ps[i] * 25), Math.round(p.lo), Math.round(p.og), p.mon, p.deal];
         r.score = r.comp.reduce(function (a, b) { return a + b; }, 0) - p.flags.length * 5;
@@ -682,10 +686,29 @@ window.BRC = (function () {
     scoreAll(extra);
     var board = pool.filter(function (r) { return !r.ip && !r.flags.length && r.score >= 55; }).sort(function (a, b) { return b.score - a.score || b.playing - a.playing; }).slice(0, BOARD_MAX);
 
+    // Small games: 100 to 499 players, otherwise the board's rules (under four months old, rated 85% or
+    // better, visits coming in). They're scored against each other, never against the board, so they
+    // don't change the board's scores, the weekly picks or the track record. Many buyers want games
+    // before they reach 500 players. If anything here fails, the board still goes out without them.
+    var SMALL_MAX = 30, SMALL_MIN = 50, SMALL_LO = 100;
+    var spool = [], small = [], extraS = {}, smallError = null;
+    try {
+      spool = rows.filter(function (r) { return r.playing >= SMALL_LO && r.playing < 500 && r.age <= 120 && r.like >= 0.85 && r.pace > 0; });
+      if (spool.length >= 2) {
+        scoreAll({}, spool);
+        var scands = spool.filter(function (r) { return !r.ip && !r.flags.length; }).sort(function (a, b) { return b.score - a.score; }).slice(0, SMALL_MAX + 10);
+        extraS = await enrich(scands.map(function (r) { return { uid: r.uid, cid: r.cid, ctype: r.ctype }; }));
+        scoreAll(extraS, spool);
+        small = spool.filter(function (r) { return !r.ip && !r.flags.length && r.score >= SMALL_MIN; }).sort(function (a, b) { return b.score - a.score || b.playing - a.playing; }).slice(0, SMALL_MAX);
+      }
+    } catch (e) { small = []; smallError = String(e && e.message || e); }
+
     var r1 = function (x) { return Math.round(x * 10) / 10; };
 
-    // Remember today's board in today's snapshot, so tomorrow can show rank changes and streaks.
+    // Remember today's board and small-games list in today's snapshot, so tomorrow can show rank
+    // changes and streaks.
     snap.b = board.map(function (r) { return r.uid; });
+    snap.sm = small.map(function (r) { return r.uid; });
     try { saveJSON(KEY, hist); } catch (e) {}
 
     // Trends from the daily record. Snapshots from before boards were saved have no "b", so rank
@@ -704,15 +727,17 @@ window.BRC = (function () {
         visits: n[0] - a[0]
       };
     }
-    function trendOf(r) {
+    // key is the snapshot list the game is on: "b" for the board, "sm" for small games.
+    function trendOf(r, key) {
       var t = {};
-      if (prevSnap && prevSnap.b) {
-        var at = prevSnap.b.indexOf(r.uid);
+      key = key || "b";
+      if (prevSnap && prevSnap[key]) {
+        var at = prevSnap[key].indexOf(r.uid);
         t.prevRank = at >= 0 ? at + 1 : 0;
         var days = 1, complete = true;
         for (var i = prior.length - 1; i >= 0; i--) {
-          if (!prior[i].b) { complete = false; break; }
-          if (prior[i].b.indexOf(r.uid) < 0) break;
+          if (!prior[i][key]) { complete = false; break; }
+          if (prior[i][key].indexOf(r.uid) < 0) break;
           days++;
         }
         t.daysOn = days;
@@ -740,13 +765,25 @@ window.BRC = (function () {
       if (k && list && list.length >= 3) nicheByUid[g.id] = [1 + list.filter(function (p) { return p > (g.playing || 0); }).length, list.length, k];
     });
     var nicheOf = function (r) { return nicheByUid[r.uid] || null; };
-    var BOARD = board.map(function (r, i) {
-      var e = extra[r.uid] || {};
-      return [r.pid, r.name, r.creator, r.own, r.genre, r.genre2, Math.round(r.age), r.playing, Math.round(r.pace), r.fresh, r.accel != null ? r1(r.accel) : null, r1(r.sess), r1(r.like * 100), r1(r.favk), r1(r.vk), Math.round(r.hrs), r.U, r.T, r.E, r.R, r.Gk, r.shape, r.wave ? 1 : 0, r.comp.join("/"), r.score, r.mult,
-        { passes: e.passes, pmin: e.pmin, pmax: e.pmax, members: e.members, discord: /discord/i.test(r.g.description || "") ? 1 : 0, cid: r.cid, ctype: r.ctype, pgrowth7: r.pgrowth7 != null ? r1(r.pgrowth7) : null, decay: r.decay != null ? r1(r.decay * 100) : null,
-          rank: i + 1, uid: r.uid, trend: trendOf(r), deep: DEEP.byUid[r.uid] || null,
-          niche: nicheOf(r), where: sortCodes(r.sorts), upd: updRecord(r.uid, hist.snaps, idx0[r.uid] && idx0[r.uid].nh) }];
-    });
+    // One row per game, the same layout for the board and the small-games list.
+    function rowOf(r, i, ex, deepBy, key) {
+      var e = ex[r.uid] || {};
+      var x = { passes: e.passes, pmin: e.pmin, pmax: e.pmax, members: e.members, discord: /discord/i.test(r.g.description || "") ? 1 : 0, cid: r.cid, ctype: r.ctype, pgrowth7: r.pgrowth7 != null ? r1(r.pgrowth7) : null, decay: r.decay != null ? r1(r.decay * 100) : null,
+        rank: i + 1, uid: r.uid, trend: trendOf(r, key), deep: deepBy[r.uid] || null,
+        niche: nicheOf(r), where: sortCodes(r.sorts), upd: updRecord(r.uid, hist.snaps, idx0[r.uid] && idx0[r.uid].nh) };
+      if (key === "sm") x.small = 1;
+      return [r.pid, r.name, r.creator, r.own, r.genre, r.genre2, Math.round(r.age), r.playing, Math.round(r.pace), r.fresh, r.accel != null ? r1(r.accel) : null, r1(r.sess), r1(r.like * 100), r1(r.favk), r1(r.vk), Math.round(r.hrs), r.U, r.T, r.E, r.R, r.Gk, r.shape, r.wave ? 1 : 0, r.comp.join("/"), r.score, r.mult, x];
+    }
+    var BOARD = board.map(function (r, i) { return rowOf(r, i, extra, DEEP.byUid, "b"); });
+    // Small games get the same owner details, minus the server count (that source rate-limits
+    // hard, and the board's games need it more).
+    var SMALL = [];
+    if (small.length) {
+      try {
+        var DEEP_S = await deep(small, { servers: false });
+        SMALL = small.map(function (r, i) { return rowOf(r, i, extraS, DEEP_S.byUid, "sm"); });
+      } catch (e) { SMALL = []; smallError = String(e && e.message || e); }
+    }
     // Each board game's price [low, middle, high], kept with the weekly report so past issues show
     // what they said at the time. The pages work prices out from META.earn themselves.
     if (EARN) BOARD.forEach(function (row, i) { var v = SBV.value(SBV.boardInput(row, EARN), EARN); board[i].val = [Math.round(v.lo), Math.round(v.mid), Math.round(v.hi)]; });
@@ -813,16 +850,18 @@ window.BRC = (function () {
       ranksKnown: !!(prevSnap && prevSnap.b),
       prevDate: prevSnap ? prevSnap.d : null,
       deepSkipped: DEEP.skipped,
+      // The small-games list: how many games had 100 to 499 players and passed the other rules.
+      small: { pool: spool.length, shown: SMALL.length, min: SMALL_MIN, lo: SMALL_LO, max: SMALL_MAX },
       // Top Earning curve and ranks for pricing (public/valuation.js). Null if the chart didn't load.
       earn: EARN
     };
-    var BR = { META: META, BOARD: BOARD, BIG: BIG, BIG_NOTES: BIG_NOTES, IP_OFF: IP_OFF, FLAG_OFF: FLAG_OFF };
+    var BR = { META: META, BOARD: BOARD, SMALL: SMALL, BIG: BIG, BIG_NOTES: BIG_NOTES, IP_OFF: IP_OFF, FLAG_OFF: FLAG_OFF };
     var dataJs = "/* Spawnbook data, built " + now.toISOString() + ". The page reads window.BR. */\nwindow.BR = " + JSON.stringify(BR, null, 1) + ";\n";
     var picksCsv = opts.weekly ? board.map(function (r, i) { return [pDate(now), i + 1, '"' + r.name.replace(/"/g, '""') + '"', r.pid, r.score, r.playing, Math.round(r.pace)].join(","); }).join("\n") : "";
     window.__BR_LAST = { dataJs: dataJs, trackJs: trackJs, reportJs: reportJs, historyJs: historyJs, picksCsv: picksCsv, board: board.map(function (r) { return [r.name, r.score]; }), ids: rows.map(function (r) { return [r.pid, r.uid, r.cid, r.ctype, r.playing]; }), descs: rows.reduce(function (o, r) { o[r.pid] = r.g.description || ""; return o; }, {}) };
     return {
       ok: true, at: now.toISOString(), lists: data.lists, gamesSeen: data.uids.length, youngTracked: young.length, pool: pool.length,
-      board: board.length, top5: board.slice(0, 5).map(function (r) { return r.name + " (" + r.score + ")"; }),
+      board: board.length, small: SMALL.length, smallPool: spool.length, smallError: smallError, top5: board.slice(0, 5).map(function (r) { return r.name + " (" + r.score + ")"; }),
       historyDays: hist.snaps.length, firstDay: first.d, visitsBasis: p7 ? "7-day" : p1 ? "1-day" : "lifetime",
       picksLogged: picks.length, dataJsLength: dataJs.length, deepSkipped: DEEP.skipped,
       trackBatches: tr.batches.length, trackShown: TR.batches.filter(function (b) { return b.shown; }).length,

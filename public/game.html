@@ -160,7 +160,8 @@
 
   // ---------- today's board row, if any ----------
   var BR = window.BR, row = null;
-  if (BR && BR.BOARD) BR.BOARD.forEach(function (r) { if (r[0] === g.pid) row = r; });
+  if (BR && BR.BOARD) BR.BOARD.concat(BR.SMALL || []).forEach(function (r) { if (r[0] === g.pid) row = r; });
+  var onSmall = !!(row && row[26] && row[26].small);
   var EARN = (BR && BR.META && BR.META.earn) || null; // prices: public/valuation.js
 
   // ---------- numbers now ----------
@@ -185,7 +186,7 @@
     if (live && live.favorites != null) tile("Favorites", T.short(live.favorites), null);
     if (row) {
       var v = SBV.value(SBV.boardInput(row, EARN), EARN);
-      tile("On today's board", "#" + ((row[26] && row[26].rank) || "?") + ", score " + row[24], "Estimated price about " + T.money(v.mid) + ", likely " + T.money(v.lo) + "–" + T.money(v.hi));
+      tile(onSmall ? "On today's small-games list" : "On today's board", "#" + ((row[26] && row[26].rank) || "?") + ", score " + row[24], "Estimated price about " + T.money(v.mid) + ", likely " + T.money(v.lo) + "–" + T.money(v.hi));
     } else {
       var rv = SBV.revenue({ rank: SBV.rankOf(EARN, g.uid), players: latest[1] }, EARN);
       tile("On today's board", "No", "Estimated revenue about " + T.money(rv.mid) + " a month" + (rv.rank ? ", from Top Earning #" + rv.rank : rv.basis === "offchart" ? ". Not on Top Earning" : ""));

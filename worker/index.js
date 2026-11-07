@@ -413,7 +413,8 @@ async function sendDailyPicks(env, origin, opts) {
 const ALERT_DETAIL = 5; // games described in full; the rest are named in one line
 const ALERT_MAX = 15;   // games in one email at most
 
-// Today's board from data.js, each game with the board's price estimate and monthly revenue.
+// Today's board and small-games list from data.js, each game with the board's price estimate and
+// monthly revenue. Small games (100 to 499 players) carry small: true.
 async function boardToday(env, origin) {
   const asset = await env.ASSETS.fetch(new Request(new URL("/data.js", origin)));
   if (!asset.ok) return null;
@@ -422,10 +423,10 @@ async function boardToday(env, origin) {
   if (at < 0) return null;
   const BR = JSON.parse(text.slice(at + 11).trim().replace(/;\s*$/, ""));
   const earn = BR.META && BR.META.earn;
-  const games = (BR.BOARD || []).map((r) => {
+  const games = (BR.BOARD || []).concat(BR.SMALL || []).map((r) => {
     const v = globalThis.SBV.value(globalThis.SBV.boardInput(r, earn), earn);
     const x = r[26] || {};
-    return { pid: r[0], uid: Number(x.uid) || null, name: cleanName(r[1]), genre: r[4] || "", genre2: r[5] || "", age: r[6], players: r[7], perDay: r[8], wave: !!r[22], score: r[24], price: v.mid, rev: v.rev.mid };
+    return { pid: r[0], uid: Number(x.uid) || null, name: cleanName(r[1]), genre: r[4] || "", genre2: r[5] || "", age: r[6], players: r[7], perDay: r[8], wave: !!r[22], score: r[24], price: v.mid, rev: v.rev.mid, small: !!x.small };
   });
   return { date: (BR.META && BR.META.snapshot) || "", games };
 }
@@ -452,14 +453,15 @@ function alertEmail(board, list, d, origin) {
   const first = String(d.name || "").trim().split(/\s+/)[0];
   const n = list.length;
   const shown = list.slice(0, ALERT_DETAIL), rest = list.slice(ALERT_DETAIL);
-  const lines = ["Hi " + (first || "there") + ",", "", (n === 1 ? "A game on today's Spawnbook board (" + noYear(board.date) + ") fits" : n + " games on today's Spawnbook board (" + noYear(board.date) + ") fit") + " the buy box on your account.", ""];
+  const where = list.some((g) => g.small) ? (list.every((g) => g.small) ? "small-games list" : "board and small-games list") : "board";
+  const lines = ["Hi " + (first || "there") + ",", "", (n === 1 ? "A game on today's Spawnbook " + where + " (" + noYear(board.date) + ") fits" : n + " games on today's Spawnbook " + where + " (" + noYear(board.date) + ") fit") + " the buy box on your account.", ""];
   shown.forEach((g, i) => {
-    lines.push((i + 1) + ". " + g.name + " (score " + g.score + " of 100)");
+    lines.push((i + 1) + ". " + g.name + " (score " + g.score + " of 100" + (g.small ? " among small games, under 500 players" : "") + ")");
     lines.push("   " + (g.genre2 || g.genre ? (g.genre2 || g.genre) + ", " : "") + commas(g.players) + " playing, " + g.age + " days old, " + shortNum(g.perDay) + " visits a day. Estimated price about " + usd(g.price) + ".");
     lines.push("   On Spawnbook: " + origin + "/game?pid=" + g.pid + "&via=alert");
     lines.push("   On Roblox: " + gameUrl(g.pid), "");
   });
-  if (rest.length) lines.push((rest.length === 1 ? "One more fits too: " : rest.length + " more fit too: ") + rest.map((g) => g.name).join(", ") + ". They're on the board: " + origin + "/board?via=alert", "");
+  if (rest.length) lines.push((rest.length === 1 ? "One more fits too: " : rest.length + " more fit too: ") + rest.map((g) => g.name).join(", ") + ". They're on the " + (rest.every((g) => g.small) ? "small-games list: " + origin + "/board?via=alert#small" : "board: " + origin + "/board?via=alert"), "");
   lines.push("We send each game once, so these won't come again. To change what you buy, or turn these emails off, go to your Leads page: " + origin + "/leads", "");
   if (d.until - Date.now() < 3 * DAY_MS) {
     const until = new Date(d.until).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" });
@@ -468,7 +470,7 @@ function alertEmail(board, list, d, origin) {
   lines.push("Gautam Prasanna", "Spawnbook, spawnbook.com", "", ADDRESS, "Stop these emails: " + unsub);
   return {
     to: d.email,
-    subject: n === 1 ? "A game on today's board fits what you buy: " + list[0].name : n + " games on today's board fit what you buy",
+    subject: n === 1 ? "A game on today's " + where + " fits what you buy: " + list[0].name : n + " games on today's " + where + " fit what you buy",
     text: lines.join("\n"),
     headers: { "List-Unsubscribe": "<" + unsub + ">", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
   };

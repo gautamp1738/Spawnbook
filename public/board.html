@@ -55,6 +55,7 @@
       <li><a href="#find">Find a game</a></li>
       <li><a href="#picks">Top five</a></li>
       <li><a href="#board">Full board</a></li>
+      <li><a href="#small">Small games</a></li>
       <li><a href="#leftoff">Check these first</a></li>
       <li><a href="#charted">Already charting</a></li>
       <li><a href="#comps">How we price</a></li>
@@ -70,12 +71,12 @@
       <div class="c-l stack">
         <h2 id="find-h" class="head" data-reveal>Find a game to buy</h2>
       </div>
-      <p class="c-r lead" data-reveal style="--i:1">Answer three questions. We'll pick the games on today's board that fit, explain each one in plain English and write your first message to the owner.</p>
+      <p class="c-r lead" data-reveal style="--i:1">Answer three questions. We'll pick the games on today's board and small-games list that fit, explain each one in plain English and write your first message to the owner.</p>
     </div>
     <form class="finder" id="finder" data-ui novalidate>
       <fieldset class="q">
         <legend><span class="q-n" aria-hidden="true">1</span>What kind of game?</legend>
-        <p class="small muted" id="f-genres-help">Pick as many as you like, or none for any genre. The number is how many are on today's board.</p>
+        <p class="small muted" id="f-genres-help">Pick as many as you like, or none for any genre. The number is how many are on today's board and small-games list.</p>
         <div class="pick-chips" id="f-genres" role="group" aria-label="Genres" aria-describedby="f-genres-help"></div>
         <label class="check" for="f-wave"><input type="checkbox" id="f-wave"> Skip trend games, like brainrot, steal, egg and RNG games</label>
       </fieldset>
@@ -83,6 +84,7 @@
         <legend><span class="q-n" aria-hidden="true">2</span>How many players?</legend>
         <div class="seg" role="group" aria-label="How many players">
           <button type="button" data-size="any" aria-pressed="true">Any size</button>
+          <button type="button" data-size="small" aria-pressed="false">Under 500</button>
           <button type="button" data-size="seed" aria-pressed="false">Under 3,000</button>
           <button type="button" data-size="break" aria-pressed="false">3,000 to 10,000</button>
           <button type="button" data-size="chart" aria-pressed="false">10,000+</button>
@@ -189,6 +191,20 @@
         </ul>
       </div>
     </div>
+  </section>
+
+  <section id="small" class="sec wrap" aria-labelledby="small-h" hidden>
+    <div class="grid sec-head">
+      <div class="c-l stack">
+        <h2 id="small-h" class="head" data-reveal>Small games</h2>
+        <p class="small muted" data-reveal style="--i:1">For buyers who want a game before it reaches 500 players. These are scored against each other, not against the board, so a 70 here doesn't mean the same as a 70 above. Most aren't on Top Earning yet, so their prices are rough guesses from players: ask the owner for real numbers before you trust one. Small games' numbers also swing more from day to day.</p>
+      </div>
+      <p class="c-r lead" id="small-sub" data-reveal style="--i:1"></p>
+    </div>
+    <div class="board-tools">
+      <p class="small board-count" id="small-count" aria-live="polite"></p>
+    </div>
+    <div class="board" id="small-list"></div>
   </section>
 
   <section id="leftoff" class="sec wrap grid" aria-labelledby="leftoff-h">
@@ -561,7 +577,7 @@
     $("board-list").appendChild(el("p", "empty", "Today's data didn't load. Refresh the page to try again."));
     return;
   }
-  var META = BR.META, BOARD = BR.BOARD, BIG = BR.BIG, BIG_NOTES = BR.BIG_NOTES || {}, IP_OFF = BR.IP_OFF || [], FLAG_OFF = BR.FLAG_OFF || [];
+  var META = BR.META, BOARD = BR.BOARD, SMALL = BR.SMALL || [], BIG = BR.BIG, BIG_NOTES = BR.BIG_NOTES || {}, IP_OFF = BR.IP_OFF || [], FLAG_OFF = BR.FLAG_OFF || [];
 
   var W = [25, 25, 15, 15, 10, 10];
   var WN = ["Momentum", "Stickiness", "Updates", "Originality", "Earnings", "Ease of buying"];
@@ -600,7 +616,7 @@
   }
   function likely(v) { return "likely " + money(v.lo) + "–" + money(v.hi); }
   function tierOf(p) { return p < 3000 ? "seed" : p < 10000 ? "break" : "chart"; }
-  var TIER_NAME = { seed: "Under 3K players", "break": "3K–10K players", chart: "10K+ players" };
+  var TIER_NAME = { small: "Under 500 players", seed: "Under 3K players", "break": "3K–10K players", chart: "10K+ players" };
   function sessBand(s) { return s < 6.62 ? "below the Roblox median" : s < 14.53 ? "above the Roblox median" : s < 26.38 ? "in Roblox's top quarter" : "in Roblox's top tenth"; }
   function ownerText(o) {
     if (o === "Gv") return "Owned by a group with a verified badge.";
@@ -651,17 +667,24 @@
     return ["", "Group-owned"];
   }
 
-  var P = BOARD.map(function (r) {
+  function toGame(r) {
     var o = { pid: r[0], name: clean(r[1]), creator: r[2], own: r[3], genre: r[4], g2: r[5], age: r[6], playing: r[7], pace: r[8], fresh: r[9],
       accel: r[10], sess: r[11], like: r[12], favk: r[13], vk: r[14], hrs: r[15], U: r[16], T: r[17], E: r[18], R: r[19], G: r[20],
       shape: r[21], wave: r[22], comp: r[23].split("/").map(Number), score: r[24], mult: r[25] || null, x: r[26] || {} };
-    o.tier = tierOf(o.playing);
+    o.small = !!o.x.small;
+    o.tier = o.small ? "small" : tierOf(o.playing);
     o.val = SBV.value(SBV.boardInput(r, EARN), EARN);
     o.brand = brandOf(o);
     return o;
-  });
+  }
+  var P = BOARD.map(toGame);
   P.slice().sort(function (a, b) { return b.score - a.score; }).forEach(function (p, i) { p.rank = i + 1; });
+  // Small games (100 to 499 players) have their own list, ranked among themselves.
+  var S = SMALL.map(toGame);
+  S.slice().sort(function (a, b) { return b.score - a.score; }).forEach(function (p, i) { p.rank = i + 1; });
   var byScore = P.slice().sort(function (a, b) { return b.score - a.score || b.playing - a.playing; });
+  // The game finder looks at both lists.
+  var byScoreAll = P.concat(S).sort(function (a, b) { return b.score - a.score || b.playing - a.playing; });
 
   // ---------- page text from today's data ----------
   var hot = P.filter(function (p) { return p.score >= 75; }).length;
@@ -744,7 +767,7 @@
     var t = p.x.trend;
     if (!META.ranksKnown || !t || t.prevRank == null) return null;
     var now = p.x.rank || p.rank;
-    if (t.prevRank === 0) return { cls: "new", text: "New", label: "New on the board today" };
+    if (t.prevRank === 0) return { cls: "new", text: "New", label: p.small ? "New on the small-games list today" : "New on the board today" };
     var d = t.prevRank - now;
     if (d > 0) return { cls: "up", text: "▲" + d, label: "Up " + d + (d === 1 ? " place" : " places") + " since yesterday" };
     if (d < 0) return { cls: "down", text: "▼" + (-d), label: "Down " + (-d) + (d === -1 ? " place" : " places") + " since yesterday" };
@@ -913,7 +936,11 @@
     var box = $("board-list");
     box.textContent = "";
     if (!list.length) box.appendChild(el("p", "empty", "No games match these filters. Choose All sizes or Any genre to see more."));
-    list.forEach(function (p) {
+    list.forEach(function (p) { box.appendChild(gameRow(p)); });
+    $("board-count").textContent = "Showing " + list.length + " of " + P.length + " games";
+  }
+  // One game's row, the same on the board and the small-games list.
+  function gameRow(p) {
       var row = el("article", "row");
       row.id = "pr-" + p.pid;
       row.setAttribute("data-ui", "");
@@ -1003,10 +1030,18 @@
       setOpen(!!detailOpen[p.pid]);
       btn.addEventListener("click", function () { setOpen(det.hidden); });
       row._open = function () { setOpen(true); };
-
-      box.appendChild(row);
-    });
-    $("board-count").textContent = "Showing " + list.length + " of " + P.length + " games";
+      return row;
+  }
+  // ---------- small games ----------
+  function renderSmall() {
+    var info = META.small || {};
+    if (!S.length) return;
+    $("small").hidden = false;
+    $("small-sub").textContent = "Young games with " + commas(info.lo || 100) + " to 499 players that pass the board's other rules: under four months old, rated 85% or better and getting visits." + (info.pool ? " " + info.pool + " did today, and the " + S.length + " shown scored " + (info.min || 50) + " or more against each other." : "");
+    var box = $("small-list");
+    box.textContent = "";
+    S.slice().sort(function (a, b) { return b.score - a.score || b.playing - a.playing; }).forEach(function (p) { box.appendChild(gameRow(p)); });
+    $("small-count").textContent = S.length === 1 ? "1 small game today" : S.length + " small games today";
   }
   function segGroup(map, key) {
     Object.keys(map).forEach(function (k) {
@@ -1111,6 +1146,7 @@
   });
 
   renderBoard();
+  renderSmall();
 
   // A pick in the top five, or a game finder match, opens its row on the board. If the board's
   // filters hide that game, they're cleared first. The link's own #pr- address then scrolls to it.
@@ -1139,19 +1175,19 @@
   // picks their verified leads. Using the finder and opening a message are recorded under the
   // account or free pass, like every other record. The message itself never leaves the browser.
   var FIND_GENRES = ["Action", "Adventure", "Entertainment", "Obby & Platformer", "Party & Casual", "Puzzle", "Roleplay & Avatar Sim", "RPG", "Shooter", "Shopping", "Simulation", "Social", "Sports & Racing", "Strategy", "Survival"];
-  var SIZE_TXT = { any: "any size", seed: "under 3,000 players", "break": "3,000 to 10,000 players", chart: "10,000+ players" };
-  var SIZE_RANGE = { any: [null, null], seed: [null, 3000], "break": [3000, 10000], chart: [10000, null] };
+  var SIZE_TXT = { any: "any size", small: "under 500 players", seed: "under 3,000 players", "break": "3,000 to 10,000 players", chart: "10,000+ players" };
+  var SIZE_RANGE = { any: [null, null], small: [null, 499], seed: [null, 3000], "break": [3000, 10000], chart: [10000, null] };
   var fstate = { genres: [], size: "any", budget: 0, skipWave: false };
   var found = null, foundAll = false, drafts = [], drafted = {};
 
   (function genreChips() {
     var counts = {};
-    P.forEach(function (p) { if (p.genre) counts[p.genre] = (counts[p.genre] || 0) + 1; });
+    P.concat(S).forEach(function (p) { if (p.genre) counts[p.genre] = (counts[p.genre] || 0) + 1; });
     FIND_GENRES.slice().sort(function (a, b) { return (counts[b] || 0) - (counts[a] || 0) || FIND_GENRES.indexOf(a) - FIND_GENRES.indexOf(b); }).forEach(function (g) {
       var n = counts[g] || 0;
       var b = el("button", n ? null : "none"); b.type = "button";
       b.setAttribute("aria-pressed", "false");
-      b.setAttribute("aria-label", g + ", " + (n || "none") + " on today's board");
+      b.setAttribute("aria-label", g + ", " + (n || "none") + " today");
       b.appendChild(document.createTextNode(g));
       b.appendChild(el("span", "n", String(n)));
       b.addEventListener("click", function () {
@@ -1179,7 +1215,8 @@
   function fits(p, q) {
     if (q.genres.length && q.genres.indexOf(p.genre) < 0) return false;
     if (q.skipWave && p.wave) return false;
-    if (q.size !== "any" && p.tier !== q.size) return false;
+    // "Under 3,000" includes the small games too.
+    if (q.size !== "any" && p.tier !== q.size && !(q.size === "seed" && p.tier === "small")) return false;
     if (q.budget && p.val.mid > q.budget) return false;
     return true;
   }
@@ -1190,7 +1227,7 @@
     if (q.size !== "any" || q.budget) steps.push(["size", Object.assign({}, q, { budget: 0, size: "any" })]);
     if (q.genres.length) steps.push(["genre", Object.assign({}, q, { genres: [] })]);
     for (var i = 0; i < steps.length; i++) {
-      var list = byScore.filter(function (p) { return fits(p, steps[i][1]); });
+      var list = byScoreAll.filter(function (p) { return fits(p, steps[i][1]); });
       if (list.length) return { list: list, loosened: steps[i][0] };
     }
     return { list: [], loosened: "all" };
@@ -1313,7 +1350,7 @@
     top.appendChild(el("span", "m-rank", String(i + 1)));
     var nm = el("div");
     var h = el("h4"); h.id = "fm-h-" + p.pid; h.appendChild(extLink(p.name, "https://www.roblox.com/games/" + p.pid)); nm.appendChild(h);
-    nm.appendChild(el("p", "who", (p.g2 || p.genre || "No genre listed") + ". " + p.age + " days old. Score " + p.score + " of 100."));
+    nm.appendChild(el("p", "who", (p.g2 || p.genre || "No genre listed") + ". " + p.age + " days old. Score " + p.score + " of 100" + (p.small ? ", among small games." : ".")));
     top.appendChild(nm);
     top.appendChild(band(p));
     li.appendChild(top);
@@ -1350,7 +1387,7 @@
     });
     acts.appendChild(wb);
     var fd = el("a", "button quiet", "All the numbers"); fd.href = "#pr-" + p.pid; fd.setAttribute("data-open", p.pid);
-    fd.setAttribute("aria-label", "All the numbers for " + p.name + ", on the full board");
+    fd.setAttribute("aria-label", "All the numbers for " + p.name + (p.small ? ", on the small-games list" : ", on the full board"));
     acts.appendChild(fd);
     li.appendChild(acts);
     li.appendChild(panel);
@@ -1366,7 +1403,7 @@
     else if (found.loosened === "size") note = "These are the kind of game you picked, at other sizes and prices.";
     else if (found.loosened === "genre") note = "No " + orList(q.genres) + " games fit today. These fit your size and budget in other genres. The board changes every day, so check back tomorrow.";
     $("f-note").textContent = note; $("f-note").hidden = !note;
-    $("f-count").textContent = found.loosened === "all" ? "Nothing on today's board fits" : found.loosened ? "Nothing fits all your answers today, so here are the closest" : n === 1 ? "1 game on today's board fits" : n + " games on today's board fit";
+    $("f-count").textContent = found.loosened === "all" ? "Nothing fits today" : found.loosened ? "Nothing fits all your answers today, so here are the closest" : n === 1 ? "1 game fits today" : n + " games fit today";
     var box = $("f-list"); box.textContent = "";
     if (found.loosened === "all") box.appendChild(el("li", "empty", "Try fewer limits: no price limit or any size will show more."));
     (foundAll ? list : list.slice(0, 5)).forEach(function (p, i) { box.appendChild(matchCard(p, i)); });
