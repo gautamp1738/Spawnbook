@@ -9,15 +9,21 @@ name: Daily data pull
 
 on:
   schedule:
-    # GitHub schedules run in UTC: 21:33 UTC is 2:33 PM Pacific in summer and 1:33 PM in winter.
-    # GitHub sometimes starts scheduled runs late or drops them when it's busy, so two backups
-    # follow. Each backup quits straight away if today's board is already out.
-    - cron: "33 21 * * *"
+    # The board reads Roblox at 1:30 PM Pacific, during Roblox's busiest hours, so day-to-day
+    # changes compare like with like. GitHub starts scheduled runs anywhere from minutes to hours
+    # late (2 to 5 hours in Oct and Nov 2026), so the schedule starts about 4 hours early and an
+    # early start waits for 1:30 PM (see "Wait for 1:30 PM Pacific"). GitHub also drops runs when
+    # it's busy, so backups follow; each quits straight away if today's board is already out.
+    # Times are UTC: 17:33 UTC is 9:33 AM Pacific in winter and 10:33 AM in summer.
+    - cron: "33 17 * * *"
+    - cron: "7 19 * * *"
+    - cron: "41 20 * * *"
     - cron: "7 23 * * *"
-    - cron: "41 0 * * *"
   # Lets you start a run by hand from the Actions tab.
   workflow_dispatch:
-  # Runs once whenever this file changes, to check a new version works.
+  # Runs whenever this file changes, to check a new version works. It waits for 1:30 PM Pacific
+  # like a scheduled run, or stops if that's more than 5 hours away. Put [skip actions] in a
+  # commit message to skip it.
   push:
     branches: [main]
     paths: [".github/workflows/daily.yml"]
@@ -32,7 +38,8 @@ concurrency:
 jobs:
   pull:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    # Up to 5 hours of waiting for 1:30 PM, then about 30 minutes of work.
+    timeout-minutes: 340
     steps:
       - uses: actions/checkout@v4
 
@@ -61,8 +68,27 @@ jobs:
             echo "Today's board is already out, so this run stops here."
           fi
 
+      # Waiting is free: the repo is public, so GitHub doesn't count these minutes.
+      - name: Wait for 1:30 PM Pacific
+        id: wait
+        if: steps.done.outputs.skip != 'true' && github.event_name != 'workflow_dispatch'
+        run: |
+          now=$(date +%s)
+          day=$(TZ=America/Los_Angeles date -d "@$now" +%F)
+          target=$(TZ=America/Los_Angeles date -d "$day 13:30" +%s)
+          wait=$(( target - now ))
+          if [ "$wait" -gt 18000 ]; then
+            echo "It's $(TZ=America/Los_Angeles date +%H:%M) Pacific, more than 5 hours before 1:30 PM. Leaving today's board to the schedule."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ "$wait" -gt 0 ]; then
+            echo "Waiting $(( wait / 60 )) minutes, until 1:30 PM Pacific."
+            sleep "$wait"
+          else
+            echo "It's past 1:30 PM Pacific, so the reading starts now."
+          fi
+
       - name: Read Roblox and build the board
-        if: steps.done.outputs.skip != 'true'
+        if: steps.done.outputs.skip != 'true' && steps.wait.outputs.skip != 'true'
         working-directory: pipeline
         run: |
           mkdir -p state/code
@@ -73,7 +99,7 @@ jobs:
           node -e 'const s=require("./out/summary.json"); if (!s.ok) { console.error(s.error); process.exit(1); } console.log(s.board + " games on the board. Top 5: " + s.top5.join(", "))'
 
       - name: Save the history and publish the board
-        if: steps.done.outputs.skip != 'true'
+        if: steps.done.outputs.skip != 'true' && steps.wait.outputs.skip != 'true'
         run: |
           node pipeline/apply-batch.mjs pipeline/out/batch.json pipeline/state
           cp pipeline/out/data.js public/data.js

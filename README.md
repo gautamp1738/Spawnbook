@@ -76,7 +76,7 @@ Visits are counted with Cloudflare Web Analytics, which Cloudflare adds to each 
 
 ## How the data updates
 
-GitHub Actions runs `.github/workflows/daily.yml` once a day, at 21:33 UTC (2:33 PM Pacific in summer, 1:33 PM in winter). Each run reads Roblox's public chart lists and game stats, scores the young games against their history, and commits:
+GitHub Actions runs `.github/workflows/daily.yml` once a day and reads Roblox at 1:30 PM Pacific, during Roblox's busiest hours. GitHub starts scheduled runs hours late, so the schedule starts about 4 hours early (17:33 UTC, with backups) and an early start waits until 1:30 PM. A run more than 5 hours early stops and leaves the day to the schedule. Runs started by hand from the Actions tab read straight away. Each run reads Roblox's public chart lists and game stats, scores the young games against their history, and commits:
 
 - `public/data.js`, the new board, which makes Cloudflare redeploy the site
 - the day's reading in `pipeline/state/hist/`, the daily record the growth scores are worked out from
