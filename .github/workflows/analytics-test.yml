@@ -1,0 +1,24 @@
+# One-time check that a game owner's read-only Roblox analytics key works with the
+# Open Cloud Analytics Query API. Prints only whether it worked, never the numbers.
+name: analytics key test
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/analytics-test.yml", "pipeline/analytics-test.mjs"]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Ask Roblox for 30 days of players and revenue
+        env:
+          ROBLOX_ANALYTICS_KEY: ${{ secrets.ROBLOX_ANALYTICS_KEY }}
+          UNIVERSE_ID: "10768918649"
+        run: node pipeline/analytics-test.mjs
