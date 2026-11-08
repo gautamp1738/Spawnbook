@@ -18,6 +18,15 @@ const say = (s) => { console.log(s); lines.push(s); };
 
 function iso(d) { return d.toISOString().replace(/\.\d{3}Z$/, "Z"); }
 
+// The structure of a response with every value replaced by its type, so the shape can be
+// logged publicly without the numbers.
+function shape(o, depth = 0) {
+  if (depth > 6) return "...";
+  if (Array.isArray(o)) return o.length ? [`${o.length} items`, shape(o[0], depth + 1)] : ["empty"];
+  if (o && typeof o === "object") { const r = {}; Object.keys(o).forEach((k) => { r[k] = shape(o[k], depth + 1); }); return r; }
+  return typeof o;
+}
+
 // Find every data point ({ time, value } or { time, stringValues }) anywhere in a response.
 function points(o, out = []) {
   if (Array.isArray(o)) { o.forEach((x) => points(x, out)); return out; }
@@ -68,6 +77,7 @@ async function main() {
         const pts = points(r.data);
         const withData = pts.filter((p) => Number(p.value) > 0).length;
         say(`- ${m}: worked (HTTP ${r.status}${r.polls ? `, after ${r.polls} polls` : ""}). ${pts.length} daily points returned, ${withData} of them above zero. Response fields: ${Object.keys(r.data).join(", ")}.`);
+        say(`  Shape (field names and list lengths only, no values): ${JSON.stringify(shape(r.data.response)).slice(0, 600)}`);
         ok++;
       } else {
         const err = (r.data && (r.data.error || r.data.errors)) || null;
