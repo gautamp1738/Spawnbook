@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Prove your Roblox game's numbers | Spawnbook</title>
+<meta name="description" content="Connect a read-only Roblox analytics key and get a link showing your game's real players and Robux, read straight from Roblox. Share it with buyers instead of screenshots. Free.">
+<link rel="canonical" href="https://spawnbook.com/connect">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Spawnbook">
+<meta property="og:url" content="https://spawnbook.com/connect">
+<meta property="og:title" content="Prove your Roblox game's numbers">
+<meta property="og:description" content="A free link showing your game's real players and Robux, read straight from Roblox with a read-only key. Share it instead of screenshots.">
+<meta property="og:image" content="https://spawnbook.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to the steps</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks" id="navlinks">
+      <li><a href="value">Value your game</a></li>
+      <li><a href="connect" aria-current="page">Prove your numbers</a></li>
+      <li><a href="sell">Sell your game</a></li>
+      <li class="nav-end"><a href="/">For buyers</a></li>
+    </ul>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="navlinks">Menu</button>
+  </nav>
+</div>
+
+<main id="main" tabindex="-1">
+  <section class="sec wrap grid page-top" aria-labelledby="c-h">
+    <div class="c-l stack">
+      <h1 id="c-h" class="head">Prove your game's numbers</h1>
+      <p class="lead">Connect a read-only key from Roblox and get a link showing your game's real players and Robux, read straight from Roblox. Share it with a buyer, a studio or a partner instead of screenshots, which anyone can fake.</p>
+    </div>
+    <div class="c-r stack">
+      <dl class="cn-facts">
+        <div><dt>What the key can do</dt><dd>Read your game's analytics: players, Robux earned, retention. Nothing else.</dd></div>
+        <div><dt>What it can't do</dt><dd>Change your game, see your password, or touch your Robux or your account.</dd></div>
+        <div><dt>What we do with it</dt><dd>Use it once to read your last 90 days, then throw it away. We never save it. Delete it on Roblox when you're done.</dd></div>
+        <div><dt>What it costs</dt><dd>Nothing, and you don't need an account.</dd></div>
+      </dl>
+      <p class="small muted">Takes about three minutes. You'll need to be the game's owner, or a group admin who can manage its settings.</p>
+    </div>
+  </section>
+
+  <section class="sec wrap grid" id="key" aria-labelledby="k-h">
+    <div class="c-l stack">
+      <h2 id="k-h" class="head">Make your key</h2>
+      <p class="small muted">Keep this page open in one tab and Roblox in another. Copy each bit of text exactly; the names on Roblox are easy to mix up.</p>
+    </div>
+    <div class="c-r stack">
+      <ol class="v-steps">
+        <li class="v-step">
+          <h4>Open the API keys page on Roblox</h4>
+          <p class="small">If a group owns the game, switch to that group at the top of Creator Hub first, so the key belongs to the group.</p>
+          <p><a class="button quiet" href="https://create.roblox.com/dashboard/credentials?activeTab=ApiKeysTab" target="_blank" rel="noopener">Open Roblox API keys<span class="sr-only"> (opens in a new tab)</span></a></p>
+        </li>
+        <li class="v-step">
+          <h4>Click Create API Key and name it</h4>
+          <p class="small">Call it something you'll recognize, like <strong>Spawnbook</strong>, so it's easy to delete later.</p>
+        </li>
+        <li class="v-step">
+          <h4>Add the analytics system</h4>
+          <p class="small">Under Access Permissions, type this into Select API System and pick it:</p>
+          <p class="v-code-row"><code class="v-code cn-code">universe-analytics</code> <button type="button" class="button quiet cn-copy" data-copy="universe-analytics">Copy</button> <span class="status small" aria-live="polite"></span></p>
+          <p class="small"><strong>Not</strong> universe-analytics-dashboard. That one has a similar name and won't work.</p>
+        </li>
+        <li class="v-step">
+          <h4>Pick your game and the read permission</h4>
+          <p class="small">Select your game, then add this as the only operation:</p>
+          <p class="v-code-row"><code class="v-code cn-code">universe.analytics:read</code> <button type="button" class="button quiet cn-copy" data-copy="universe.analytics:read">Copy</button> <span class="status small" aria-live="polite"></span></p>
+        </li>
+        <li class="v-step">
+          <h4>Allow our server to use it</h4>
+          <p class="small">Under Security, add this as the accepted IP address. Our server's address changes, so a fixed one wouldn't work. The key still only reads analytics, and it stops working when it expires.</p>
+          <p class="v-code-row"><code class="v-code cn-code">0.0.0.0/0</code> <button type="button" class="button quiet cn-copy" data-copy="0.0.0.0/0">Copy</button> <span class="status small" aria-live="polite"></span></p>
+        </li>
+        <li class="v-step">
+          <h4>Set it to expire, then copy it</h4>
+          <p class="small">Pick an expiration a day or a week away. Click Save &amp; Generate Key and copy the key right away: Roblox only shows it once.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec wrap grid" id="connect" aria-labelledby="f-h">
+    <div class="c-l stack">
+      <h2 id="f-h" class="head">Connect your game</h2>
+      <p class="small muted">Never paste your password, your account cookie or a key with other permissions here, or anywhere else. Nobody needs them to check your numbers.</p>
+    </div>
+    <div class="c-r stack">
+      <div class="cn-done" id="c-done" hidden>
+        <h3 class="v-title" id="c-done-h" tabindex="-1">Your verified report is ready</h3>
+        <p>Anyone with this link can see it, so share it with the people you choose:</p>
+        <p class="v-code-row"><a class="link cn-link" id="c-link" href="#">your report</a> <button type="button" class="button quiet" id="c-link-copy">Copy link</button> <span class="status small" id="c-link-status" aria-live="polite"></span></p>
+        <p class="small">To take it down later, keep this private delete link. We can't show it again:</p>
+        <p class="v-code-row"><a class="link small cn-link" id="c-del" href="#">delete link</a> <button type="button" class="linkbutton small" id="c-del-copy">Copy</button> <span class="status small" id="c-del-status" aria-live="polite"></span></p>
+        <div class="cn-now">
+          <h4>Now delete the key on Roblox</h4>
+          <p class="small">We've already thrown away our copy. Open <a class="link" href="https://create.roblox.com/dashboard/credentials?activeTab=ApiKeysTab" target="_blank" rel="noopener">Roblox API keys<span class="sr-only"> (opens in a new tab)</span></a> and delete the Spawnbook key, or let it expire. Your report stays up either way. To update it, make a new key and connect again.</p>
+        </div>
+      </div>
+      <form class="form" id="c-form" novalidate>
+        <div class="fields">
+          <div class="field full">
+            <label for="c-game">Your game's link</label>
+            <input id="c-game" name="link" type="url" inputmode="url" maxlength="400" autocomplete="off" placeholder="https://www.roblox.com/games/…" aria-required="true" aria-describedby="c-game-help">
+            <span class="help" id="c-game-help">The link to your game's page on Roblox, or its page in Creator Hub.</span>
+          </div>
+          <div class="field full">
+            <label for="c-key">Your read-only key</label>
+            <input id="c-key" name="key" type="password" maxlength="4000" autocomplete="off" autocapitalize="off" spellcheck="false" aria-required="true" aria-describedby="c-key-help">
+            <span class="help" id="c-key-help">Pasted from Roblox. It's hidden on screen, used once, and never saved. <button type="button" class="linkbutton" id="c-key-show" aria-controls="c-key">Show it</button></span>
+          </div>
+          <fieldset class="age-set full" aria-required="true">
+            <legend>Your age</legend>
+            <label class="consent" for="c-adult"><input type="radio" id="c-adult" name="age" value="adult"><span>I'm 18 or older.</span></label>
+            <label class="consent" for="c-teen"><input type="radio" id="c-teen" name="age" value="teen"><span>I'm 13 to 17, and a parent or guardian is helping me.</span></label>
+            <p class="help">If you're under 13, ask a parent or guardian to do this for you.</p>
+          </fieldset>
+        </div>
+        <div class="form-row">
+          <button class="button" type="submit" id="c-go">Get my verified report</button>
+          <span class="status" id="c-wait" role="status"></span>
+        </div>
+        <p class="err cn-err" id="c-err" role="alert"></p>
+      </form>
+      <p class="small muted">By connecting, you agree we can keep the numbers Roblox returns so your link works. We don't sell them or show them anywhere else. See the <a class="link" href="privacy.html">Privacy Policy</a> and <a class="link" href="terms.html">Terms</a>.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <p><a class="link" href="value">Making a game? Get it valued</a></p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <h2 class="foot-mail"><span class="sr-only">Email us at </span><a href="mailto:gautamuprasanna@gmail.com">gautamuprasanna<span class="at">@gmail.com</span></a></h2>
+  <div class="foot-copy"><button type="button" class="button" id="foot-copy">Copy email address</button><span class="status" id="foot-status" aria-live="polite"></span></div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent site. Not affiliated with, endorsed by or sponsored by Roblox Corporation.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var copy = function (text, status) { window.SB.copyText(text, status, null, "Copied."); };
+
+  document.querySelectorAll(".cn-copy").forEach(function (b) {
+    b.addEventListener("click", function () { copy(b.getAttribute("data-copy"), b.nextElementSibling); });
+  });
+
+  $("c-key-show").addEventListener("click", function () {
+    var k = $("c-key"), show = k.type === "password";
+    k.type = show ? "text" : "password";
+    this.textContent = show ? "Hide it" : "Show it";
+  });
+
+  var MSG = {
+    link: "That doesn't look like a Roblox game link. Paste the link from your game's page, like roblox.com/games/123…",
+    game: "We couldn't find that game on Roblox. Check the link.",
+    keyshape: "That doesn't look like a whole key. Copy it again from Roblox: it's one long piece of text with no spaces.",
+    age: "Pick your age group.",
+    keybad: "Roblox didn't accept that key. Copy it again, check it hasn't expired, and check the accepted IP address is 0.0.0.0/0.",
+    scope: "That key can't read this game's analytics. Check you picked universe-analytics (not universe-analytics-dashboard), selected this game, and added universe.analytics:read. If a group owns the game, make the key from the group.",
+    empty: "Roblox has no player numbers for this game from the last 90 days, so there's nothing to verify yet.",
+    rate: "Roblox is limiting requests right now. Wait a minute and try again.",
+    slow: "Roblox took too long to answer. Try again in a minute.",
+    busy: "Too many tries from here in the last hour. Try again later.",
+    roblox: "Something went wrong talking to Roblox. Try again in a minute."
+  };
+
+  var form = $("c-form"), err = $("c-err"), wait = $("c-wait"), go = $("c-go");
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    err.textContent = "";
+    var age = form.querySelector("input[name=age]:checked");
+    var body = { link: $("c-game").value.trim(), key: $("c-key").value.trim(), age: age ? age.value : "" };
+    if (!body.link) { err.textContent = "Paste your game's link."; $("c-game").focus(); return; }
+    if (!body.key) { err.textContent = "Paste the key you made on Roblox."; $("c-key").focus(); return; }
+    if (!body.age) { err.textContent = MSG.age; $("c-adult").focus(); return; }
+    go.disabled = true;
+    wait.textContent = "Reading your numbers from Roblox. This can take up to half a minute…";
+    fetch("/api/connect", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return { error: "roblox" }; }); })
+      .then(function (d) {
+        go.disabled = false; wait.textContent = "";
+        if (!d || !d.ok) { err.textContent = MSG[d && d.error] || MSG.roblox; return; }
+        $("c-key").value = "";
+        var link = location.origin + "/verified?id=" + d.id, del = link + "#del=" + d.del;
+        $("c-link").href = link; $("c-link").textContent = link;
+        $("c-del").href = del; $("c-del").textContent = "Delete link (keep it private)";
+        $("c-link-copy").onclick = function () { copy(link, $("c-link-status")); };
+        $("c-del-copy").onclick = function () { copy(del, $("c-del-status")); };
+        form.hidden = true;
+        $("c-done").hidden = false;
+        $("c-done-h").focus();
+      })
+      .catch(function () { go.disabled = false; wait.textContent = ""; err.textContent = MSG.roblox; });
+  });
+})();
+</script>
+<script src="nav.js" defer></script>
+</body>
+</html>

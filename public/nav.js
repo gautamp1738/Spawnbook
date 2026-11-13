@@ -31,6 +31,7 @@
     ]],
     ["For game owners", [
       ["value", "Value your game", "A price range from what your game earned last month."],
+      ["connect", "Prove your numbers", "A free link with your real players and Robux, read from Roblox."],
       ["sell", "Sell your game", "Tell us about it and show it's yours. Free, and no cut of the sale."]
     ]],
     ["Your account", [

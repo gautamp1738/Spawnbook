@@ -32,6 +32,8 @@
 //   GET  /g, /g/find, /g/<place ID>/<name>
 //                           public game pages, for anyone and for Google (worker/gpage.js)
 //   GET  /sitemap.xml       the public pages and a page for every game in our daily record
+//   POST /api/connect       an owner connects a read-only analytics key once; we save the numbers as a report
+//   GET  /api/verified      a verified report by its id (POST /api/verified/delete with the delete code)
 //   POST /api/daily-email   { email, source } signs up for the daily top 5 by email (free for 7 days
 //                           without an account); signed in, { action: "off" } stops it. GET: status
 //   GET|POST /unsubscribe?t= the link in every daily email
@@ -125,6 +127,8 @@ export default {
       else if (path === "/api/lookup") res = await lookupApi(request, env, url, ctx);
       else if (path === "/api/daily-email") res = await dailyEmailApi(request, env, url, ctx);
       else if (path === "/api/discord") res = await discordApi(request, env, url, ctx);
+      else if (path === "/api/connect") res = await connectApi(request, env, ctx);
+      else if (path === "/api/verified" || path === "/api/verified/delete") res = await verifiedApi(request, env, url, path);
       else if (path === "/unsubscribe") res = await unsubscribe(request, env, url);
       else if (path === "/g" || path.startsWith("/g/")) res = await publicGame(request, env, url, (detail) => trackPage(request, env, url, ctx, detail));
       else if (path === "/sitemap.xml") res = await sitemap(env, url);
@@ -1533,9 +1537,17 @@ async function teaser(env, url) {
   const BR = JSON.parse(text.slice(at + "window.BR =".length).trim().replace(/;\s*$/, ""));
   const board = (BR.BOARD || []).slice().sort((a, b) => b[24] - a[24] || b[7] - a[7]);
   const top = board[0];
+  // How many games are in each size range, and the best score in each, for the landing page's size
+  // switch. Counts only: no names, so the board itself stays behind the free pass.
+  const sizes = { small: { n: 0, top: 0 }, seed: { n: 0, top: 0 }, break: { n: 0, top: 0 }, chart: { n: 0, top: 0 } };
+  board.forEach((r) => { const k = r[7] < 3000 ? "seed" : r[7] < 10000 ? "break" : "chart"; sizes[k].n++; sizes[k].top = Math.max(sizes[k].top, r[24]); });
+  (BR.SMALL || []).forEach((r) => { sizes.small.n++; sizes.small.top = Math.max(sizes.small.top, r[24]); });
   return json({
     date: BR.META && BR.META.snapshot,
     count: board.length,
+    small: (BR.SMALL || []).length,
+    checked: (BR.META && BR.META.checked) || null,
+    sizes,
     top: top ? { score: top[24], age: top[6], players: top[7], visitsPerDay: top[8] } : null,
   }, 200, "public, max-age=300");
 }
@@ -2249,6 +2261,154 @@ async function checkPassword(pw, stored) {
   return diff === 0;
 }
 
+// ---------- verified stats: an owner connects their game ----------
+//
+// The owner makes a read-only Open Cloud API key (the universe-analytics system with only
+// universe.analytics:read) and pastes it on /connect with the game's link. We use the key once, in
+// this request, to read the last VERIFY_DAYS days from Roblox's Analytics Query API, save only the
+// numbers under a random link, and throw the key away: it's never stored, logged or sent anywhere
+// else. The report says when it was read; to refresh it they connect again. Whoever made the report
+// gets a delete code (we keep only its hash) so they can take the link down.
+const VERIFY_DAYS = 90;
+const ANALYTICS = "https://apis.roblox.com/analytics-query-api/";
+// Daily active users and revenue (Robux) are the report; the rest show up only if Roblox returns them.
+const VERIFY_METRICS = [
+  { k: "dau", metric: "DailyActiveUsers", need: true },
+  { k: "rev", metric: "DailyRevenue", need: true },
+  { k: "peak", metric: "PeakConcurrentPlayers" },
+  { k: "d1", metric: "ForwardD1Retention" },
+  { k: "d7", metric: "ForwardD7Retention" },
+  { k: "sess", metric: "AverageSessionLengthMinutes" },
+];
+
+// A universe ID from a Creator Hub link (…/experiences/123/overview) or ?universeId=123.
+function universeFrom(text) {
+  const t = String(text || "").trim();
+  const m = /experiences\/(\d{3,19})/i.exec(t) || /[?&]universeId=(\d{3,19})/i.exec(t);
+  const n = m ? Number(m[1]) : NaN;
+  return Number.isSafeInteger(n) ? n : null;
+}
+
+// Every data point ({ time, value }) anywhere in an analytics answer.
+function analyticsPoints(o, out) {
+  if (Array.isArray(o)) { for (const x of o) analyticsPoints(x, out); return out; }
+  if (o && typeof o === "object") {
+    if ("time" in o && "value" in o) { out.push(o); return out; }
+    for (const x of Object.values(o)) analyticsPoints(x, out);
+  }
+  return out;
+}
+
+// One metric, one value per UTC day. Slow queries come back as an operation to poll.
+async function analyticsQuery(key, uid, metric, startTime, endTime) {
+  const headers = { "x-api-key": key, "Content-Type": "application/json", Accept: "application/json" };
+  let r = await fetch(ANALYTICS + "v1/universes/" + uid + "/metrics", Object.assign({ method: "POST", headers, body: JSON.stringify({ metric, granularity: "OneDay", startTime, endTime }) }, withTimeout(15000)));
+  let body = await r.json().catch(() => null);
+  for (let polls = 0; r.ok && body && body.done === false && body.path && polls < 5; polls++) {
+    await new Promise((ok) => setTimeout(ok, 1500));
+    r = await fetch(ANALYTICS + String(body.path).replace(/^\/+/, ""), Object.assign({ headers: { "x-api-key": key, Accept: "application/json" } }, withTimeout(15000)));
+    body = await r.json().catch(() => null);
+  }
+  if (!r.ok) return { error: true, status: r.status };
+  if (!body || body.done === false) return { error: true, status: 504 };
+  const byDay = {};
+  for (const p of analyticsPoints(body.response || body, [])) {
+    const day = String(p.time || "").slice(0, 10), v = Number(p.value);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isFinite(v)) byDay[day] = (byDay[day] || 0) + v;
+  }
+  return { days: Object.keys(byDay).sort().map((d) => [d, Math.round(byDay[d] * 1000) / 1000]) };
+}
+
+function reportId() {
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => abc[b % abc.length]).join("");
+}
+
+async function connectApi(request, env, ctx) {
+  if (request.method !== "POST") return json({ error: "method" }, 405);
+  let p;
+  try { p = await request.json(); } catch (e) { return json({ error: "form" }, 400); }
+  const key = String(p.key || "").trim();
+  const link = String(p.link || "").trim().slice(0, 400);
+  const age = p.age === "adult" || p.age === "teen" ? p.age : "";
+  if (!link) return json({ error: "link" }, 400);
+  if (key.length < 20 || key.length > 4000 || /\s/.test(key)) return json({ error: "keyshape" }, 400);
+  if (!age) return json({ error: "age" }, 400);
+
+  // A public form that makes calls to Roblox: at most 12 tries an hour from one address, 200 in all.
+  const who = (await sha256("connect|" + (request.headers.get("CF-Connecting-IP") || ""))).slice(0, 24);
+  const gate = await call(env, "verify-try", { who });
+  if (gate.limited) return json({ error: "busy" }, 429);
+
+  let uid = universeFrom(link), pid = null;
+  if (!uid) {
+    const n = placeIdFrom(link);
+    if (!n) return json({ error: "link" }, 400);
+    try { uid = await placeToUniverse(n); } catch (e) { return json({ error: "roblox" }, 502); }
+    if (uid) pid = n;
+    else if (/^\d+$/.test(link)) uid = n; // a bare number that isn't a place: try it as the universe ID
+  }
+  const info = uid ? (await robloxGames([uid]))[uid] : null;
+  if (!info) return json({ error: "game" }, 400);
+
+  const end = new Date(); end.setUTCHours(0, 0, 0, 0);
+  const start = new Date(end.getTime() - VERIFY_DAYS * 864e5);
+  const iso = (d) => d.toISOString().replace(/\.\d{3}Z$/, "Z");
+  const results = await Promise.all(VERIFY_METRICS.map((m) => analyticsQuery(key, uid, m.metric, iso(start), iso(end)).catch(() => ({ error: true, status: 0 }))));
+  const bad = results.find((r, i) => VERIFY_METRICS[i].need && r.error);
+  if (bad) {
+    const s = bad.status;
+    const code = s === 401 ? "keybad" : s === 403 || s === 404 ? "scope" : s === 429 ? "rate" : s === 504 ? "slow" : "roblox";
+    return json({ error: code, status: s }, 400);
+  }
+  const data = {};
+  VERIFY_METRICS.forEach((m, i) => { if (!results[i].error && results[i].days.length) data[m.k] = results[i].days; });
+  if (!data.dau || !data.dau.some((d) => d[1] > 0)) return json({ error: "empty" }, 400);
+
+  const c = info.creator || {};
+  const name = String(info.name || "").slice(0, 120);
+  const report = Object.assign({
+    v: 1, uid, pid: info.pid || pid, name, creator: { name: String(c.name || "").slice(0, 120), type: c.type || "" },
+    launched: info.created || null, players: info.players == null ? null : info.players, visits: info.visits == null ? null : info.visits,
+    at: Date.now(), from: start.toISOString().slice(0, 10), to: new Date(end.getTime() - 864e5).toISOString().slice(0, 10), age,
+  }, data);
+  const id = reportId(), del = randomToken();
+  await call(env, "verify-add", { id, hash: await sha256(del), uid, data: JSON.stringify(report) });
+  track(env, ctx, "verify", "connect", name + " u " + uid);
+  const origin = new URL(request.url).origin;
+  const rev30 = (data.rev || []).slice(-30).reduce((a, d) => a + d[1], 0);
+  const dau30 = (data.dau || []).slice(-30);
+  const send = sendEmail(env, {
+    to: OWNER_EMAIL,
+    subject: "Verified stats: " + (name || "a Roblox game"),
+    text: "Someone connected a game and made a verified report.\n\nGame: " + (name || "Unknown") + " (" + gameUrl(info.pid || pid || 0) + ")\nOwner on Roblox: " + (c.name || "Unknown") + (c.type ? " (" + c.type + ")" : "") +
+      "\nAverage daily players, last 30 days: " + commas(dau30.reduce((a, d) => a + d[1], 0) / Math.max(1, dau30.length)) + "\nRobux earned, last 30 days: " + commas(rev30) +
+      "\nAge: " + (age === "adult" ? "18 or older" : "13 to 17, with a parent or guardian") + "\n\nReport: " + origin + "/verified?id=" + id +
+      "\n\nThey haven't said they want to sell. Don't contact them from this alone.",
+  }).catch(() => {});
+  if (ctx && ctx.waitUntil) ctx.waitUntil(send);
+  return json({ ok: true, id, del });
+}
+
+async function verifiedApi(request, env, url, path) {
+  if (path === "/api/verified/delete") {
+    if (request.method !== "POST") return json({ error: "method" }, 405);
+    let p;
+    try { p = await request.json(); } catch (e) { return json({ error: "form" }, 400); }
+    const id = String(p.id || ""), del = String(p.del || "");
+    if (!/^[A-Za-z0-9]{8,32}$/.test(id) || !/^[a-f0-9]{64}$/.test(del)) return json({ error: "code" }, 400);
+    const r = await call(env, "verify-del", { id, hash: await sha256(del) });
+    return r.ok ? json({ ok: true }) : json({ error: "code" }, 403);
+  }
+  const id = String(url.searchParams.get("id") || "");
+  if (!/^[A-Za-z0-9]{8,32}$/.test(id)) return json({ error: "missing" }, 404);
+  const r = await call(env, "verify-get", { id });
+  if (!r.data) return json({ error: "missing" }, 404);
+  return new Response(r.data, { headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+}
+
 export class Store {
   constructor(ctx) {
     this.sql = ctx.storage.sql;
@@ -2293,6 +2453,10 @@ export class Store {
     this.sql.exec("CREATE TABLE IF NOT EXISTS lead_files (id INTEGER PRIMARY KEY, lead_id INTEGER NOT NULL, name TEXT NOT NULL, type TEXT NOT NULL, size INTEGER NOT NULL, chunks INTEGER NOT NULL, done INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS lead_file_chunks (file_id INTEGER NOT NULL, i INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (file_id, i))");
     this.sql.exec("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
+    // Verified stats reports: the numbers an owner pulled with their read-only key (never the key),
+    // the hash of the delete code they were given, and the connect attempts kept a day for the limit.
+    this.sql.exec("CREATE TABLE IF NOT EXISTS verified (id TEXT PRIMARY KEY, hash TEXT NOT NULL, uid INTEGER NOT NULL, data TEXT NOT NULL, created_at INTEGER NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS verify_tries (who TEXT NOT NULL, at INTEGER NOT NULL)");
     // Activity: one row per thing someone did (landing visit, free pass started, page opened, lookup,
     // sign-up), kept 120 days, for the admin activity page. "who" is an account's email, or "pass"
     // and a number for a visitor without an account.
@@ -2906,6 +3070,30 @@ export class Store {
     if (op === "free-add") {
       this.sql.exec("INSERT OR IGNORE INTO free_lookups (who, day, uid, at) VALUES (?, ?, ?, ?)", String(p.who), String(p.day), Number(p.uid), now);
       if (Math.random() < 0.05) this.sql.exec("DELETE FROM free_lookups WHERE at < ?", now - 7 * DAY_MS);
+      return reply({ ok: true });
+    }
+
+    // ---------- verified stats ----------
+    if (op === "verify-try") {
+      this.sql.exec("DELETE FROM verify_tries WHERE at < ?", now - 86400e3);
+      const mine = this.sql.exec("SELECT COUNT(*) AS n FROM verify_tries WHERE who = ? AND at > ?", String(p.who), now - 3600e3).toArray()[0].n;
+      const all = this.sql.exec("SELECT COUNT(*) AS n FROM verify_tries WHERE at > ?", now - 3600e3).toArray()[0].n;
+      if (mine >= 12 || all >= 200) return reply({ limited: true });
+      this.sql.exec("INSERT INTO verify_tries (who, at) VALUES (?, ?)", String(p.who), now);
+      return reply({ ok: true });
+    }
+    if (op === "verify-add") {
+      this.sql.exec("INSERT INTO verified (id, hash, uid, data, created_at) VALUES (?, ?, ?, ?, ?)", String(p.id), String(p.hash), Number(p.uid) || 0, String(p.data), now);
+      return reply({ ok: true });
+    }
+    if (op === "verify-get") {
+      const row = this.sql.exec("SELECT data FROM verified WHERE id = ?", String(p.id)).toArray()[0];
+      return reply({ data: row ? row.data : null });
+    }
+    if (op === "verify-del") {
+      const row = this.sql.exec("SELECT hash FROM verified WHERE id = ?", String(p.id)).toArray()[0];
+      if (!row || row.hash !== String(p.hash)) return reply({ ok: false });
+      this.sql.exec("DELETE FROM verified WHERE id = ?", String(p.id));
       return reply({ ok: true });
     }
 

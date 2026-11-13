@@ -981,3 +981,33 @@ a.lk-pick-b { text-decoration: none; color: inherit; }
 .auth .oauth { background: var(--surface); padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1.25rem, 3vw, 2.25rem) 0; }
 .auth .oauth ~ .form { margin-top: 0; }
 .auth .oauth > * { max-width: 30rem; }
+
+/* ---------- prove your numbers (/connect) and verified reports (/verified) ---------- */
+.cn-facts { display: grid; gap: 2px; margin: 0; }
+.cn-facts > div { background: var(--surface); padding: 1rem 1.25rem; display: grid; gap: 0.25rem; }
+.cn-facts dt { font-weight: 600; }
+.cn-facts dd { margin: 0; font-size: var(--step-small); line-height: 1.45; }
+.cn-code { font-size: 1.125rem; letter-spacing: 0.02em; }
+.cn-done { background: var(--pale); padding: clamp(1.25rem, 3vw, 2rem); display: grid; gap: 0.9rem; }
+.cn-done .v-title { font-size: var(--step-lead); line-height: 1.25; }
+.cn-link { overflow-wrap: anywhere; }
+.cn-now { background: var(--bg); padding: 1rem 1.25rem; display: grid; gap: 0.4rem; }
+.cn-now h4 { font-size: 1.0625rem; }
+.cn-err { margin: 0; min-height: 0; }
+.cn-err:empty { display: none; }
+.vr-top { display: grid; gap: 1rem; padding-bottom: 1rem; }
+.vr-badge { justify-self: start; background: var(--green); color: var(--inv-ink); font-weight: 700; font-size: var(--step-small); padding: 0.35rem 0.75rem; margin: 0; }
+.vr-body { display: grid; gap: 0.5rem; padding-top: 1rem; }
+.vr-line { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.vr-bar { fill: var(--green); }
+.vr-price, .vr-proof, .vr-del { margin-top: 2rem; display: grid; gap: 0.5rem; max-width: 62ch; }
+.vr-price { background: var(--surface); padding: clamp(1.25rem, 3vw, 2rem); max-width: none; }
+.vr-amt { font-size: var(--step-lead); font-weight: 700; margin: 0; }
+.vr-table { margin-top: 2rem; }
+.vr-table summary { cursor: pointer; font-weight: 600; min-height: 2.75rem; display: flex; align-items: center; }
+.vr-scroll { max-height: 26rem; overflow: auto; margin-top: 0.75rem; }
+.vr-table table { border-collapse: collapse; width: 100%; font-size: var(--step-small); font-variant-numeric: tabular-nums; }
+.vr-table th, .vr-table td { text-align: right; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--surface-2); }
+.vr-table th:first-child, .vr-table td:first-child { text-align: left; }
+.vr-table thead th { position: sticky; top: 0; background: var(--bg); }
+.vr-cta { margin-top: 2rem; }

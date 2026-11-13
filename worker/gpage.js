@@ -365,7 +365,7 @@ export async function publicGame(request, env, url, onView) {
 }
 
 // ---------- /sitemap.xml ----------
-const PUBLIC_PAGES = ["/", "/g", "/value", "/trends", "/track", "/subscribe", "/sell"];
+const PUBLIC_PAGES = ["/", "/g", "/value", "/trends", "/track", "/subscribe", "/sell", "/connect"];
 export async function sitemap(env, url) {
   const data = await ourData(env, url.origin);
   const hx = data.hx;

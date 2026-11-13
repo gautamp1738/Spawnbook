@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Verified game stats | Spawnbook</title>
+<meta name="description" content="A Roblox game's players and Robux, read straight from Roblox's analytics with the owner's read-only key.">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to the report</a>
+
+<div class="bar wrap">
+  <nav class="topbar" aria-label="Main">
+    <a class="wordmark" href="/">Spawnbook</a>
+    <ul class="navlinks" id="navlinks">
+      <li><a href="value">Value your game</a></li>
+      <li><a href="connect">Prove your numbers</a></li>
+      <li><a href="sell">Sell your game</a></li>
+      <li class="nav-end"><a href="/">For buyers</a></li>
+    </ul>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="navlinks">Menu</button>
+  </nav>
+</div>
+
+<main id="main" tabindex="-1">
+  <section class="sec wrap page-top vr-top" aria-labelledby="vr-h">
+    <p class="vr-badge" id="vr-badge" hidden>Verified from Roblox</p>
+    <h1 id="vr-h" class="head">Verified game stats</h1>
+    <p class="lead" id="vr-sub">Loading the report…</p>
+    <p class="small muted" id="vr-when"></p>
+  </section>
+
+  <section class="sec wrap vr-body" id="vr-body" aria-label="The numbers" hidden>
+    <dl class="tiles" id="vr-tiles"></dl>
+
+    <div class="chart-block">
+      <h2 class="chart-h" id="ch-dau-h">Daily active users</h2>
+      <div class="chart" id="ch-dau"></div>
+    </div>
+    <div class="chart-block">
+      <h2 class="chart-h" id="ch-rev-h">Robux earned each day</h2>
+      <div class="chart" id="ch-rev"></div>
+    </div>
+
+    <div class="vr-price" id="vr-price" hidden>
+      <h2 class="chart-h">What it might sell for</h2>
+      <p class="vr-amt" id="vr-amt"></p>
+      <p class="small" id="vr-why"></p>
+      <p class="small muted">An estimate from Spawnbook's price model using the revenue above, not an offer. Buyers set their own price. <a class="link" href="value#sale">How a sale works</a></p>
+    </div>
+
+    <div class="vr-proof">
+      <h2 class="chart-h">What this proves</h2>
+      <p class="small">These numbers came from Roblox's Analytics API, read with a read-only key for this game. Only someone who manages the game on Roblox can make that key, and Spawnbook read the numbers itself, so they weren't typed in or edited. They don't prove who's allowed to sell the game: check that with the owner before any deal, and use escrow.</p>
+    </div>
+
+    <details class="vr-table">
+      <summary>Show the numbers day by day</summary>
+      <div class="vr-scroll"><table id="vr-rows"><thead><tr><th scope="col">Day (UTC)</th><th scope="col">Daily active users</th><th scope="col">Robux earned</th></tr></thead><tbody></tbody></table></div>
+    </details>
+
+    <div class="vr-del" id="vr-del" hidden>
+      <h2 class="chart-h">Delete this report</h2>
+      <p class="small">You opened this with your private delete link. Deleting takes the report down for everyone and can't be undone.</p>
+      <div class="form-row"><button type="button" class="button quiet" id="vr-del-go">Delete this report</button><span class="status" id="vr-del-status" role="status"></span></div>
+    </div>
+  </section>
+
+  <section class="sec wrap" id="vr-missing" hidden>
+    <p class="lead">This report doesn't exist, or its owner deleted it.</p>
+    <p><a class="button" href="connect">Make a verified report for your game</a></p>
+  </section>
+
+  <section class="sec wrap grid vr-cta" aria-labelledby="vr-cta-h">
+    <div class="c-l stack">
+      <h2 id="vr-cta-h" class="head">Prove your own numbers</h2>
+    </div>
+    <div class="c-r stack">
+      <p>Own a Roblox game? Make a free report like this one in about three minutes with a read-only key. We use the key once and never save it.</p>
+      <p><a class="button" href="connect">Prove your game's numbers</a></p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot wrap">
+  <div class="foot-top">
+    <p>Spawnbook. A daily board and a weekly report on young Roblox games, for the studios and investors who buy them.</p>
+    <p><a class="link" href="value">Making a game? Get it valued</a></p>
+    <a class="link" href="#">Back to top</a>
+  </div>
+  <h2 class="foot-mail"><span class="sr-only">Email us at </span><a href="mailto:gautamuprasanna@gmail.com">gautamuprasanna<span class="at">@gmail.com</span></a></h2>
+  <div class="foot-copy"><button type="button" class="button" id="foot-copy">Copy email address</button><span class="status" id="foot-status" aria-live="polite"></span></div>
+  <div class="foot-meta">
+    <nav aria-label="Legal">
+      <ul>
+        <li><a class="link" href="privacy.html">Privacy Policy</a></li>
+        <li><a class="link" href="terms.html">Terms</a></li>
+        <li><a class="link" href="cookies.html">Cookie Policy</a></li>
+        <li><a class="link" href="refunds.html">Refund Policy</a></li>
+      </ul>
+    </nav>
+    <p>Independent site. Not affiliated with, endorsed by or sponsored by Roblox Corporation.</p>
+    <p>© 2026 Gautam Prasanna</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script src="valuation.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var id = new URLSearchParams(location.search).get("id") || "";
+  var del = (/(?:^|[#&])del=([a-f0-9]{64})/.exec(location.hash) || [])[1] || "";
+  var commas = function (n) { return n == null || !isFinite(n) ? "–" : Math.round(n).toLocaleString("en-US"); };
+  var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var day = function (s) { var p = String(s).split("-"); return MON[Number(p[1]) - 1] + " " + Number(p[2]); };
+  var full = function (ms) { var d = new Date(ms); return MON[d.getMonth()] + " " + d.getDate() + ", " + d.getFullYear(); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  var avg = function (xs) { return xs.length ? xs.reduce(function (a, b) { return a + b; }, 0) / xs.length : null; };
+  var sum = function (xs) { return xs.reduce(function (a, b) { return a + b; }, 0); };
+  var vals = function (rows) { return (rows || []).map(function (r) { return r[1]; }); };
+  var pct = function (x) { return (x > 0 ? "+" : "") + Math.round(x * 100) + "%"; };
+
+  function missing() { $("vr-sub").textContent = ""; $("vr-h").textContent = "Report not found"; $("vr-missing").hidden = false; }
+  if (!/^[A-Za-z0-9]{8,32}$/.test(id)) { missing(); return; }
+
+  // A plain chart: a line for players, bars for Robux. Hover or focus isn't needed: the table below
+  // has every number.
+  function chart(el, rows, kind, label) {
+    var W = 720, H = 220, L = 52, R = 12, T = 12, B = 28, n = rows.length;
+    var max = Math.max.apply(null, vals(rows).concat([1]));
+    var nice = Math.pow(10, Math.floor(Math.log10(max))), top = Math.ceil(max / nice) * nice;
+    var x = function (i) { return L + (n <= 1 ? 0 : i * (W - L - R) / (n - 1)); };
+    var y = function (v) { return T + (H - T - B) * (1 - v / top); };
+    var short = function (v) { return v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + "K" : String(Math.round(v)); };
+    var s = "";
+    [0, 0.5, 1].forEach(function (f) { var v = top * f; s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text class="tick" x="' + (L - 8) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + short(v) + "</text>"; });
+    [0, Math.floor((n - 1) / 2), n - 1].forEach(function (i) { if (rows[i]) s += '<text class="tick" x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="' + (i === 0 ? "start" : i === n - 1 ? "end" : "middle") + '">' + day(rows[i][0]) + "</text>"; });
+    if (kind === "bar") {
+      var bw = Math.max(1, (W - L - R) / n - 1);
+      rows.forEach(function (r, i) { s += '<rect class="vr-bar" x="' + (x(i) - bw / 2) + '" y="' + y(r[1]) + '" width="' + bw + '" height="' + Math.max(0, y(0) - y(r[1])) + '"/>'; });
+    } else {
+      s += '<polyline class="vr-line" points="' + rows.map(function (r, i) { return x(i).toFixed(1) + "," + y(r[1]).toFixed(1); }).join(" ") + '"/>';
+    }
+    el.innerHTML = '<svg class="chart-svg" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(label) + '">' + s + "</svg>";
+  }
+
+  fetch("/api/verified?id=" + encodeURIComponent(id), { headers: { Accept: "application/json" } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d || !d.dau) { missing(); return; }
+      document.title = d.name + ": verified stats | Spawnbook";
+      $("vr-badge").hidden = false;
+      $("vr-h").textContent = d.name || "A Roblox game";
+      var by = d.creator && d.creator.name ? "By " + d.creator.name + (d.creator.type === "Group" ? " (a Roblox group)" : "") + ". " : "";
+      $("vr-sub").innerHTML = esc(by) + (d.pid ? '<a class="link" href="https://www.roblox.com/games/' + Number(d.pid) + '" target="_blank" rel="noopener">See it on Roblox<span class="sr-only"> (opens in a new tab)</span></a>' : "");
+      $("vr-when").textContent = "Read from Roblox's analytics on " + full(d.at) + ", covering " + day(d.from) + " to " + day(d.to) + " (" + d.dau.length + " days).";
+
+      var dau = vals(d.dau), rev = vals(d.rev);
+      var a30 = avg(dau.slice(-30)), p30 = dau.length >= 60 ? avg(dau.slice(-60, -30)) : null;
+      var r30 = sum(rev.slice(-30)), rp30 = rev.length >= 60 ? sum(rev.slice(-60, -30)) : null;
+      var usd = r30 * (window.SBV ? SBV.DEVEX : 0.0038);
+      var tiles = [];
+      tiles.push(["Daily active users, last 30 days", commas(a30) + " a day", p30 ? pct(a30 / p30 - 1) + " on the 30 days before" : ""]);
+      tiles.push(["Robux earned, last 30 days", commas(r30), "About $" + commas(usd) + " at Roblox's DevEx rate" + (rp30 ? ". " + pct(r30 / rp30 - 1) + " on the 30 days before" : "")]);
+      if (d.peak && d.peak.length) tiles.push(["Most players at once, last 30 days", commas(Math.max.apply(null, vals(d.peak).slice(-30))), ""]);
+      var ret = function (rows) { var v = avg(vals(rows).slice(-30)); return v == null ? null : v <= 1 ? v * 100 : v; };
+      if (d.d1 && d.d1.length) tiles.push(["Players back the next day", Math.round(ret(d.d1)) + "%", "Average, last 30 days"]);
+      if (d.d7 && d.d7.length) tiles.push(["Players back a week later", Math.round(ret(d.d7)) + "%", "Average, last 30 days"]);
+      if (d.sess && d.sess.length) tiles.push(["Average session", Math.round(avg(vals(d.sess).slice(-30))) + " minutes", "Last 30 days"]);
+      $("vr-tiles").innerHTML = tiles.map(function (t) { return '<div class="tile"><dt>' + esc(t[0]) + "</dt><dd>" + esc(t[1]) + "</dd>" + (t[2] ? '<p class="tile-sub">' + esc(t[2]) + "</p>" : "") + "</div>"; }).join("");
+
+      chart($("ch-dau"), d.dau, "line", "Daily active users from " + day(d.from) + " to " + day(d.to) + ", " + commas(a30) + " a day on average over the last 30 days");
+      if (d.rev && d.rev.length) chart($("ch-rev"), d.rev, "bar", "Robux earned each day from " + day(d.from) + " to " + day(d.to) + ", " + commas(r30) + " over the last 30 days");
+      else { $("ch-rev-h").hidden = true; }
+
+      // Price: revenue a month from Roblox itself, months of revenue from age and the player trend.
+      if (window.SBV && usd > 0) {
+        var age = d.launched ? Math.max(0, Math.round((d.at - Date.parse(d.launched)) / 864e5)) : null;
+        var decay = p30 && a30 < p30 ? 1 - a30 / p30 : 0;
+        var w1 = avg(dau.slice(-7)), w0 = dau.length >= 14 ? avg(dau.slice(-14, -7)) : null;
+        var v = SBV.value({ seller: usd, age: age, decay: decay, week: w0 ? w1 / w0 - 1 : null }, null);
+        $("vr-amt").textContent = "About " + SBV.money(v.mid) + " (likely " + SBV.rangeText(v) + ")";
+        $("vr-why").textContent = "About " + SBV.money(usd) + " a month from the Robux above, times " + (Math.round(v.months.mid * 10) / 10) + " months of revenue. " + SBV.monthsWhy(v);
+        $("vr-price").hidden = false;
+      }
+
+      var revBy = {}; (d.rev || []).forEach(function (r) { revBy[r[0]] = r[1]; });
+      $("vr-rows").querySelector("tbody").innerHTML = d.dau.slice().reverse().map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + commas(r[1]) + "</td><td>" + (r[0] in revBy ? commas(revBy[r[0]]) : "–") + "</td></tr>"; }).join("");
+
+      $("vr-body").hidden = false;
+      if (del) $("vr-del").hidden = false;
+    })
+    .catch(missing);
+
+  $("vr-del-go").addEventListener("click", function () {
+    var b = this, st = $("vr-del-status");
+    b.disabled = true; st.textContent = "Deleting…";
+    fetch("/api/verified/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: id, del: del }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.ok) { $("vr-body").hidden = true; $("vr-badge").hidden = true; $("vr-h").textContent = "Report deleted"; $("vr-sub").textContent = "It's gone for everyone with the link."; $("vr-when").textContent = ""; history.replaceState(null, "", location.pathname); }
+        else { b.disabled = false; st.textContent = "That delete link didn't work. Check you copied all of it."; }
+      })
+      .catch(function () { b.disabled = false; st.textContent = "Couldn't reach Spawnbook. Try again."; });
+  });
+})();
+</script>
+<script src="nav.js" defer></script>
+</body>
+</html>
